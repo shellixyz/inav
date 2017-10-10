@@ -59,6 +59,7 @@ typedef struct mixerConfig_s {
     uint8_t platformType;
     bool hasFlaps;
     int16_t appliedMixerPreset;
+    uint8_t fw_pitch_to_throttle;
 } mixerConfig_t;
 
 PG_DECLARE(mixerConfig_t, mixerConfig);
