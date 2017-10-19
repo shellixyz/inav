@@ -503,6 +503,9 @@ groups:
       - name: yaw_jump_prevention_limit
         min: YAW_JUMP_PREVENTION_LIMIT_LOW
         max: YAW_JUMP_PREVENTION_LIMIT_HIGH
+      - name: flaperon_pitch_comp_angle
+        min: 0
+        max: 900
 
   - name: PG_MOTOR_3D_CONFIG
     type: flight3DConfig_t
