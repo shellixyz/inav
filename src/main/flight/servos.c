@@ -292,6 +292,15 @@ void servoMixer(float dT)
         servo[target] += servoDirection(target, from) * ((int32_t)inputLimited * currentServoMixer[i].rate) / 100;
     }
 
+    if (STATE(FIXED_WING)) {
+      uint8_t throw_diff;
+      throw_diff = 100 - mixerConfig()->fw_flapperons_throw_diff;
+      if ((int32_t)servo[SERVO_FLAPPERON_1] * servoParams(SERVO_FLAPPERON_1)->rate < 0) servo[SERVO_FLAPPERON_1] = (int32_t)servo[SERVO_FLAPPERON_1] * throw_diff / 100L;
+      if ((int32_t)servo[SERVO_FLAPPERON_2] * servoParams(SERVO_FLAPPERON_2)->rate > 0) servo[SERVO_FLAPPERON_2] = (int32_t)servo[SERVO_FLAPPERON_2] * throw_diff / 100L;
+      throw_diff = 100 - mixerConfig()->fw_elevator_throw_diff;
+      if (servo[SERVO_ELEVATOR] > 0) servo[SERVO_ELEVATOR] = (int32_t)servo[SERVO_ELEVATOR] * throw_diff / 100L;
+    }
+
     for (int i = 0; i < MAX_SUPPORTED_SERVOS; i++) {
 
         /*
