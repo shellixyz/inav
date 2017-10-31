@@ -503,6 +503,12 @@ groups:
       - name: yaw_jump_prevention_limit
         min: YAW_JUMP_PREVENTION_LIMIT_LOW
         max: YAW_JUMP_PREVENTION_LIMIT_HIGH
+      - name: fw_flapperons_throw_diff
+        min: 0
+        max: 100
+      - name: fw_elevator_throw_diff
+        min: 0
+        max: 100
 
   - name: PG_MOTOR_3D_CONFIG
     type: flight3DConfig_t
