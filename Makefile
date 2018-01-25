@@ -887,7 +887,7 @@ CFLAGS      += $(ARCH_FLAGS) \
               $(addprefix -I,$(INCLUDE_DIRS)) \
               $(DEBUG_FLAGS) \
               -std=gnu99 \
-              -Wall -Wextra -Wunsafe-loop-optimizations -Wdouble-promotion \
+              -Wall -Wextra -Wunsafe-loop-optimizations -Wdouble-promotion -Wdouble-promotion -Wfloat-equal -Wfloat-conversion -Wunsuffixed-float-constants \
               -ffunction-sections \
               -fdata-sections \
               $(DEVICE_FLAGS) \
