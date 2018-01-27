@@ -7,7 +7,7 @@
 #include "common/utils.h"
 
 #include "drivers/time.h"
-#include "drivers/io.h"
+#include "drivers/lights_io.h"
 
 #include "rx/rx.h"
 
@@ -16,27 +16,37 @@
 #include "fc/rc_modes.h"
 #include "fc/runtime_config.h"
 
+#include "scheduler/scheduler.h"
+
 #include "config/feature.h"
+
+#include "config/parameter_group.h"
+#include "config/parameter_group_ids.h"
 
 #include "io/lights.h"
 
-#ifdef LIGHTS
+#ifdef USE_LIGHTS
 
-static IO_t lightsIO = DEFIO_IO(NONE);
+PG_REGISTER_WITH_RESET_TEMPLATE(lightsConfig_t, lightsConfig, PG_LIGHTS_CONFIG, 0);
+
+PG_RESET_TEMPLATE(lightsConfig_t, lightsConfig,
+        .failsafe = {
+            .enabled = true,
+            .flash_period = 1000,
+            .flash_on_time = 100
+        }
+);
+
 static bool lights_on = false;
+static timeUs_t last_status_change = 0;
 
-#ifdef FAILSAFE_LIGHTS
-  static timeUs_t last_status_change = 0;
-#endif
-
-bool lightsSetStatus(bool status)
+static void lightsSetStatus(bool status, timeUs_t currentTimeUs)
 {
-  if (status != lights_on) {
-    lights_on = status;
-    IOWrite(lightsIO, lights_on);
-    return(true);
-  } else
-    return(false);
+    if (status != lights_on) {
+        lights_on = status;
+        lightsHardwareSetStatus(status);
+        last_status_change = currentTimeUs;
+    }
 }
 
 /*
@@ -45,40 +55,26 @@ bool lightsSetStatus(bool status)
  */
 void lightsUpdate(timeUs_t currentTimeUs)
 {
-  UNUSED(currentTimeUs);
-  if (lightsIO) {
-#ifdef FAILSAFE_LIGHTS
-    if (FLIGHT_MODE(FAILSAFE_MODE) && ARMING_FLAG(WAS_EVER_ARMED)) {
-      bool new_lights_status = lights_on;
-      if (lights_on) {
-	if (currentTimeUs - last_status_change > FAILSAFE_LIGHTS_ON_TIME * 1000)
-	  new_lights_status = false;
-      } else {
-	if (currentTimeUs - last_status_change > FAILSAFE_LIGHTS_OFF_TIME * 1000)
-	  new_lights_status = true;
-      }
-      if (new_lights_status != lights_on) {
-	lightsSetStatus(new_lights_status);
-	last_status_change = currentTimeUs;
-      }
-    } else {
-      if (lightsSetStatus(IS_RC_MODE_ACTIVE(BOXLIGHTS)))
-	last_status_change = currentTimeUs;
-    }
-#else
-    lightsSetStatus(IS_RC_MODE_ACTIVE(BOXLIGHTS));
-#endif /* FAILSAFE_LIGHTS */
-  }
+    UNUSED(currentTimeUs);
+    if (lightsConfig()->failsafe.enabled && FLIGHT_MODE(FAILSAFE_MODE) && ARMING_FLAG(WAS_EVER_ARMED)) {
+        if (lightsConfig()->failsafe.flash_period <= lightsConfig()->failsafe.flash_on_time) {
+            lightsSetStatus(true, currentTimeUs);
+        } else {
+            if (lights_on) {
+                if (currentTimeUs - last_status_change > lightsConfig()->failsafe.flash_on_time * 1000)
+                    lightsSetStatus(false, currentTimeUs);
+            } else {
+                if (currentTimeUs - last_status_change > (uint32_t)(lightsConfig()->failsafe.flash_period - lightsConfig()->failsafe.flash_on_time) * 1000)
+                    lightsSetStatus(true, currentTimeUs);
+            }
+        }
+    } else
+        lightsSetStatus(IS_RC_MODE_ACTIVE(BOXLIGHTS), currentTimeUs);
 }
 
 void lightsInit()
 {
-  lightsIO = IOGetByTag(IO_TAG(LIGHTS));
-
-  if (lightsIO) {
-    IOInit(lightsIO, OWNER_LED, RESOURCE_OUTPUT, 0);
-    IOConfigGPIO(lightsIO, LIGHTS_OUTPUT_MODE);
-  }
+    lightsHardwareInit();
 }
 
-#endif /* LIGHTS */
+#endif /* USE_LIGHTS */

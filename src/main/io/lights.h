@@ -17,25 +17,22 @@
 
 #pragma once
 
+#include "config/parameter_group.h"
 #include "common/time.h"
 
-#ifdef LIGHTS
+#ifdef USE_LIGHTS
 
-//#define FAILSAFE_LIGHTS
+typedef struct lightsConfig_s {
+    struct {
+        bool enabled;
+        uint16_t flash_period;
+        uint16_t flash_on_time;
+    } failsafe;
+} lightsConfig_t;
 
-#ifndef LIGHTS_OUTPUT_MODE
-  #define LIGHTS_OUTPUT_MODE IOCFG_OUT_PP
-#endif
-
-#ifndef FAILSAFE_LIGHTS_ON_TIME
-  #define FAILSAFE_LIGHTS_ON_TIME 100 // ms
-#endif
-#ifndef FAILSAFE_LIGHTS_OFF_TIME
-  #define FAILSAFE_LIGHTS_OFF_TIME 900 // ms
-#endif
-
+PG_DECLARE(lightsConfig_t, lightsConfig);
 
 void lightsUpdate(timeUs_t currentTimeUs);
 void lightsInit();
 
-#endif /* LIGHTS */
+#endif /* USE_LIGHTS */
