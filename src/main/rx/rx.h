@@ -21,7 +21,12 @@
 #include <stdbool.h>
 
 #include "common/time.h"
+
 #include "config/parameter_group.h"
+
+#include "drivers/io_types.h"
+
+#include "drivers/io_types.h"
 
 #define STICK_CHANNEL_COUNT 4
 
@@ -50,6 +55,14 @@ typedef enum {
     RX_FRAME_COMPLETE = (1 << 0),       // There is new data available
     RX_FRAME_FAILSAFE = (1 << 1)        // Receiver detected loss of RC link. Only valid when RX_FRAME_COMPLETE is set as well
 } rxFrameState_e;
+<<<<<<<
+=======
+    SERIALRX_CRSF = 9,
+    SERIALRX_SRXL = 10,
+    SERIALRX_TARGET_CUSTOM = 11,
+    SERIALRX_FPORT = 12,
+} SerialRXType;
+>>>>>>>
 
 typedef enum {
     RX_TYPE_NONE        = 0,

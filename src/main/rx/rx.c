@@ -50,6 +50,7 @@
 
 #include "rx/rx.h"
 #include "rx/pwm.h"
+#include "rx/fport.h"
 #include "rx/sbus.h"
 #include "rx/spektrum.h"
 #include "rx/sumd.h"
@@ -206,6 +207,16 @@ bool serialRxInit(const rxConfig_t *rxConfig, rxRuntimeConfig_t *rxRuntimeConfig
 #ifdef USE_SERIALRX_CRSF
     case SERIALRX_CRSF:
         enabled = crsfRxInit(rxConfig, rxRuntimeConfig);
+        break;
+#endif
+#ifdef USE_SERIALRX_FPORT
+    case SERIALRX_FPORT:
+        enabled = fportRxInit(rxConfig, rxRuntimeConfig);
+        break;
+#endif
+#ifdef USE_SERIALRX_FPORT
+    case SERIALRX_FPORT:
+        enabled = fportRxInit(rxConfig, rxRuntimeConfig);
         break;
 #endif
     default:
