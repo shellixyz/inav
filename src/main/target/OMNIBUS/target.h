@@ -77,7 +77,8 @@
 #define USE_UART1
 #define USE_UART2
 #define USE_UART3
-#define SERIAL_PORT_COUNT       4
+#define USE_SOFTSERIAL1
+#define SERIAL_PORT_COUNT       5
 
 #define UART1_TX_PIN            PA9
 #define UART1_RX_PIN            PA10
@@ -87,6 +88,9 @@
 
 #define UART3_TX_PIN            PB10 // PB10 (AF7)
 #define UART3_RX_PIN            PB11 // PB11 (AF7)
+
+#define SOFTSERIAL_1_RX_PIN      PB14
+#define SOFTSERIAL_1_TX_PIN      PB15
 
 // Enable I2C instead of PWM7&8 for iNav
 #define USE_I2C
@@ -124,10 +128,10 @@
 // Performance logging for SD card operations:
 // #define AFATFS_USE_INTROSPECTIVE_LOGGING
 
-#define USE_OSD
-#define USE_MAX7456
-#define MAX7456_SPI_BUS             BUS_SPI1
-#define MAX7456_CS_PIN              PB1
+//#define USE_OSD
+//#define USE_MAX7456
+//#define MAX7456_SPI_BUS             BUS_SPI1
+//#define MAX7456_CS_PIN              PB1
 
 #define USE_ADC
 #define ADC_INSTANCE                ADC1
