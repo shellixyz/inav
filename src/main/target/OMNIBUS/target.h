@@ -51,24 +51,24 @@
 #define BMP280_SPI_BUS          BUS_SPI1
 #define BMP280_CS_PIN           PA13
 
-#define BARO_I2C_BUS             BUS_I2C1
-#define USE_BARO_BMP085 // External
-#define USE_BARO_BMP180 // External
-#define USE_BARO_MS5611 // External
+//#define BARO_I2C_BUS             BUS_I2C1
+//#define USE_BARO_BMP085 // External
+//#define USE_BARO_BMP180 // External
+//#define USE_BARO_MS5611 // External
 
 #define USE_MAG
 #define MAG_I2C_BUS             BUS_I2C1
 #define USE_MAG_HMC5883
-#define USE_MAG_QMC5883
-#define USE_MAG_IST8310
-#define USE_MAG_MAG3110
+//#define USE_MAG_QMC5883
+//#define USE_MAG_IST8310
+//#define USE_MAG_MAG3110
 
-#define USE_RANGEFINDER
-#define USE_RANGEFINDER_HCSR04
-#define RANGEFINDER_HCSR04_ECHO_PIN          PB2  // Has 1K series resistor
-#define RANGEFINDER_HCSR04_TRIGGER_PIN       PB4  // FT
-#define USE_RANGEFINDER_HCSR04_I2C
-#define RANGEFINDER_I2C_BUS                  BUS_I2C1
+//#define USE_RANGEFINDER
+//#define USE_RANGEFINDER_HCSR04
+//#define RANGEFINDER_HCSR04_ECHO_PIN          PB2  // Has 1K series resistor
+//#define RANGEFINDER_HCSR04_TRIGGER_PIN       PB4  // FT
+//#define USE_RANGEFINDER_HCSR04_I2C
+//#define RANGEFINDER_I2C_BUS                  BUS_I2C1
 
 #define USB_CABLE_DETECTION
 #define USB_DETECT_PIN          PB5
@@ -97,8 +97,8 @@
 #define USE_I2C_DEVICE_1 // PB6/SCL(PWM8), PB7/SDA(PWM7)
 #define USE_I2C_PULLUP
 
-#define USE_PITOT_MS4525
-#define PITOT_I2C_BUS           BUS_I2C1
+//#define USE_PITOT_MS4525
+//#define PITOT_I2C_BUS           BUS_I2C1
 
 #define USE_SPI
 #define USE_SPI_DEVICE_2 // PB12,13,14,15 on AF5
@@ -128,10 +128,10 @@
 // Performance logging for SD card operations:
 // #define AFATFS_USE_INTROSPECTIVE_LOGGING
 
-//#define USE_OSD
-//#define USE_MAX7456
-//#define MAX7456_SPI_BUS             BUS_SPI1
-//#define MAX7456_CS_PIN              PB1
+#define USE_OSD
+#define USE_MAX7456
+#define MAX7456_SPI_BUS             BUS_SPI1
+#define MAX7456_CS_PIN              PB1
 
 #define USE_ADC
 #define ADC_INSTANCE                ADC1
@@ -144,28 +144,28 @@
 #define CURRENT_METER_ADC_CHANNEL   ADC_CHN_2
 #define RSSI_ADC_CHANNEL            ADC_CHN_3
 
-#define USE_LED_STRIP
-#define WS2811_PIN                      PA8
-#define WS2811_DMA_STREAM               DMA1_Channel2
-#define WS2811_DMA_HANDLER_IDENTIFER    DMA1_CH2_HANDLER
+//#define USE_LED_STRIP
+//#define WS2811_PIN                      PA8
+//#define WS2811_DMA_STREAM               DMA1_Channel2
+//#define WS2811_DMA_HANDLER_IDENTIFER    DMA1_CH2_HANDLER
 
 //#define ENABLE_BLACKBOX_LOGGING_ON_SDCARD_BY_DEFAULT
 
 #define DEFAULT_RX_TYPE         RX_TYPE_PPM
 #define DEFAULT_FEATURES        (FEATURE_VBAT | FEATURE_CURRENT_METER | FEATURE_BLACKBOX | FEATURE_OSD)
 
-#define BUTTONS
-#define BUTTON_A_PORT           GPIOB // Non-existent (PB1 used for RSSI/MAXCS)
-#define BUTTON_A_PIN            Pin_1
-#define BUTTON_B_PORT           GPIOB // TRIG button, used for BINDPLUG_PIN
-#define BUTTON_B_PIN            Pin_0
+//#define BUTTONS
+//#define BUTTON_A_PORT           GPIOB // Non-existent (PB1 used for RSSI/MAXCS)
+//#define BUTTON_A_PIN            Pin_1
+//#define BUTTON_B_PORT           GPIOB // TRIG button, used for BINDPLUG_PIN
+//#define BUTTON_B_PIN            Pin_0
 
-#define USE_SPEKTRUM_BIND
+//#define USE_SPEKTRUM_BIND
 // USART3
-#define BIND_PIN                PB11
+//#define BIND_PIN                PB11
 
-#define HARDWARE_BIND_PLUG
-#define BINDPLUG_PIN            PB0
+//#define HARDWARE_BIND_PLUG
+//#define BINDPLUG_PIN            PB0
 
 #define USE_SERIAL_4WAY_BLHELI_INTERFACE
 
@@ -177,6 +177,6 @@
 #define TARGET_IO_PORTC         (BIT(13)|BIT(14)|BIT(15))
 #define TARGET_IO_PORTF         (BIT(0)|BIT(1)|BIT(4))
 
-#define USABLE_TIMER_CHANNEL_COUNT  10
+#define USABLE_TIMER_CHANNEL_COUNT  9
 
-#define USED_TIMERS             (TIM_N(1) | TIM_N(2) | TIM_N(3) | TIM_N(4) | TIM_N(15))
+#define USED_TIMERS             (TIM_N(2) | TIM_N(3) | TIM_N(4) | TIM_N(8) | TIM_N(15))
