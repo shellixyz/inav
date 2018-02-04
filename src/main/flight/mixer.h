@@ -95,6 +95,7 @@ typedef struct mixerConfig_s {
     uint8_t fw_flapperons_throw_diff;
     uint8_t fw_elevator_throw_diff;
     uint8_t fw_pitch_to_throttle;
+    uint8_t fw_roll2pitch_comp;
 } mixerConfig_t;
 
 PG_DECLARE(mixerConfig_t, mixerConfig);

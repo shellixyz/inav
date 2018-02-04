@@ -77,7 +77,8 @@ PG_RESET_TEMPLATE(mixerConfig_t, mixerConfig,
     .yaw_jump_prevention_limit = 200,
     .fw_flapperons_throw_diff = 0,
     .fw_elevator_throw_diff = 0,
-    .fw_pitch_to_throttle = 0
+    .fw_pitch_to_throttle = 0,
+    .fw_roll2pitch_comp = 0
 );
 
 #ifdef BRUSHED_MOTORS
