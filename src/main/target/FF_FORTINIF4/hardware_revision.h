@@ -14,24 +14,15 @@
  * You should have received a copy of the GNU General Public License
  * along with Cleanflight.  If not, see <http://www.gnu.org/licenses/>.
  */
+#pragma once
 
-#include "drivers/resource.h"
+typedef enum ftf4HardwareRevision_t {
+    FORTINIF4_UNKNOWN = 0,
+    FORTINIF4_REV_1, // SPI Flash
+    FORTINIF4_REV_2  // OSD
+} ftf4HardwareRevision_e;
 
-const char * const ownerNames[OWNER_TOTAL_COUNT] = {
-    "FREE", "PWM", "PPM", "MOTOR", "SERVO", "SOFTSERIAL", "ADC", "SERIAL", "DEBUG", "TIMER",
-    "RANGEFINDER", "SYSTEM", "SPI", "I2C", "SDCARD", "FLASH", "USB", "BEEPER", "OSD",
-    "BARO", "MPU", "INVERTER", "LED STRIP", "LED", "RECEIVER", "TRANSMITTER",
-    "NRF24", "VTX", "SPI_PREINIT", "COMPASS"
-};
+extern uint8_t hardwareRevision;
 
-const char * const resourceNames[RESOURCE_TOTAL_COUNT] = {
-    "", // NONE
-    "IN", "OUT", "IN / OUT",
-    "TIMER",
-    "UART TX", "UART RX", "UART TX/RX",
-    "EXTI",
-    "SCL", "SDA",
-    "SCK", "MOSI", "MISO", "CS",
-    "CH1", "CH2", "CH3", "CH4",
-    "CE"
-};
+void updateHardwareRevision(void);
+void detectHardwareRevision(void);
