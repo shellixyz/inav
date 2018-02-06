@@ -15,22 +15,26 @@
  * along with Cleanflight.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#pragma once
+#include <stdbool.h>
+#include <stdint.h>
 
-#include "drivers/io_types.h"
+#include <platform.h>
 
-typedef enum softSPIDevice {
-    SOFT_SPIDEV_1   = 0,
-    SOFT_SPIDEV_MAX = SOFT_SPIDEV_1,
-} softSPIDevice_e;
+#ifdef TARGET_CONFIG
+#include "fc/config.h"
 
-typedef struct softSPIDevice_s {
-    ioTag_t sckTag;
-    ioTag_t mosiTag;
-    ioTag_t misoTag;
-    ioTag_t nssTag;
-} softSPIDevice_t;
+#include "config/feature.h"
 
+#include "rx/rx.h"
 
-void softSpiInit(const softSPIDevice_t *dev);
-uint8_t softSpiTransferByte(const softSPIDevice_t *dev, uint8_t data);
+#include "hardware_revision.h"
+
+void targetConfiguration(void)
+{
+    if (hardwareRevision == FORTINIF4_REV_2) {
+        featureSet(FEATURE_OSD);
+    }
+
+    rxConfigMutable()->halfDuplex = false;
+}
+#endif
