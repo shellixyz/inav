@@ -259,6 +259,18 @@ void processRcStickPositions(throttleStatus_e throttleStatus, bool disarm_kill_s
         return;
     }
 
+    // Multiple battery configuration profiles
+    if (rcSticks == THR_HI + YAW_LO + PIT_CE + ROL_LO)          // ROLL left  -> Profile 1
+        i = 1;
+    else if (rcSticks == THR_HI + YAW_LO + PIT_HI + ROL_CE)     // PITCH up   -> Profile 2
+        i = 2;
+    else if (rcSticks == THR_HI + YAW_LO + PIT_CE + ROL_HI)     // ROLL right -> Profile 3
+        i = 3;
+    if (i) {
+        setConfigBatteryProfileAndWriteEEPROM(i - 1);
+        return;
+    }
+
     // Save config
     if (rcSticks == THR_LO + YAW_LO + PIT_LO + ROL_HI) {
         saveConfigAndNotify();

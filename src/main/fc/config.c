@@ -110,6 +110,7 @@ PG_REGISTER_WITH_RESET_TEMPLATE(systemConfig_t, systemConfig, PG_SYSTEM_CONFIG, 
 
 PG_RESET_TEMPLATE(systemConfig_t, systemConfig,
     .current_profile_index = 0,
+    .current_battery_profile_index = 0,
     .debug_mode = DEBUG_NONE,
     .i2c_speed = I2C_SPEED_400KHZ,
     .cpuUnderclock = 0,
@@ -118,7 +119,13 @@ PG_RESET_TEMPLATE(systemConfig_t, systemConfig,
     .asyncMode = ASYNC_MODE_NONE,
     .throttle_tilt_compensation_strength = 0,      // 0-100, 0 - disabled
     .pwmRxInputFilteringMode = INPUT_FILTERING_DISABLED,
-    .name = { 0 }
+    .name = { 0 },
+    /*.voltage_sensor_scale = 1100,*/
+    /*.amperage_sensor = {*/
+        /*.type = CURRENT_SENSOR_ADC*/
+        /*.scale = 400,*/
+        /*.offset = 0*/
+    /*}*/
 );
 
 PG_REGISTER(beeperConfig_t, beeperConfig, PG_BEEPER_CONFIG, 0);
@@ -236,7 +243,7 @@ void validateAndFixConfig(void)
         // rssi adc needs the same ports
         featureClear(FEATURE_RSSI_ADC);
         // current meter needs the same ports
-        if (batteryConfig()->currentMeterType == CURRENT_SENSOR_ADC) {
+        if (currentBatteryProfile->currentMeterType == CURRENT_SENSOR_ADC) {
             featureClear(FEATURE_CURRENT_METER);
         }
 #if defined(CC3D)
@@ -309,13 +316,13 @@ void validateAndFixConfig(void)
 #endif
 
 #if defined(NAZE) && defined(USE_RANGEFINDER_HCSR04)
-    if ((rxConfig()->receiverType == RX_TYPE_PWM) && (rangefinderConfig()->rangefinder_hardware == RANGEFINDER_HCSR04) && featureConfigured(FEATURE_CURRENT_METER) && batteryConfig()->currentMeterType == CURRENT_SENSOR_ADC) {
+    if ((rxConfig()->receiverType == RX_TYPE_PWM) && (rangefinderConfig()->rangefinder_hardware == RANGEFINDER_HCSR04) && featureConfigured(FEATURE_CURRENT_METER) && currentBatteryProfile->currentMeterType == CURRENT_SENSOR_ADC) {
         featureClear(FEATURE_CURRENT_METER);
     }
 #endif
 
 #if defined(OLIMEXINO) && defined(USE_RANGEFINDER_HCSR04)
-    if ((rangefinderConfig()->rangefinder_hardware == RANGEFINDER_HCSR04) && feature(FEATURE_CURRENT_METER) && batteryConfig()->currentMeterType == CURRENT_SENSOR_ADC) {
+    if ((rangefinderConfig()->rangefinder_hardware == RANGEFINDER_HCSR04) && feature(FEATURE_CURRENT_METER) && currentBatteryProfile->currentMeterType == CURRENT_SENSOR_ADC) {
         featureClear(FEATURE_CURRENT_METER);
     }
 #endif
@@ -430,6 +437,7 @@ void resetConfigs(void)
 static void activateConfig(void)
 {
     activateControlRateConfig();
+    activateBatteryProfile();
 
     resetAdjustmentStates();
 
@@ -459,6 +467,7 @@ void readEEPROM(void)
     }
 
     setConfigProfile(getConfigProfile());
+    setConfigBatteryProfile(getConfigBatteryProfile());
 
     validateAndFixConfig();
     activateConfig();
@@ -520,6 +529,36 @@ bool setConfigProfile(uint8_t profileIndex)
 void setConfigProfileAndWriteEEPROM(uint8_t profileIndex)
 {
     if (setConfigProfile(profileIndex)) {
+        // profile has changed, so ensure current values saved before new profile is loaded
+        writeEEPROM();
+        readEEPROM();
+    }
+    beeperConfirmationBeeps(profileIndex + 1);
+}
+
+uint8_t getConfigBatteryProfile(void)
+{
+    return systemConfig()->current_battery_profile_index;
+}
+
+bool setConfigBatteryProfile(uint8_t profileIndex)
+{
+    bool ret = true; // return true if current_battery_profile_index has changed
+    if (systemConfig()->current_battery_profile_index == profileIndex) {
+        ret =  false;
+    }
+    if (profileIndex >= MAX_BATTERY_PROFILE_COUNT) {// sanity check
+        profileIndex = 0;
+    }
+    pgActivateProfile(profileIndex);
+    systemConfigMutable()->current_battery_profile_index = profileIndex;
+    setBatteryProfile(profileIndex);
+    return ret;
+}
+
+void setConfigBatteryProfileAndWriteEEPROM(uint8_t profileIndex)
+{
+    if (setConfigBatteryProfile(profileIndex)) {
         // profile has changed, so ensure current values saved before new profile is loaded
         writeEEPROM();
         readEEPROM();

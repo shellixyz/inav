@@ -19,6 +19,8 @@
 
 #include "config/parameter_group.h"
 
+#define MAX_BATTERY_PROFILE_COUNT 3
+
 #ifndef VBAT_SCALE_DEFAULT
 #define VBAT_SCALE_DEFAULT 1100
 #endif
@@ -65,7 +67,11 @@ typedef struct batteryConfig_s {
 
 } batteryConfig_t;
 
-PG_DECLARE(batteryConfig_t, batteryConfig);
+PG_DECLARE_ARRAY(batteryConfig_t, MAX_BATTERY_PROFILE_COUNT, batteryProfiles);
+
+extern const batteryConfig_t *currentBatteryProfile;
+
+//PG_DECLARE(batteryConfig_t, batteryConfig);
 
 typedef enum {
     BATTERY_OK = 0,
@@ -94,6 +100,8 @@ uint16_t batteryAdcToVoltage(uint16_t src);
 batteryState_e getBatteryState(void);
 void batteryUpdate(uint32_t vbatTimeDelta);
 void batteryInit(void);
+void setBatteryProfile(uint8_t profileIndex);
+void activateBatteryProfile(void);
 
 void currentMeterUpdate(int32_t lastUpdateAt);
 

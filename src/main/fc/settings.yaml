@@ -483,9 +483,10 @@ groups:
         field: mode
         table: gimbal_mode
 
-  - name: PG_BATTERY_CONFIG
+  - name: PG_BATTERY_PROFILES
     type: batteryConfig_t
     headers: ["sensors/battery.h"]
+    value_type: BATTERY_CONFIG_VALUE
     members:
       - name: vbat_scale
         field: voltage.scale

@@ -681,7 +681,7 @@ static void osdFormatBatteryChargeSymbol(char *buff)
 
 static void osdUpdateBatteryCapacityOrVoltageTextAttributes(textAttributes_t *attr)
 {
-    if ((batteryState != BATTERY_NOT_PRESENT) && ((batteryUseCapacityThresholds && (batteryRemainingCapacity <= batteryConfig()->capacity.warning - batteryConfig()->capacity.critical)) || ((!batteryUseCapacityThresholds) && (vbat <= batteryWarningVoltage))))
+    if ((batteryState != BATTERY_NOT_PRESENT) && ((batteryUseCapacityThresholds && (batteryRemainingCapacity <= currentBatteryProfile->capacity.warning - currentBatteryProfile->capacity.critical)) || ((!batteryUseCapacityThresholds) && (vbat <= batteryWarningVoltage))))
         TEXT_ATTRIBUTES_ADD_BLINK(*attr);
 }
 
@@ -850,18 +850,18 @@ static bool osdDrawSingleElement(uint8_t item)
         break;
 
     case OSD_BATTERY_REMAINING_CAPACITY:
-        buff[0] = (batteryConfig()->capacity.unit == BAT_CAPACITY_UNIT_MAH ? SYM_MAH : SYM_WH);
+        buff[0] = (currentBatteryProfile->capacity.unit == BAT_CAPACITY_UNIT_MAH ? SYM_MAH : SYM_WH);
 
-        if (batteryConfig()->capacity.value == 0)
+        if (currentBatteryProfile->capacity.value == 0)
             tfp_sprintf(buff + 1, "NA");
         else if (!batteryFullWhenPluggedIn)
             tfp_sprintf(buff + 1, "NF");
-        else if (batteryConfig()->capacity.unit == BAT_CAPACITY_UNIT_MAH)
+        else if (currentBatteryProfile->capacity.unit == BAT_CAPACITY_UNIT_MAH)
             tfp_sprintf(buff + 1, "%-4lu", batteryRemainingCapacity);
-        else // batteryConfig()->capacity.unit == BAT_CAPACITY_UNIT_MWH
+        else // currentBatteryProfile->capacity.unit == BAT_CAPACITY_UNIT_MWH
             osdFormatCentiNumber(buff + 1, batteryRemainingCapacity / 10, 0, 2, 0, 3);
 
-        if ((batteryState != BATTERY_NOT_PRESENT) && batteryUseCapacityThresholds && (batteryRemainingCapacity <= batteryConfig()->capacity.warning - batteryConfig()->capacity.critical))
+        if ((batteryState != BATTERY_NOT_PRESENT) && batteryUseCapacityThresholds && (batteryRemainingCapacity <= currentBatteryProfile->capacity.warning - currentBatteryProfile->capacity.critical))
             TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
 
         break;

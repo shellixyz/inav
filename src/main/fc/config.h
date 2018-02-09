@@ -80,6 +80,7 @@ typedef struct systemConfig_s {
     uint16_t accTaskFrequency;
     uint16_t attitudeTaskFrequency;
     uint8_t current_profile_index;
+    uint8_t current_battery_profile_index;
     uint8_t asyncMode;
     uint8_t debug_mode;
     uint8_t i2c_speed;
@@ -87,6 +88,14 @@ typedef struct systemConfig_s {
     uint8_t throttle_tilt_compensation_strength;      // the correction that will be applied at throttle_correction_angle.
     inputFilteringMode_e pwmRxInputFilteringMode;
     char name[MAX_NAME_LENGTH + 1];
+    //uint16_t voltage_sensor_scale;
+
+    //struct {
+        //int16_t scale;          // scale the current sensor output voltage to milliamps. Value in 1/10th mV/A
+        //int16_t offset;         // offset of the current sensor in millivolt steps
+        //currentSensor_e type;   // type of current meter used, either ADC or virtual
+    //} amperage_sensor;
+
 } systemConfig_t;
 
 PG_DECLARE(systemConfig_t, systemConfig);
@@ -132,6 +141,10 @@ void validateAndFixConfig(void);
 uint8_t getConfigProfile(void);
 bool setConfigProfile(uint8_t profileIndex);
 void setConfigProfileAndWriteEEPROM(uint8_t profileIndex);
+
+uint8_t getConfigBatteryProfile(void);
+bool setConfigBatteryProfile(uint8_t profileIndex);
+void setConfigBatteryProfileAndWriteEEPROM(uint8_t profileIndex);
 
 bool canSoftwareSerialBeUsed(void);
 void applyAndSaveBoardAlignmentDelta(int16_t roll, int16_t pitch);
