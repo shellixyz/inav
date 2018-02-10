@@ -671,6 +671,7 @@ HIGHEND_SRC = \
             cms/cms_menu_builtin.c \
             cms/cms_menu_imu.c \
             cms/cms_menu_ledstrip.c \
+            cms/cms_menu_battery.c \
             cms/cms_menu_misc.c \
             cms/cms_menu_navigation.c \
             cms/cms_menu_osd.c \
