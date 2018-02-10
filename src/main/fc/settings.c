@@ -118,7 +118,7 @@ static uint16_t getValueOffset(const setting_t *value)
     case CONTROL_RATE_VALUE:
         return value->offset + sizeof(controlRateConfig_t) * getConfigProfile();
     case BATTERY_CONFIG_VALUE:
-        return value->offset + sizeof(batteryConfig_t) * getConfigBatteryProfile();
+        return value->offset + sizeof(batteryProfile_t) * getConfigBatteryProfile();
     }
     return 0;
 }

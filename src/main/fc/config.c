@@ -120,12 +120,6 @@ PG_RESET_TEMPLATE(systemConfig_t, systemConfig,
     .throttle_tilt_compensation_strength = 0,      // 0-100, 0 - disabled
     .pwmRxInputFilteringMode = INPUT_FILTERING_DISABLED,
     .name = { 0 },
-    /*.voltage_sensor_scale = 1100,*/
-    /*.amperage_sensor = {*/
-        /*.type = CURRENT_SENSOR_ADC*/
-        /*.scale = 400,*/
-        /*.offset = 0*/
-    /*}*/
 );
 
 PG_REGISTER(beeperConfig_t, beeperConfig, PG_BEEPER_CONFIG, 0);

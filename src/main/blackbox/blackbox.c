@@ -508,7 +508,7 @@ static bool testBlackboxConditionUncached(FlightLogFieldCondition condition)
         return feature(FEATURE_VBAT);
 
     case FLIGHT_LOG_FIELD_CONDITION_AMPERAGE_ADC:
-        return feature(FEATURE_CURRENT_METER) && currentBatteryProfile->current.type == CURRENT_SENSOR_ADC;
+        return feature(FEATURE_CURRENT_METER) && batteryMetersConfig()->current.type == CURRENT_SENSOR_ADC;
 
     case FLIGHT_LOG_FIELD_CONDITION_SURFACE:
 #ifdef USE_RANGEFINDER
@@ -1362,7 +1362,7 @@ static bool blackboxWriteSysinfo(void)
 
         BLACKBOX_PRINT_HEADER_LINE_CUSTOM(
             if (testBlackboxCondition(FLIGHT_LOG_FIELD_CONDITION_VBAT)) {
-                blackboxPrintfHeaderLine("vbat_scale", "%u", currentBatteryProfile->voltage.scale / 10);
+                blackboxPrintfHeaderLine("vbat_scale", "%u", batteryMetersConfig()->voltage_scale / 10);
             } else {
                 xmitState.headerIndex += 2; // Skip the next two vbat fields too
             }
@@ -1375,8 +1375,8 @@ static bool blackboxWriteSysinfo(void)
         BLACKBOX_PRINT_HEADER_LINE_CUSTOM(
             //Note: Log even if this is a virtual current meter, since the virtual meter uses these parameters too:
             if (feature(FEATURE_CURRENT_METER)) {
-                blackboxPrintfHeaderLine("currentMeter", "%d,%d",           currentBatteryProfile->current.offset,
-                                                                            currentBatteryProfile->current.scale);
+                blackboxPrintfHeaderLine("currentMeter", "%d,%d",           batteryMetersConfig()->current.offset,
+                                                                            batteryMetersConfig()->current.scale);
             }
             );
 

@@ -74,25 +74,18 @@ int32_t mWhDrawn = 0;               // energy (milliWatt hours) drawn from the b
 
 batteryState_e batteryState;
 
-const batteryConfig_t *currentBatteryProfile;
+const batteryProfile_t *currentBatteryProfile;
 
-PG_REGISTER_ARRAY_WITH_RESET_FN(batteryConfig_t, MAX_BATTERY_PROFILE_COUNT, batteryProfiles, PG_BATTERY_PROFILES, 0);
+PG_REGISTER_ARRAY_WITH_RESET_FN(batteryProfile_t, MAX_BATTERY_PROFILE_COUNT, batteryProfiles, PG_BATTERY_PROFILES, 0);
 
-void pgResetFn_batteryProfiles(batteryConfig_t *instance)
+void pgResetFn_batteryProfiles(batteryProfile_t *instance)
 {
     for (int i = 0; i < MAX_BATTERY_PROFILE_COUNT; i++) {
-        RESET_CONFIG(batteryConfig_t, &instance[i],
+        RESET_CONFIG(batteryProfile_t, &instance[i],
             .voltage = {
-                .scale = VBAT_SCALE_DEFAULT,
                 .cellMax = 421,
                 .cellMin = 330,
                 .cellWarning = 350
-            },
-
-            .current = {
-                .offset = 0,
-                .scale = CURRENT_METER_SCALE,
-                .type = CURRENT_SENSOR_ADC
             },
 
             .capacity = {
@@ -105,45 +98,31 @@ void pgResetFn_batteryProfiles(batteryConfig_t *instance)
     }
 }
 
-/*
-PG_REGISTER_WITH_RESET_TEMPLATE(batteryConfig_t, batteryConfig, PG_BATTERY_CONFIG, 1);
+PG_REGISTER_WITH_RESET_TEMPLATE(batteryMetersConfig_t, batteryMetersConfig, PG_BATTERY_METERS_CONFIG, 0);
 
-PG_RESET_TEMPLATE(batteryConfig_t, batteryConfig,
+PG_RESET_TEMPLATE(batteryMetersConfig_t, batteryMetersConfig,
 
-    .voltage = {
-        .scale = VBAT_SCALE_DEFAULT,
-        .cellMax = 421,
-        .cellMin = 330,
-        .cellWarning = 350
-    },
+    .voltage_scale = VBAT_SCALE_DEFAULT,
 
     .current = {
-        .offset = 0,
+        .type = CURRENT_SENSOR_ADC,
         .scale = CURRENT_METER_SCALE,
-        .type = CURRENT_SENSOR_ADC
-    },
-
-    .capacity = {
-        .value = 0,
-        .warning = 0,
-        .critical = 0,
-        .unit = BAT_CAPACITY_UNIT_MAH,
+        .offset = 0
     }
 
 );
-*/
 
 uint16_t batteryAdcToVoltage(uint16_t src)
 {
     // calculate battery voltage based on ADC reading
     // result is Vbatt in 0.01V steps. 3.3V = ADC Vref, 0xFFF = 12bit adc, 1100 = 11:1 voltage divider (10k:1k)
-    return((uint64_t)src * currentBatteryProfile->voltage.scale * ADCVREF / (0xFFF * 1000));
+    return((uint64_t)src * batteryMetersConfig()->voltage_scale * ADCVREF / (0xFFF * 1000));
 }
 
 int32_t currentSensorToCentiamps(uint16_t src)
 {
-    int32_t millivolts = ((uint32_t)src * ADCVREF) / 0xFFF - currentBatteryProfile->current.offset;
-    return millivolts * 1000 / currentBatteryProfile->current.scale; // current in 0.01A steps
+    int32_t millivolts = ((uint32_t)src * ADCVREF) / 0xFFF - batteryMetersConfig()->current.offset;
+    return millivolts * 1000 / batteryMetersConfig()->current.scale; // current in 0.01A steps
 }
 
 void batteryInit(void)
@@ -283,19 +262,19 @@ void currentMeterUpdate(int32_t timeDelta)
     static int64_t mAhdrawnRaw = 0;
     uint16_t amperageSample;
 
-    switch (currentBatteryProfile->current.type) {
+    switch (batteryMetersConfig()->current.type) {
         case CURRENT_SENSOR_ADC:
             amperageSample = adcGetChannel(ADC_CURRENT);
             amperageSample = pt1FilterApply4(&amperageFilterState, amperageSample, AMPERAGE_LPF_FREQ, timeDelta * 1e-6f);
             amperage = currentSensorToCentiamps(amperageSample);
             break;
         case CURRENT_SENSOR_VIRTUAL:
-            amperage = currentBatteryProfile->current.offset;
+            amperage = batteryMetersConfig()->current.offset;
             if (ARMING_FLAG(ARMED)) {
                 throttleStatus_e throttleStatus = calculateThrottleStatus();
                 int32_t throttleOffset = ((throttleStatus == THROTTLE_LOW) && feature(FEATURE_MOTOR_STOP)) ? 0 : (int32_t)rcCommand[THROTTLE] - 1000;
                 int32_t throttleFactor = throttleOffset + (throttleOffset * throttleOffset / 50);
-                amperage += throttleFactor * currentBatteryProfile->current.scale / 1000;
+                amperage += throttleFactor * batteryMetersConfig()->current.scale / 1000;
             }
             break;
         case CURRENT_SENSOR_NONE:
