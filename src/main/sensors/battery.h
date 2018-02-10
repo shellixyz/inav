@@ -45,6 +45,8 @@ typedef enum {
 
 typedef struct batteryMetersConfig_s {
 
+    bool profile_autoswitch;
+
     uint16_t voltage_scale;
 
     struct {
@@ -56,6 +58,8 @@ typedef struct batteryMetersConfig_s {
 } batteryMetersConfig_t;
 
 typedef struct batteryProfile_s {
+
+    uint8_t cells;
 
     struct {
         uint16_t cellMax;       // maximum voltage per cell, used for auto-detecting battery voltage in 0.01V units, default is 421 (4.21V)
@@ -99,6 +103,7 @@ extern uint32_t batteryRemainingCapacity;
 extern bool batteryUseCapacityThresholds;
 extern bool batteryFullWhenPluggedIn;
 extern batteryState_e batteryState;
+extern bool batteryProfileAutoswitchDisable;
 
 uint16_t batteryAdcToVoltage(uint16_t src);
 batteryState_e getBatteryState(void);
@@ -106,6 +111,7 @@ void batteryUpdate(uint32_t vbatTimeDelta);
 void batteryInit(void);
 void setBatteryProfile(uint8_t profileIndex);
 void activateBatteryProfile(void);
+//void changeBatteryProfile(uint8_t profileIndex);
 
 void currentMeterUpdate(int32_t lastUpdateAt);
 

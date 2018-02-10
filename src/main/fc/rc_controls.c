@@ -268,6 +268,7 @@ void processRcStickPositions(throttleStatus_e throttleStatus, bool disarm_kill_s
         i = 3;
     if (i) {
         setConfigBatteryProfileAndWriteEEPROM(i - 1);
+        batteryProfileAutoswitchDisable = true;
         activateBatteryProfile();
         return;
     }

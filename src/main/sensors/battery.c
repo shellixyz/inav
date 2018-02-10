@@ -17,6 +17,7 @@
 
 #include "stdbool.h"
 #include "stdint.h"
+#include "stdlib.h"
 
 #include "platform.h"
 
@@ -62,6 +63,7 @@ uint16_t batteryCriticalVoltage;
 uint32_t batteryRemainingCapacity = 0;
 bool batteryUseCapacityThresholds = false;
 bool batteryFullWhenPluggedIn = false;
+bool batteryProfileAutoswitchDisable = false;
 
 uint16_t vbat = 0;                   // battery voltage in 0.1V steps (filtered)
 uint16_t vbatLatestADC = 0;         // most recent unsmoothed raw reading from vbat ADC
@@ -82,6 +84,8 @@ void pgResetFn_batteryProfiles(batteryProfile_t *instance)
 {
     for (int i = 0; i < MAX_BATTERY_PROFILE_COUNT; i++) {
         RESET_CONFIG(batteryProfile_t, &instance[i],
+            .cells = 0,
+
             .voltage = {
                 .cellMax = 421,
                 .cellMin = 330,
@@ -102,6 +106,8 @@ PG_REGISTER_WITH_RESET_TEMPLATE(batteryMetersConfig_t, batteryMetersConfig, PG_B
 
 PG_RESET_TEMPLATE(batteryMetersConfig_t, batteryMetersConfig,
 
+    .profile_autoswitch = false,
+
     .voltage_scale = VBAT_SCALE_DEFAULT,
 
     .current = {
@@ -111,6 +117,39 @@ PG_RESET_TEMPLATE(batteryMetersConfig_t, batteryMetersConfig,
     }
 
 );
+
+typedef struct {
+  uint8_t profile_index;
+  uint16_t max_voltage;
+} profile_comp_t;
+
+int profile_compare(profile_comp_t *a, profile_comp_t *b) {
+    if (a->max_voltage < b->max_voltage)
+        return -1;
+    else if (a->max_voltage > b->max_voltage)
+        return 1;
+    else
+        return 0;
+}
+
+static int8_t profileDetect() {
+    profile_comp_t profile_comp_array[MAX_BATTERY_PROFILE_COUNT];
+
+    for (uint8_t i = 0; i < MAX_BATTERY_PROFILE_COUNT; ++i) {
+        const batteryProfile_t *profile = batteryProfiles(i);
+        profile_comp_array[i].profile_index = i;
+        profile_comp_array[i].max_voltage = profile->cells * profile->voltage.cellMax;
+    }
+
+    qsort(profile_comp_array, MAX_BATTERY_PROFILE_COUNT, sizeof(*profile_comp_array), (int (*)(const void *, const void *))profile_compare);
+
+    uint16_t vbatLatest = batteryAdcToVoltage(vbatLatestADC);
+    for (uint8_t i = 0; i < MAX_BATTERY_PROFILE_COUNT; ++i)
+        if ((profile_comp_array[i].max_voltage > 0) && (vbatLatest <= profile_comp_array[i].max_voltage))
+            return profile_comp_array[i].profile_index;
+
+    return -1;
+}
 
 uint16_t batteryAdcToVoltage(uint16_t src)
 {
@@ -147,11 +186,12 @@ void activateBatteryProfile(void)
     batteryInit();
 }
 
-void changeBatteryProfile(uint8_t profileIndex)
-{
-    setBatteryProfile(profileIndex);
-    activateBatteryProfile();
-}
+/*void changeBatteryProfile(uint8_t profileIndex)*/
+/*{*/
+    /*systemConfigMutable()->current_battery_profile_index = profileIndex;*/
+    /*setBatteryProfile(profileIndex);*/
+    /*activateBatteryProfile();*/
+/*}*/
 
 static void updateBatteryVoltage(uint32_t vbatTimeDelta)
 {
@@ -180,15 +220,27 @@ void batteryUpdate(uint32_t vbatTimeDelta)
         delay(VBATT_STABLE_DELAY);
         updateBatteryVoltage(vbatTimeDelta);
 
-        unsigned cells = (batteryAdcToVoltage(vbatLatestADC) / currentBatteryProfile->voltage.cellMax) + 1;
-        if (cells > 8) cells = 8; // something is wrong, we expect 8 cells maximum (and autodetection will be problematic at 6+ cells)
+        /*uint8_t cells;*/
+        int8_t detectedProfileIndex = -1;
+        if (batteryMetersConfig()->profile_autoswitch && (!batteryProfileAutoswitchDisable))
+            detectedProfileIndex = profileDetect();
 
-        batteryCellCount = cells;
+        if (detectedProfileIndex != -1) {
+            systemConfigMutable()->current_battery_profile_index = detectedProfileIndex;
+            setBatteryProfile(detectedProfileIndex);
+            batteryCellCount = currentBatteryProfile->cells;
+        } else if (currentBatteryProfile->cells > 0)
+            batteryCellCount = currentBatteryProfile->cells;
+        else {
+            batteryCellCount = (batteryAdcToVoltage(vbatLatestADC) / currentBatteryProfile->voltage.cellMax) + 1;
+            if (batteryCellCount > 8) batteryCellCount = 8; // something is wrong, we expect 8 cells maximum (and autodetection will be problematic at 6+ cells)
+        }
+
         batteryFullVoltage = batteryCellCount * currentBatteryProfile->voltage.cellMax;
         batteryWarningVoltage = batteryCellCount * currentBatteryProfile->voltage.cellWarning;
         batteryCriticalVoltage = batteryCellCount * currentBatteryProfile->voltage.cellMin;
 
-        batteryFullWhenPluggedIn = batteryAdcToVoltage(vbatLatestADC) >= (batteryFullVoltage - cells * VBATT_CELL_FULL_MAX_DIFF);
+        batteryFullWhenPluggedIn = batteryAdcToVoltage(vbatLatestADC) >= (batteryFullVoltage - batteryCellCount * VBATT_CELL_FULL_MAX_DIFF);
         batteryUseCapacityThresholds = feature(FEATURE_CURRENT_METER) && batteryFullWhenPluggedIn && (currentBatteryProfile->capacity.value > 0) &&
                                            (currentBatteryProfile->capacity.warning > 0) && (currentBatteryProfile->capacity.critical > 0);
 

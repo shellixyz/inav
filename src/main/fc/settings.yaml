@@ -487,6 +487,10 @@ groups:
     type: batteryMetersConfig_t
     headers: ["sensors/battery.h"]
     members:
+      - name: bat_profile_autoswitch
+        field: profile_autoswitch
+        condition: USE_ADC
+        type: bool
       - name: vbat_scale
         field: voltage_scale
         condition: USE_ADC
@@ -510,6 +514,11 @@ groups:
     headers: ["sensors/battery.h"]
     value_type: BATTERY_CONFIG_VALUE
     members:
+      - name: bat_cells
+        field: cells
+        condition: USE_ADC
+        min: 0
+        max: 8
       - name: vbat_max_cell_voltage
         field: voltage.cellMax
         condition: USE_ADC

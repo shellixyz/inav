@@ -54,6 +54,7 @@ static long cmsx_menuBattery_onExit(const OSD_Entry *self)
     UNUSED(self);
 
     setConfigBatteryProfile(battProfileIndex);
+    batteryProfileAutoswitchDisable = true;
     activateBatteryProfile();
 
     return 0;
@@ -82,6 +83,7 @@ static OSD_Entry menuBattSettingsEntries[]=
     { "-- BATT SETTINGS --", OME_Label, NULL, NULL, 0 },
 
 #ifdef USE_ADC
+    OSD_SETTING_ENTRY("CELLS", SETTING_BAT_CELLS),
     OSD_SETTING_ENTRY("CELL MAX", SETTING_VBAT_MAX_CELL_VOLTAGE),
     OSD_SETTING_ENTRY("CELL WARN", SETTING_VBAT_WARNING_CELL_VOLTAGE),
     OSD_SETTING_ENTRY("CELL MIN", SETTING_VBAT_MIN_CELL_VOLTAGE),
@@ -110,6 +112,7 @@ static OSD_Entry menuBatteryEntries[]=
 {
     { "-- BATTERY --", OME_Label, NULL, NULL, 0 },
 
+    OSD_SETTING_ENTRY("PROF AUTOSWITCH", SETTING_BAT_PROFILE_AUTOSWITCH),
     {"PROF",   OME_UINT8,   cmsx_onBatteryProfileIndexChange,     &(OSD_UINT8_t){ &battDispProfileIndex, 1, MAX_BATTERY_PROFILE_COUNT, 1}, 0},
     {"SETTINGS",  OME_Submenu, cmsMenuChange, &cmsx_menuBattSettings,    0},
 
