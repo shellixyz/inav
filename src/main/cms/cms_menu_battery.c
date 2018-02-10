@@ -35,9 +35,51 @@
 
 // Battery menu
 
-static OSD_Entry menuBatteryEntries[]=
+static uint8_t battDispProfileIndex;
+static uint8_t battProfileIndex;
+static char battProfileIndexString[] = " p";
+
+
+static long cmsx_menuBattery_onEnter(void)
 {
-    { "-- BATTERY --", OME_Label, NULL, NULL, 0 },
+    battProfileIndex = getConfigBatteryProfile();
+    battDispProfileIndex = battProfileIndex + 1;
+    battProfileIndexString[1] = '0' + battDispProfileIndex;
+
+    return 0;
+}
+
+static long cmsx_menuBattery_onExit(const OSD_Entry *self)
+{
+    UNUSED(self);
+
+    setConfigBatteryProfile(battProfileIndex);
+    activateBatteryProfile();
+
+    return 0;
+}
+
+static long cmsx_onBatteryProfileIndexChange(displayPort_t *displayPort, const void *ptr)
+{
+    UNUSED(displayPort);
+    UNUSED(ptr);
+
+    battProfileIndex = battDispProfileIndex - 1;
+    battProfileIndexString[1] = '0' + battDispProfileIndex;
+
+    return 0;
+}
+
+static long cmsx_menuBattSettings_onEnter(void)
+{
+    setConfigBatteryProfile(battProfileIndex);
+
+    return 0;
+}
+
+static OSD_Entry menuBattSettingsEntries[]=
+{
+    { "-- BATT SETTINGS --", OME_Label, NULL, NULL, 0 },
 
 #ifdef USE_ADC
     OSD_SETTING_ENTRY("CELL MAX", SETTING_VBAT_MAX_CELL_VOLTAGE),
@@ -53,13 +95,35 @@ static OSD_Entry menuBatteryEntries[]=
     { NULL, OME_END, NULL, NULL, 0}
 };
 
+static CMS_Menu cmsx_menuBattSettings = {
+#ifdef CMS_MENU_DEBUG
+    .GUARD_text = "XBATT",
+    .GUARD_type = OME_MENU,
+#endif
+    .onEnter = cmsx_menuBattSettings_onEnter,
+    .onExit = NULL,
+    .onGlobalExit = NULL,
+    .entries = menuBattSettingsEntries
+};
+
+static OSD_Entry menuBatteryEntries[]=
+{
+    { "-- BATTERY --", OME_Label, NULL, NULL, 0 },
+
+    {"PROF",   OME_UINT8,   cmsx_onBatteryProfileIndexChange,     &(OSD_UINT8_t){ &battDispProfileIndex, 1, MAX_BATTERY_PROFILE_COUNT, 1}, 0},
+    {"SETTINGS",  OME_Submenu, cmsMenuChange, &cmsx_menuBattSettings,    0},
+
+    { "BACK", OME_Back, NULL, NULL, 0},
+    { NULL, OME_END, NULL, NULL, 0}
+};
+
 CMS_Menu cmsx_menuBattery = {
 #ifdef CMS_MENU_DEBUG
     .GUARD_text = "XBATT",
     .GUARD_type = OME_MENU,
 #endif
-    .onEnter = NULL,
-    .onExit = NULL,
+    .onEnter = cmsx_menuBattery_onEnter,
+    .onExit = cmsx_menuBattery_onExit,
     .onGlobalExit = NULL,
     .entries = menuBatteryEntries
 };
