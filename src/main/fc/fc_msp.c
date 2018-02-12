@@ -394,6 +394,7 @@ static bool mspFcProcessOutCommand(uint16_t cmdMSP, sbuf_t *dst, mspPostProcessF
             sbufWriteU16(dst, packSensorStatus());
             sbufWriteU16(dst, averageSystemLoadPercent);
             sbufWriteU8(dst, getConfigProfile());
+            sbufWriteU8(dst, getConfigBatteryProfile());
             sbufWriteU32(dst, armingFlags);
             sbufWriteData(dst, &mspBoxModeFlags, sizeof(mspBoxModeFlags));
         }
@@ -2229,6 +2230,14 @@ static mspResult_e mspFcProcessInCommand(uint16_t cmdMSP, sbuf_t *src)
 
     case MSP2_COMMON_SET_TZ:
         timeConfigMutable()->tz_offset = (int16_t)sbufReadU16(src);
+        break;
+
+    case MSP2_INAV_SELECT_BATTERY_PROFILE:
+        if (!ARMING_FLAG(ARMED)) {
+            uint8_t batteryProfileIndex;
+            if (sbufReadU8Safe(&batteryProfileIndex, src))
+                setConfigBatteryProfileAndWriteEEPROM(batteryProfileIndex);
+        }
         break;
 
     default:
