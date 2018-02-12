@@ -19,8 +19,6 @@
 
 #include "config/parameter_group.h"
 
-#define MAX_BATTERY_PROFILE_COUNT 3
-
 #ifndef VBAT_SCALE_DEFAULT
 #define VBAT_SCALE_DEFAULT 1100
 #endif
@@ -29,6 +27,10 @@
 
 #ifndef CURRENT_METER_SCALE
 #define CURRENT_METER_SCALE 400 // for Allegro ACS758LCB-100U (40mV/A)
+#endif
+
+#ifndef MAX_BATTERY_PROFILE_COUNT
+#define MAX_BATTERY_PROFILE_COUNT 3
 #endif
 
 typedef enum {
@@ -42,6 +44,11 @@ typedef enum {
     BAT_CAPACITY_UNIT_MAH,
     BAT_CAPACITY_UNIT_MWH,
 } batCapacityUnit_e;
+
+typedef struct {
+  uint8_t profile_index;
+  uint16_t max_voltage;
+} profile_comp_t;
 
 typedef struct batteryMetersConfig_s {
 

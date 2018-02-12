@@ -78,6 +78,7 @@ batteryState_e batteryState;
 
 const batteryProfile_t *currentBatteryProfile;
 
+
 PG_REGISTER_ARRAY_WITH_RESET_FN(batteryProfile_t, MAX_BATTERY_PROFILE_COUNT, batteryProfiles, PG_BATTERY_PROFILES, 0);
 
 void pgResetFn_batteryProfiles(batteryProfile_t *instance)
@@ -118,39 +119,6 @@ PG_RESET_TEMPLATE(batteryMetersConfig_t, batteryMetersConfig,
 
 );
 
-typedef struct {
-  uint8_t profile_index;
-  uint16_t max_voltage;
-} profile_comp_t;
-
-int profile_compare(profile_comp_t *a, profile_comp_t *b) {
-    if (a->max_voltage < b->max_voltage)
-        return -1;
-    else if (a->max_voltage > b->max_voltage)
-        return 1;
-    else
-        return 0;
-}
-
-static int8_t profileDetect() {
-    profile_comp_t profile_comp_array[MAX_BATTERY_PROFILE_COUNT];
-
-    for (uint8_t i = 0; i < MAX_BATTERY_PROFILE_COUNT; ++i) {
-        const batteryProfile_t *profile = batteryProfiles(i);
-        profile_comp_array[i].profile_index = i;
-        profile_comp_array[i].max_voltage = profile->cells * profile->voltage.cellMax;
-    }
-
-    qsort(profile_comp_array, MAX_BATTERY_PROFILE_COUNT, sizeof(*profile_comp_array), (int (*)(const void *, const void *))profile_compare);
-
-    uint16_t vbatLatest = batteryAdcToVoltage(vbatLatestADC);
-    for (uint8_t i = 0; i < MAX_BATTERY_PROFILE_COUNT; ++i)
-        if ((profile_comp_array[i].max_voltage > 0) && (vbatLatest <= profile_comp_array[i].max_voltage))
-            return profile_comp_array[i].profile_index;
-
-    return -1;
-}
-
 uint16_t batteryAdcToVoltage(uint16_t src)
 {
     // calculate battery voltage based on ADC reading
@@ -173,6 +141,40 @@ void batteryInit(void)
     batteryCriticalVoltage = 0;
 }
 
+// profileDetect() profile sorting compare function
+int profile_compare(profile_comp_t *a, profile_comp_t *b) {
+    if (a->max_voltage < b->max_voltage)
+        return -1;
+    else if (a->max_voltage > b->max_voltage)
+        return 1;
+    else
+        return 0;
+}
+
+// Find profile matching plugged battery for profile_autoselect
+static int8_t profileDetect() {
+    profile_comp_t profile_comp_array[MAX_BATTERY_PROFILE_COUNT];
+
+    // Prepare profile sort
+    for (uint8_t i = 0; i < MAX_BATTERY_PROFILE_COUNT; ++i) {
+        const batteryProfile_t *profile = batteryProfiles(i);
+        profile_comp_array[i].profile_index = i;
+        profile_comp_array[i].max_voltage = profile->cells * profile->voltage.cellMax;
+    }
+
+    // Sort profiles by max voltage
+    qsort(profile_comp_array, MAX_BATTERY_PROFILE_COUNT, sizeof(*profile_comp_array), (int (*)(const void *, const void *))profile_compare);
+
+    // Return index of the first profile where vbat <= profile_max_voltage
+    uint16_t vbatLatest = batteryAdcToVoltage(vbatLatestADC);
+    for (uint8_t i = 0; i < MAX_BATTERY_PROFILE_COUNT; ++i)
+        if ((profile_comp_array[i].max_voltage > 0) && (vbatLatest <= profile_comp_array[i].max_voltage))
+            return profile_comp_array[i].profile_index;
+
+    // No matching profile found
+    return -1;
+}
+
 void setBatteryProfile(uint8_t profileIndex)
 {
     if (profileIndex >= MAX_BATTERY_PROFILE_COUNT) {
@@ -185,13 +187,6 @@ void activateBatteryProfile(void)
 {
     batteryInit();
 }
-
-/*void changeBatteryProfile(uint8_t profileIndex)*/
-/*{*/
-    /*systemConfigMutable()->current_battery_profile_index = profileIndex;*/
-    /*setBatteryProfile(profileIndex);*/
-    /*activateBatteryProfile();*/
-/*}*/
 
 static void updateBatteryVoltage(uint32_t vbatTimeDelta)
 {
@@ -220,7 +215,6 @@ void batteryUpdate(uint32_t vbatTimeDelta)
         delay(VBATT_STABLE_DELAY);
         updateBatteryVoltage(vbatTimeDelta);
 
-        /*uint8_t cells;*/
         int8_t detectedProfileIndex = -1;
         if (batteryMetersConfig()->profile_autoswitch && (!batteryProfileAutoswitchDisable))
             detectedProfileIndex = profileDetect();

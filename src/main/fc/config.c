@@ -544,7 +544,6 @@ bool setConfigBatteryProfile(uint8_t profileIndex)
     if (profileIndex >= MAX_BATTERY_PROFILE_COUNT) {// sanity check
         profileIndex = 0;
     }
-    pgActivateProfile(profileIndex);
     systemConfigMutable()->current_battery_profile_index = profileIndex;
     setBatteryProfile(profileIndex);
     return ret;
