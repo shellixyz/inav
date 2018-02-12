@@ -112,7 +112,9 @@ static OSD_Entry menuBatteryEntries[]=
 {
     { "-- BATTERY --", OME_Label, NULL, NULL, 0 },
 
+#ifdef USE_ADC
     OSD_SETTING_ENTRY("PROF AUTOSWITCH", SETTING_BAT_PROFILE_AUTOSWITCH),
+#endif
     {"PROF",   OME_UINT8,   cmsx_onBatteryProfileIndexChange,     &(OSD_UINT8_t){ &battDispProfileIndex, 1, MAX_BATTERY_PROFILE_COUNT, 1}, 0},
     {"SETTINGS",  OME_Submenu, cmsMenuChange, &cmsx_menuBattSettings,    0},
 
