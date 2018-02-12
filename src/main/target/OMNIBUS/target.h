@@ -51,10 +51,12 @@
 #define BMP280_SPI_BUS          BUS_SPI1
 #define BMP280_CS_PIN           PA13
 
+/*
 #define BARO_I2C_BUS             BUS_I2C1
 #define USE_BARO_BMP085 // External
 #define USE_BARO_BMP180 // External
 #define USE_BARO_MS5611 // External
+*/
 
 #define USE_MAG
 #define MAG_I2C_BUS             BUS_I2C1
