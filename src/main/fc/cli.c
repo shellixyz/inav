@@ -2574,11 +2574,13 @@ static void printConfig(const char *cmdline, bool doDiff)
     }
 
     const int currentProfileIndexSave = getConfigProfile();
+    const int currentBatteryProfileIndexSave = getConfigBatteryProfile();
     backupConfigs();
     // reset all configs to defaults to do differencing
     resetConfigs();
     // restore the profile indices, since they should not be reset for proper comparison
     setConfigProfile(currentProfileIndexSave);
+    setConfigBatteryProfile(currentBatteryProfileIndexSave);
 
     if (checkCommand(options, "showdefaults")) {
         dumpMask = dumpMask | SHOW_DEFAULTS;   // add default values as comments for changed values
@@ -2674,7 +2676,6 @@ static void printConfig(const char *cmdline, bool doDiff)
             setConfigProfile(currentProfileIndexSave);
             setConfigBatteryProfile(currentBatteryProfileIndexSave);
 
-            // XXX Why is this necessary ? The user doesn't have to know
             cliPrintHashLine("restore original profile selection");
             cliPrintLinef("profile %d", currentProfileIndexSave + 1);
             cliPrintLinef("battery_profile %d", currentBatteryProfileIndexSave + 1);
@@ -2756,7 +2757,7 @@ const clicmd_t cmdTable[] = {
     CLI_COMMAND_DEF("defaults", "reset to defaults and reboot", NULL, cliDefaults),
     CLI_COMMAND_DEF("dfu", "DFU mode on reboot", NULL, cliDfu),
     CLI_COMMAND_DEF("diff", "list configuration changes from default",
-        "[master|profile|rates|all] {showdefaults}", cliDiff),
+        "[master|battery_profile|profile|rates|all] {showdefaults}", cliDiff),
     CLI_COMMAND_DEF("dump", "dump configuration",
         "[master|battery_profile|profile|rates|all] {showdefaults}", cliDump),
 #ifdef USE_RX_ELERES
