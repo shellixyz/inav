@@ -25,6 +25,6 @@
 
 void targetConfiguration(void)
 {
-    currentBatteryProfile->current.scale = 20;
+    batteryMetersConfigMutable()->current.scale = 20;
 }
 #endif
