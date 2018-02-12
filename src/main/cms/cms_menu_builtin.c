@@ -44,6 +44,7 @@
 #include "cms/cms_menu_vtx.h"
 #include "cms/cms_menu_osd.h"
 #include "cms/cms_menu_ledstrip.h"
+#include "cms/cms_menu_battery.h"
 #include "cms/cms_menu_misc.h"
 
 // VTX supplied menus
@@ -144,8 +145,9 @@ static OSD_Entry menuMainEntries[] =
     {"SCR LAYOUT",  OME_Submenu,  cmsMenuChange, &cmsx_menuOsdLayout, 0},
     {"ALARMS",      OME_Submenu,  cmsMenuChange, &cmsx_menuAlarms, 0},
 #endif
-    {"FC&FW INFO",  OME_Submenu,  cmsMenuChange, &menuInfo, 0},
+    {"BATTERY",     OME_Submenu,  cmsMenuChange, &cmsx_menuBattery, 0},
     {"MISC",        OME_Submenu,  cmsMenuChange, &cmsx_menuMisc, 0},
+    {"FC&FW INFO",  OME_Submenu,  cmsMenuChange, &menuInfo, 0},
     {"SAVE&REBOOT", OME_OSD_Exit, cmsMenuExit,   (void*)CMS_EXIT_SAVEREBOOT, 0},
     {"EXIT",        OME_OSD_Exit, cmsMenuExit,   (void*)CMS_EXIT, 0},
 #ifdef CMS_MENU_DEBUG

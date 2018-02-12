@@ -394,6 +394,7 @@ static bool mspFcProcessOutCommand(uint16_t cmdMSP, sbuf_t *dst, mspPostProcessF
             sbufWriteU16(dst, packSensorStatus());
             sbufWriteU16(dst, averageSystemLoadPercent);
             sbufWriteU8(dst, getConfigProfile());
+            sbufWriteU8(dst, getConfigBatteryProfile());
             sbufWriteU32(dst, armingFlags);
             sbufWriteData(dst, &mspBoxModeFlags, sizeof(mspBoxModeFlags));
         }
@@ -647,10 +648,10 @@ static bool mspFcProcessOutCommand(uint16_t cmdMSP, sbuf_t *dst, mspPostProcessF
 
         sbufWriteU16(dst, compassConfig()->mag_declination / 10);
 
-        sbufWriteU8(dst, batteryConfig()->voltage.scale / 10);
-        sbufWriteU8(dst, batteryConfig()->voltage.cellMin / 10);
-        sbufWriteU8(dst, batteryConfig()->voltage.cellMax / 10);
-        sbufWriteU8(dst, batteryConfig()->voltage.cellWarning / 10);
+        sbufWriteU8(dst, batteryMetersConfig()->voltage_scale / 10);
+        sbufWriteU8(dst, currentBatteryProfile->voltage.cellMin / 10);
+        sbufWriteU8(dst, currentBatteryProfile->voltage.cellMax / 10);
+        sbufWriteU8(dst, currentBatteryProfile->voltage.cellWarning / 10);
         break;
 
     case MSP2_INAV_MISC:
@@ -676,30 +677,30 @@ static bool mspFcProcessOutCommand(uint16_t cmdMSP, sbuf_t *dst, mspPostProcessF
 
         sbufWriteU16(dst, compassConfig()->mag_declination / 10);
 
-        sbufWriteU16(dst, batteryConfig()->voltage.scale);
-        sbufWriteU16(dst, batteryConfig()->voltage.cellMin);
-        sbufWriteU16(dst, batteryConfig()->voltage.cellMax);
-        sbufWriteU16(dst, batteryConfig()->voltage.cellWarning);
+        sbufWriteU16(dst, batteryMetersConfig()->voltage_scale);
+        sbufWriteU16(dst, currentBatteryProfile->voltage.cellMin);
+        sbufWriteU16(dst, currentBatteryProfile->voltage.cellMax);
+        sbufWriteU16(dst, currentBatteryProfile->voltage.cellWarning);
 
-        sbufWriteU32(dst, batteryConfig()->capacity.value);
-        sbufWriteU32(dst, batteryConfig()->capacity.warning);
-        sbufWriteU32(dst, batteryConfig()->capacity.critical);
-        sbufWriteU8(dst, batteryConfig()->capacity.unit);
+        sbufWriteU32(dst, currentBatteryProfile->capacity.value);
+        sbufWriteU32(dst, currentBatteryProfile->capacity.warning);
+        sbufWriteU32(dst, currentBatteryProfile->capacity.critical);
+        sbufWriteU8(dst, currentBatteryProfile->capacity.unit);
         break;
 
     case MSP2_INAV_BATTERY_CONFIG:
-        sbufWriteU16(dst, batteryConfig()->voltage.scale);
-        sbufWriteU16(dst, batteryConfig()->voltage.cellMin);
-        sbufWriteU16(dst, batteryConfig()->voltage.cellMax);
-        sbufWriteU16(dst, batteryConfig()->voltage.cellWarning);
+        sbufWriteU16(dst, batteryMetersConfig()->voltage_scale);
+        sbufWriteU16(dst, currentBatteryProfile->voltage.cellMin);
+        sbufWriteU16(dst, currentBatteryProfile->voltage.cellMax);
+        sbufWriteU16(dst, currentBatteryProfile->voltage.cellWarning);
 
-        sbufWriteU16(dst, batteryConfig()->current.offset);
-        sbufWriteU16(dst, batteryConfig()->current.scale);
+        sbufWriteU16(dst, batteryMetersConfig()->current.offset);
+        sbufWriteU16(dst, batteryMetersConfig()->current.scale);
 
-        sbufWriteU32(dst, batteryConfig()->capacity.value);
-        sbufWriteU32(dst, batteryConfig()->capacity.warning);
-        sbufWriteU32(dst, batteryConfig()->capacity.critical);
-        sbufWriteU8(dst, batteryConfig()->capacity.unit);
+        sbufWriteU32(dst, currentBatteryProfile->capacity.value);
+        sbufWriteU32(dst, currentBatteryProfile->capacity.warning);
+        sbufWriteU32(dst, currentBatteryProfile->capacity.critical);
+        sbufWriteU8(dst, currentBatteryProfile->capacity.unit);
         break;
 
     case MSP_MOTOR_PINS:
@@ -785,17 +786,17 @@ static bool mspFcProcessOutCommand(uint16_t cmdMSP, sbuf_t *dst, mspPostProcessF
         break;
 
     case MSP_VOLTAGE_METER_CONFIG:
-        sbufWriteU8(dst, batteryConfig()->voltage.scale / 10);
-        sbufWriteU8(dst, batteryConfig()->voltage.cellMin / 10);
-        sbufWriteU8(dst, batteryConfig()->voltage.cellMax / 10);
-        sbufWriteU8(dst, batteryConfig()->voltage.cellWarning / 10);
+        sbufWriteU8(dst, batteryMetersConfig()->voltage_scale / 10);
+        sbufWriteU8(dst, currentBatteryProfile->voltage.cellMin / 10);
+        sbufWriteU8(dst, currentBatteryProfile->voltage.cellMax / 10);
+        sbufWriteU8(dst, currentBatteryProfile->voltage.cellWarning / 10);
         break;
 
     case MSP_CURRENT_METER_CONFIG:
-        sbufWriteU16(dst, batteryConfig()->current.scale);
-        sbufWriteU16(dst, batteryConfig()->current.offset);
-        sbufWriteU8(dst, batteryConfig()->current.type);
-        sbufWriteU16(dst, constrain(batteryConfig()->capacity.value, 0, 0xFFFF));
+        sbufWriteU16(dst, batteryMetersConfig()->current.scale);
+        sbufWriteU16(dst, batteryMetersConfig()->current.offset);
+        sbufWriteU8(dst, batteryMetersConfig()->current.type);
+        sbufWriteU16(dst, constrain(currentBatteryProfile->capacity.value, 0, 0xFFFF));
         break;
 
     case MSP_MIXER:
@@ -855,8 +856,8 @@ static bool mspFcProcessOutCommand(uint16_t cmdMSP, sbuf_t *dst, mspPostProcessF
         sbufWriteU16(dst, boardAlignment()->pitchDeciDegrees);
         sbufWriteU16(dst, boardAlignment()->yawDeciDegrees);
 
-        sbufWriteU16(dst, batteryConfig()->current.scale);
-        sbufWriteU16(dst, batteryConfig()->current.offset);
+        sbufWriteU16(dst, batteryMetersConfig()->current.scale);
+        sbufWriteU16(dst, batteryMetersConfig()->current.offset);
         break;
 
     case MSP_CF_SERIAL_CONFIG:
@@ -940,7 +941,7 @@ static bool mspFcProcessOutCommand(uint16_t cmdMSP, sbuf_t *dst, mspPostProcessF
 #endif
         sbufWriteU8(dst, osdConfig()->units);
         sbufWriteU8(dst, osdConfig()->rssi_alarm);
-        sbufWriteU16(dst, batteryConfig()->capacity.warning);
+        sbufWriteU16(dst, currentBatteryProfile->capacity.warning);
         sbufWriteU16(dst, osdConfig()->time_alarm);
         sbufWriteU16(dst, osdConfig()->alt_alarm);
         sbufWriteU16(dst, osdConfig()->dist_alarm);
@@ -1310,6 +1311,7 @@ static mspResult_e mspFcProcessInCommand(uint16_t cmdMSP, sbuf_t *src)
     uint32_t i;
     uint16_t tmp;
     uint8_t rate;
+    batteryProfile_t *currentBatteryProfileMutable = (batteryProfile_t*)currentBatteryProfile;
 
     const unsigned int dataSize = sbufBytesRemaining(src);
 
@@ -1521,10 +1523,10 @@ static mspResult_e mspFcProcessInCommand(uint16_t cmdMSP, sbuf_t *src)
         sbufReadU16(src);
 #endif
 
-        batteryConfigMutable()->voltage.scale = sbufReadU8(src) * 10;
-        batteryConfigMutable()->voltage.cellMin = sbufReadU8(src) * 10;         // vbatlevel_warn1 in MWC2.3 GUI
-        batteryConfigMutable()->voltage.cellMax = sbufReadU8(src) * 10;         // vbatlevel_warn2 in MWC2.3 GUI
-        batteryConfigMutable()->voltage.cellWarning = sbufReadU8(src) * 10;     // vbatlevel when buzzer starts to alert
+        batteryMetersConfigMutable()->voltage_scale = sbufReadU8(src) * 10;
+        currentBatteryProfileMutable->voltage.cellMin = sbufReadU8(src) * 10;         // vbatlevel_warn1 in MWC2.3 GUI
+        currentBatteryProfileMutable->voltage.cellMax = sbufReadU8(src) * 10;         // vbatlevel_warn2 in MWC2.3 GUI
+        currentBatteryProfileMutable->voltage.cellWarning = sbufReadU8(src) * 10;     // vbatlevel when buzzer starts to alert
         break;
 
     case MSP2_INAV_SET_MISC:
@@ -1557,36 +1559,36 @@ static mspResult_e mspFcProcessInCommand(uint16_t cmdMSP, sbuf_t *src)
         sbufReadU16(src);
 #endif
 
-        batteryConfigMutable()->voltage.scale = sbufReadU16(src);
-        batteryConfigMutable()->voltage.cellMin = sbufReadU16(src);
-        batteryConfigMutable()->voltage.cellMax = sbufReadU16(src);
-        batteryConfigMutable()->voltage.cellWarning = sbufReadU16(src);
+        batteryMetersConfigMutable()->voltage_scale = sbufReadU16(src);
+        currentBatteryProfileMutable->voltage.cellMin = sbufReadU16(src);
+        currentBatteryProfileMutable->voltage.cellMax = sbufReadU16(src);
+        currentBatteryProfileMutable->voltage.cellWarning = sbufReadU16(src);
 
-        batteryConfigMutable()->capacity.value = sbufReadU32(src);
-        batteryConfigMutable()->capacity.warning = sbufReadU32(src);
-        batteryConfigMutable()->capacity.critical = sbufReadU32(src);
-        batteryConfigMutable()->capacity.unit = sbufReadU8(src);
-        if ((batteryConfig()->capacity.unit != BAT_CAPACITY_UNIT_MAH) && (batteryConfig()->capacity.unit != BAT_CAPACITY_UNIT_MWH)) {
-            batteryConfigMutable()->capacity.unit = BAT_CAPACITY_UNIT_MAH;
+        currentBatteryProfileMutable->capacity.value = sbufReadU32(src);
+        currentBatteryProfileMutable->capacity.warning = sbufReadU32(src);
+        currentBatteryProfileMutable->capacity.critical = sbufReadU32(src);
+        currentBatteryProfileMutable->capacity.unit = sbufReadU8(src);
+        if ((currentBatteryProfile->capacity.unit != BAT_CAPACITY_UNIT_MAH) && (currentBatteryProfile->capacity.unit != BAT_CAPACITY_UNIT_MWH)) {
+            currentBatteryProfileMutable->capacity.unit = BAT_CAPACITY_UNIT_MAH;
             return MSP_RESULT_ERROR;
         }
         break;
 
     case MSP2_INAV_SET_BATTERY_CONFIG:
-        batteryConfigMutable()->voltage.scale = sbufReadU16(src);
-        batteryConfigMutable()->voltage.cellMin = sbufReadU16(src);
-        batteryConfigMutable()->voltage.cellMax = sbufReadU16(src);
-        batteryConfigMutable()->voltage.cellWarning = sbufReadU16(src);
+        batteryMetersConfigMutable()->voltage_scale = sbufReadU16(src);
+        currentBatteryProfileMutable->voltage.cellMin = sbufReadU16(src);
+        currentBatteryProfileMutable->voltage.cellMax = sbufReadU16(src);
+        currentBatteryProfileMutable->voltage.cellWarning = sbufReadU16(src);
 
-        batteryConfigMutable()->current.offset = sbufReadU16(src);
-        batteryConfigMutable()->current.scale = sbufReadU16(src);
+        batteryMetersConfigMutable()->current.offset = sbufReadU16(src);
+        batteryMetersConfigMutable()->current.scale = sbufReadU16(src);
 
-        batteryConfigMutable()->capacity.value = sbufReadU32(src);
-        batteryConfigMutable()->capacity.warning = sbufReadU32(src);
-        batteryConfigMutable()->capacity.critical = sbufReadU32(src);
-        batteryConfigMutable()->capacity.unit = sbufReadU8(src);
-        if ((batteryConfig()->capacity.unit != BAT_CAPACITY_UNIT_MAH) && (batteryConfig()->capacity.unit != BAT_CAPACITY_UNIT_MWH)) {
-            batteryConfigMutable()->capacity.unit = BAT_CAPACITY_UNIT_MAH;
+        currentBatteryProfileMutable->capacity.value = sbufReadU32(src);
+        currentBatteryProfileMutable->capacity.warning = sbufReadU32(src);
+        currentBatteryProfileMutable->capacity.critical = sbufReadU32(src);
+        currentBatteryProfileMutable->capacity.unit = sbufReadU8(src);
+        if ((currentBatteryProfile->capacity.unit != BAT_CAPACITY_UNIT_MAH) && (currentBatteryProfile->capacity.unit != BAT_CAPACITY_UNIT_MWH)) {
+            currentBatteryProfileMutable->capacity.unit = BAT_CAPACITY_UNIT_MAH;
             return MSP_RESULT_ERROR;
         }
         break;
@@ -1909,7 +1911,7 @@ static mspResult_e mspFcProcessInCommand(uint16_t cmdMSP, sbuf_t *src)
 #endif
                 osdConfigMutable()->units = sbufReadU8(src);
                 osdConfigMutable()->rssi_alarm = sbufReadU8(src);
-                batteryConfigMutable()->capacity.warning = sbufReadU16(src);
+                currentBatteryProfileMutable->capacity.warning = sbufReadU16(src);
                 osdConfigMutable()->time_alarm = sbufReadU16(src);
                 osdConfigMutable()->alt_alarm = sbufReadU16(src);
                 // Won't be read if they weren't provided
@@ -2042,17 +2044,17 @@ static mspResult_e mspFcProcessInCommand(uint16_t cmdMSP, sbuf_t *src)
         break;
 
     case MSP_SET_VOLTAGE_METER_CONFIG:
-        batteryConfigMutable()->voltage.scale = sbufReadU8(src) * 10;
-        batteryConfigMutable()->voltage.cellMin = sbufReadU8(src) * 10;
-        batteryConfigMutable()->voltage.cellMax = sbufReadU8(src) * 10;
-        batteryConfigMutable()->voltage.cellWarning = sbufReadU8(src) * 10;
+        batteryMetersConfigMutable()->voltage_scale = sbufReadU8(src) * 10;
+        currentBatteryProfileMutable->voltage.cellMin = sbufReadU8(src) * 10;
+        currentBatteryProfileMutable->voltage.cellMax = sbufReadU8(src) * 10;
+        currentBatteryProfileMutable->voltage.cellWarning = sbufReadU8(src) * 10;
         break;
 
     case MSP_SET_CURRENT_METER_CONFIG:
-        batteryConfigMutable()->current.scale = sbufReadU16(src);
-        batteryConfigMutable()->current.offset = sbufReadU16(src);
-        batteryConfigMutable()->current.type = sbufReadU8(src);
-        batteryConfigMutable()->capacity.value = sbufReadU16(src);
+        batteryMetersConfigMutable()->current.scale = sbufReadU16(src);
+        batteryMetersConfigMutable()->current.offset = sbufReadU16(src);
+        batteryMetersConfigMutable()->current.type = sbufReadU8(src);
+        currentBatteryProfileMutable->capacity.value = sbufReadU16(src);
         break;
 
 #ifndef USE_QUAD_MIXER_ONLY
@@ -2123,8 +2125,8 @@ static mspResult_e mspFcProcessInCommand(uint16_t cmdMSP, sbuf_t *src)
         boardAlignmentMutable()->pitchDeciDegrees = sbufReadU16(src); // board_align_pitch
         boardAlignmentMutable()->yawDeciDegrees = sbufReadU16(src); // board_align_yaw
 
-        batteryConfigMutable()->current.scale = sbufReadU16(src);
-        batteryConfigMutable()->current.offset = sbufReadU16(src);
+        batteryMetersConfigMutable()->current.scale = sbufReadU16(src);
+        batteryMetersConfigMutable()->current.offset = sbufReadU16(src);
         break;
 
     case MSP_SET_CF_SERIAL_CONFIG:
@@ -2228,6 +2230,14 @@ static mspResult_e mspFcProcessInCommand(uint16_t cmdMSP, sbuf_t *src)
 
     case MSP2_COMMON_SET_TZ:
         timeConfigMutable()->tz_offset = (int16_t)sbufReadU16(src);
+        break;
+
+    case MSP2_INAV_SELECT_BATTERY_PROFILE:
+        if (!ARMING_FLAG(ARMED)) {
+            uint8_t batteryProfileIndex;
+            if (sbufReadU8Safe(&batteryProfileIndex, src))
+                setConfigBatteryProfileAndWriteEEPROM(batteryProfileIndex);
+        }
         break;
 
     default:
