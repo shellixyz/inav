@@ -35,6 +35,15 @@
 #define USE_UNDERCLOCK
 #endif
 
+#if defined(STM32F1)
+#define MAX_BATTERY_PROFILE_COUNT 1
+#endif
+
+#if defined(STM32F3)
+#define MAX_BATTERY_PROFILE_COUNT 2
+#endif
+
+
 #if (FLASH_SIZE > 64)
 #define USE_64BIT_TIME
 #define USE_BLACKBOX
