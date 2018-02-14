@@ -51,6 +51,8 @@
 #define USE_I2C_DEVICE_2
 #define I2C_DEVICE_2_SHARES_UART3
 
+#define UG2864_I2C_BUS BUS_I2C2
+
 // MPU6000 interrupts
 #define USE_EXTI
 #define MPU_INT_EXTI            PC4
@@ -116,7 +118,6 @@
 #define RANGEFINDER_I2C_BUS     BUS_I2C2
 #define USE_RANGEFINDER_HCSR04_I2C
 
-#define USB_IO
 #define USE_VCP
 #define VBUS_SENSING_PIN        PC5
 #define VBUS_SENSING_ENABLED
