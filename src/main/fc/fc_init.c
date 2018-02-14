@@ -65,6 +65,7 @@
 #include "drivers/serial.h"
 #include "drivers/serial_softserial.h"
 #include "drivers/serial_uart.h"
+#include "drivers/serial_usb_vcp.h"
 #include "drivers/sound_beeper.h"
 #include "drivers/system.h"
 #include "drivers/time.h"
@@ -180,6 +181,7 @@ void init(void)
 
     printfSupportInit();
 
+    // Initialize system and CPU clocks to their initial values
     systemInit();
 
     // initialize IO (needed for all IO operations)
@@ -197,9 +199,8 @@ void init(void)
     ensureEEPROMContainsValidData();
     readEEPROM();
 
-#ifdef USE_UNDERCLOCK
+    // Re-initialize system clock to their final values (if necessary)
     systemClockSetup(systemConfig()->cpuUnderclock);
-#endif
     
     i2cSetSpeed(systemConfig()->i2c_speed);
 
@@ -241,6 +242,11 @@ void init(void)
     }
 #endif
 
+#ifdef USE_VCP
+    // Early initialize USB hardware
+    usbVcpInitHardware();
+#endif
+
     delay(500);
 
     timerInit();  // timer must be initialized before any channel is allocated
@@ -253,6 +259,17 @@ void init(void)
             (rxConfig()->receiverType == RX_TYPE_PWM) || (rxConfig()->receiverType == RX_TYPE_PPM) ? SERIAL_PORT_USART3 : SERIAL_PORT_NONE);
 #else
     serialInit(feature(FEATURE_SOFTSERIAL), SERIAL_PORT_NONE);
+#endif
+
+    // Initialize MSP serial ports here so DEBUG_TRACE can share a port with MSP.
+    // XXX: Don't call mspFcInit() yet, since it initializes the boxes and needs
+    // to run after the sensors have been detected.
+    mspSerialInit();
+
+#if defined(USE_DEBUG_TRACE)
+    // Debug trace uses serial output, so we only can init it after serial port is ready
+    // From this point on we can use DEBUG_TRACE() to produce real-time debugging information
+    debugTraceInit();
 #endif
 
 #ifdef USE_SERVOS
@@ -544,8 +561,9 @@ void init(void)
 
     imuInit();
 
-    mspFcInit();
-    mspSerialInit();
+    // Sensors have now been detected, mspFcInit() can now be called
+    // to set the boxes up
+     mspFcInit();
 
 #ifdef USE_CLI
     cliInit(serialConfig());
