@@ -424,7 +424,7 @@ static inline void osdFormatFlyTime(char *buff, textAttributes_t *attr)
 {
     uint32_t seconds = flyTime / 1000000;
     osdFormatTime(buff, seconds, SYM_FLY_M, SYM_FLY_H);
-    if (attr) {
+    if (attr && osdConfig()->time_alarm > 0) {
        if (seconds / 60 >= osdConfig()->time_alarm && ARMING_FLAG(ARMED)) {
             TEXT_ATTRIBUTES_ADD_BLINK(*attr);
         }
@@ -541,6 +541,8 @@ static const char * osdArmingDisabledReasonMessage(void)
             return OSD_MESSAGE_STR("THROTTLE IS NOT LOW");
 	case ARMING_DISABLED_ROLLPITCH_NOT_CENTERED:
             return OSD_MESSAGE_STR("ROLLPITCH NOT CENTERED");
+        case ARMING_DISABLED_SERVO_AUTOTRIM:
+            return OSD_MESSAGE_STR("AUTOTRIM IS ACTIVE");
         case ARMING_DISABLED_CLI:
             return OSD_MESSAGE_STR("CLI IS ACTIVE");
             // Cases without message
@@ -1673,11 +1675,12 @@ void osdInit(displayPort_t *osdDisplayPortToUse)
 #ifdef USE_STATS
     displayWrite(osdDisplayPort, 3, ++y, "ODOMETER:");
     if (osdConfig()->units == OSD_UNIT_IMPERIAL)
-        tfp_sprintf(string_buffer, "%dMI", statsConfig()->stats_total_dist / METERS_PER_MILE);
+        tfp_sprintf(string_buffer, "%d MI", statsConfig()->stats_total_dist / METERS_PER_MILE);
     else
-        tfp_sprintf(string_buffer, "%dKM", statsConfig()->stats_total_dist / METERS_PER_KILOMETER);
+        tfp_sprintf(string_buffer, "%d KM", statsConfig()->stats_total_dist / METERS_PER_KILOMETER);
     displayWrite(osdDisplayPort, 13, y++,  string_buffer);
-    tfp_sprintf(string_buffer, "%dH", statsConfig()->stats_total_time / 3600);
+    uint32_t tot_mins = statsConfig()->stats_total_time / 60;
+    tfp_sprintf(string_buffer, "%d:%02d H", tot_mins / 60, tot_mins % 60);
     displayWrite(osdDisplayPort, 13, y++,  string_buffer);
 #endif
 

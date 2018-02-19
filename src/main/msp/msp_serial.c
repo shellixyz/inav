@@ -497,10 +497,9 @@ void mspSerialInit(void)
     mspSerialAllocatePorts();
 }
 
-int mspSerialPush(uint8_t cmd, const uint8_t *data, int datalen)
+int mspSerialPushPort(uint16_t cmd, const uint8_t *data, int datalen, mspPort_t *mspPort, mspVersion_e version)
 {
-    static uint8_t pushBuf[30];
-    int ret = 0;
+    uint8_t pushBuf[MSP_PORT_OUTBUF_SIZE];
 
     mspPacket_t push = {
         .buf = { .ptr = pushBuf, .end = ARRAYEND(pushBuf), },
@@ -508,22 +507,29 @@ int mspSerialPush(uint8_t cmd, const uint8_t *data, int datalen)
         .result = 0,
     };
 
+    sbufWriteData(&push.buf, data, datalen);
+
+    sbufSwitchToReader(&push.buf, pushBuf);
+
+    return mspSerialEncode(mspPort, &push, version);
+}
+
+int mspSerialPush(uint8_t cmd, const uint8_t *data, int datalen)
+{
+    int ret = 0;
+
     for (int portIndex = 0; portIndex < MAX_MSP_PORT_COUNT; portIndex++) {
         mspPort_t * const mspPort = &mspPorts[portIndex];
         if (!mspPort->port) {
             continue;
         }
 
-        // XXX Kludge!!! Avoid zombie VCP port (avoid VCP entirely for now)
-        if (mspPort->port->identifier == SERIAL_PORT_USB_VCP) {
+        // Avoid unconnected ports (only VCP for now)
+        if (!serialIsConnected(mspPort->port)) {
             continue;
         }
 
-        sbufWriteData(&push.buf, data, datalen);
-
-        sbufSwitchToReader(&push.buf, pushBuf);
-
-        ret = mspSerialEncode(mspPort, &push, MSP_V1);
+        ret = mspSerialPushPort(cmd, data, datalen, mspPort, MSP_V1);
     }
     return ret; // return the number of bytes written
 }
@@ -550,4 +556,15 @@ uint32_t mspSerialTxBytesFree(void)
     }
 
     return ret;
+}
+
+mspPort_t * mspSerialPortFind(const serialPort_t *serialPort)
+{
+    for (int portIndex = 0; portIndex < MAX_MSP_PORT_COUNT; portIndex++) {
+        mspPort_t * mspPort = &mspPorts[portIndex];
+        if (mspPort->port == serialPort) {
+            return mspPort;
+        }
+    }
+    return NULL;
 }

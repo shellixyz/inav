@@ -188,8 +188,8 @@ static void updateArmingStatus(void)
         }
 
 	/* CHECK: pitch / roll sticks centered when NAV_LAUNCH_MODE enabled */
-	if (IS_RC_MODE_ACTIVE(BOXNAVLAUNCH)) {
-	  if ((ABS(rcCommand[ROLL]) > rcControlsConfig()->pos_hold_deadband) || (ABS(rcCommand[PITCH]) > rcControlsConfig()->pos_hold_deadband)) {
+	if (isNavLaunchEnabled()) {
+	  if (areSticksDeflectedMoreThanPosHoldDeadband()) {
 	    ENABLE_ARMING_FLAG(ARMING_DISABLED_ROLLPITCH_NOT_CENTERED);
 	  } else {
 	    DISABLE_ARMING_FLAG(ARMING_DISABLED_ROLLPITCH_NOT_CENTERED);
@@ -273,6 +273,13 @@ static void updateArmingStatus(void)
         else {
             DISABLE_ARMING_FLAG(ARMING_DISABLED_BOXKILLSWITCH);
         }
+        /* CHECK: Do not allow arming if Servo AutoTrim is enabled */
+        if (IS_RC_MODE_ACTIVE(BOXAUTOTRIM)) {
+	    ENABLE_ARMING_FLAG(ARMING_DISABLED_SERVO_AUTOTRIM);
+	    } 
+        else {
+	    DISABLE_ARMING_FLAG(ARMING_DISABLED_SERVO_AUTOTRIM);
+	    }
 
         if (isArmingDisabled()) {
             warningLedFlash();
