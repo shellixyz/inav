@@ -1,3 +1,5 @@
+.*.swp
+src/main/cscope.out
 *.o
 .DS_Store
 *~
