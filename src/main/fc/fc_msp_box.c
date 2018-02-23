@@ -52,7 +52,8 @@ static const box_t boxes[CHECKBOX_ITEM_COUNT + 1] = {
     { BOXMANUAL, "MANUAL", 12 },
     { BOXBEEPERON, "BEEPER", 13 },
     { BOXLEDLOW, "LEDLOW", 15 },
-    { BOXLIGHTS, "LIGHTS", 16 },
+    { BOXWLIGHTS, "WING LIGHTS", 16 },
+    { BOXFLIGHTS, "FRONT LIGHTS", 17 },
     { BOXOSD, "OSD SW", 19 },
     { BOXTELEMETRY, "TELEMETRY", 20 },
     { BOXAUTOTUNE, "AUTO TUNE", 21 },
@@ -69,9 +70,12 @@ static const box_t boxes[CHECKBOX_ITEM_COUNT + 1] = {
     { BOXNAVLAUNCH, "NAV LAUNCH", 36 },
     { BOXAUTOTRIM, "SERVO AUTOTRIM", 37 },
     { BOXKILLSWITCH, "KILLSWITCH", 38 },
+#ifdef USE_RCDEVICE
     { BOXCAMERA1, "CAMERA CONTROL 1", 39 },
     { BOXCAMERA2, "CAMERA CONTROL 2", 40 },
     { BOXCAMERA3, "CAMERA CONTROL 3", 41 },
+#endif
+    { BOXVIDEOPWR, "VIDEO PWR", 42 },
     { CHECKBOX_ITEM_COUNT, NULL, 0xFF }
 };
 
@@ -212,7 +216,8 @@ void initActiveBoxIds(void)
     activeBoxIds[activeBoxIdCount++] = BOXBEEPERON;
 
 #ifdef USE_LIGHTS
-    activeBoxIds[activeBoxIdCount++] = BOXLIGHTS;
+    activeBoxIds[activeBoxIdCount++] = BOXWLIGHTS;
+    activeBoxIds[activeBoxIdCount++] = BOXFLIGHTS;
 #endif
 
 #ifdef USE_LED_STRIP
@@ -242,6 +247,10 @@ void initActiveBoxIds(void)
     activeBoxIds[activeBoxIdCount++] = BOXCAMERA2;
     activeBoxIds[activeBoxIdCount++] = BOXCAMERA3;
 #endif
+
+#ifdef USE_VIDEO_POWER_SWITCH
+    activeBoxIds[activeBoxIdCount++] = BOXVIDEOPWR;
+#endif
 }
 
 #define IS_ENABLED(mask) (mask == 0 ? 0 : 1)
@@ -264,7 +273,10 @@ void packBoxModeFlags(boxBitmask_t * mspBoxModeFlags)
     CHECK_ACTIVE_BOX(IS_ENABLED(FLIGHT_MODE(MANUAL_MODE)),          BOXMANUAL);
     CHECK_ACTIVE_BOX(IS_ENABLED(IS_RC_MODE_ACTIVE(BOXBEEPERON)),    BOXBEEPERON);
     CHECK_ACTIVE_BOX(IS_ENABLED(IS_RC_MODE_ACTIVE(BOXLEDLOW)),      BOXLEDLOW);
-    CHECK_ACTIVE_BOX(IS_ENABLED(IS_RC_MODE_ACTIVE(BOXLIGHTS)),      BOXLIGHTS);
+#ifdef USE_LIGHTS
+    CHECK_ACTIVE_BOX(IS_ENABLED(IS_RC_MODE_ACTIVE(BOXWLIGHTS)),     BOXWLIGHTS);
+    CHECK_ACTIVE_BOX(IS_ENABLED(IS_RC_MODE_ACTIVE(BOXFLIGHTS)),     BOXFLIGHTS);
+#endif
     CHECK_ACTIVE_BOX(IS_ENABLED(IS_RC_MODE_ACTIVE(BOXOSD)),         BOXOSD);
     CHECK_ACTIVE_BOX(IS_ENABLED(IS_RC_MODE_ACTIVE(BOXTELEMETRY)),   BOXTELEMETRY);
     CHECK_ACTIVE_BOX(IS_ENABLED(ARMING_FLAG(ARMED)),                BOXARM);
@@ -288,6 +300,9 @@ void packBoxModeFlags(boxBitmask_t * mspBoxModeFlags)
     CHECK_ACTIVE_BOX(IS_ENABLED(IS_RC_MODE_ACTIVE(BOXAUTOTRIM)),    BOXAUTOTRIM);
     CHECK_ACTIVE_BOX(IS_ENABLED(IS_RC_MODE_ACTIVE(BOXKILLSWITCH)),  BOXKILLSWITCH);
     CHECK_ACTIVE_BOX(IS_ENABLED(IS_RC_MODE_ACTIVE(BOXHOMERESET)),   BOXHOMERESET);
+#ifdef USE_VIDEO_POWER_SWITCH
+    CHECK_ACTIVE_BOX(IS_ENABLED(IS_RC_MODE_ACTIVE(BOXVIDEOPWR)),    BOXVIDEOPWR);
+#endif
 
     memset(mspBoxModeFlags, 0, sizeof(boxBitmask_t));
     for (uint32_t i = 0; i < activeBoxIdCount; i++) {
