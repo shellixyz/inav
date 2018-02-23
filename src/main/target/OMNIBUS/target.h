@@ -24,6 +24,13 @@
 #define BEEPER                  PC15
 #define BEEPER_INVERTED
 
+#define USE_LIGHTS
+#define WING_LIGHTS_PIN         PB12
+#define FRONT_LIGHTS_PIN        PB13
+
+#define USE_VIDEO_POWER_SWITCH
+#define VIDEO_POWER_PIN         PB14
+
 #define USE_SPI
 #define USE_SPI_DEVICE_1
 
