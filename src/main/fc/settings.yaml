@@ -399,6 +399,9 @@ groups:
       - name: motor_pwm_protocol
         field: motorPwmProtocol
         table: motor_pwm_protocol
+      - name: fw_motors
+        min: 0
+        max: MAX_SUPPORTED_MOTORS
 
   - name: PG_FAILSAFE_CONFIG
     type: failsafeConfig_t

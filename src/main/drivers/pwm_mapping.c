@@ -28,6 +28,8 @@
 
 #include "drivers/logging.h"
 
+#include "flight/mixer.h"
+
 #include "pwm_output.h"
 #include "pwm_mapping.h"
 #include "rx_pwm.h"
@@ -195,11 +197,10 @@ pwmIOConfiguration_t *pwmInit(drv_pwm_config_t *init)
 #ifdef USE_SERVOS
         else if (init->flyingPlatformType == PLATFORM_AIRPLANE || init->flyingPlatformType == PLATFORM_HELICOPTER) {
             // Fixed wing or HELI (one/two motors and a lot of servos
-            if (timerHardwarePtr->usageFlags & TIM_USE_FW_SERVO) {
-                type = MAP_TO_SERVO_OUTPUT;
-            }
-            else if (timerHardwarePtr->usageFlags & TIM_USE_FW_MOTOR) {
+            if ((timerHardwarePtr->usageFlags & TIM_USE_FW_MOTOR) && (pwmIOConfiguration.motorCount < motorConfig()->fw_motors)) {
                 type = MAP_TO_MOTOR_OUTPUT;
+            } else if (timerHardwarePtr->usageFlags & TIM_USE_FW_SERVO) {
+                type = MAP_TO_SERVO_OUTPUT;
             }
         }
 #endif

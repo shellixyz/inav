@@ -94,7 +94,8 @@ PG_RESET_TEMPLATE(motorConfig_t, motorConfig,
     .motorPwmProtocol = DEFAULT_PWM_PROTOCOL,
     .motorPwmRate = DEFAULT_PWM_RATE,
     .maxthrottle = 1850,
-    .mincommand = 1000
+    .mincommand = 1000,
+    .fw_motors = 2
 );
 
 static motorMixer_t currentMixer[MAX_SUPPORTED_MOTORS];

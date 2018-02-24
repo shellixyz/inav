@@ -111,6 +111,7 @@ typedef struct motorConfig_s {
     uint16_t mincommand;                    // This is the value for the ESCs when they are not armed. In some cases, this value must be lowered down to 900 for some specific ESCs
     uint16_t motorPwmRate;                  // The update rate of motor outputs (50-498Hz)
     uint8_t  motorPwmProtocol;
+    uint8_t  fw_motors;
 } motorConfig_t;
 
 PG_DECLARE(motorConfig_t, motorConfig);
