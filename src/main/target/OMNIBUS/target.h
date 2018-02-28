@@ -89,8 +89,8 @@
 #define UART3_TX_PIN            PB10 // PB10 (AF7)
 #define UART3_RX_PIN            PB11 // PB11 (AF7)
 
-#define SOFTSERIAL_1_RX_PIN      PB15
-#define SOFTSERIAL_1_TX_PIN      PB15
+#define SOFTSERIAL_1_RX_PIN      PB4
+#define SOFTSERIAL_1_TX_PIN      PB4
 
 // Enable I2C instead of PWM7&8 for iNav
 #define USE_I2C
