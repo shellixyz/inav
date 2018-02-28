@@ -25,11 +25,11 @@
 #define BEEPER_INVERTED
 
 #define USE_LIGHTS
-#define WING_LIGHTS_PIN         PB12
-#define FRONT_LIGHTS_PIN        PB13
+#define WING_LIGHTS_PIN         PB10
+#define FRONT_LIGHTS_PIN        PA8
 
 #define USE_VIDEO_POWER_SWITCH
-#define VIDEO_POWER_PIN         PB14
+#define VIDEO_POWER_PIN         PB0
 
 #define USE_SPI
 #define USE_SPI_DEVICE_1
@@ -100,9 +100,6 @@
 #define USE_I2C_DEVICE_1 // PB6/SCL(PWM8), PB7/SDA(PWM7)
 #define USE_I2C_PULLUP
 
-#define USE_PITOT_MS4525
-#define PITOT_I2C_BUS           BUS_I2C1
-
 #define USE_SPI
 #define USE_SPI_DEVICE_2 // PB12,13,14,15 on AF5
 
@@ -136,6 +133,8 @@
 #define MAX7456_SPI_BUS             BUS_SPI1
 #define MAX7456_CS_PIN              PB1
 
+#define USE_PITOT_ADC
+
 #define USE_ADC
 #define ADC_INSTANCE                ADC1
 //#define BOARD_HAS_VOLTAGE_DIVIDER
@@ -145,12 +144,12 @@
 #define ADC_CHANNEL_3_INSTANCE      ADC2
 #define VBAT_ADC_CHANNEL            ADC_CHN_1
 #define CURRENT_METER_ADC_CHANNEL   ADC_CHN_2
-#define RSSI_ADC_CHANNEL            ADC_CHN_3
+#define AIRSPEED_ADC_CHANNEL        ADC_CHN_3
 
-#define USE_LED_STRIP
-#define WS2811_PIN                      PA8
-#define WS2811_DMA_STREAM               DMA1_Channel2
-#define WS2811_DMA_HANDLER_IDENTIFER    DMA1_CH2_HANDLER
+//#define USE_LED_STRIP
+//#define WS2811_PIN                      PA8
+//#define WS2811_DMA_STREAM               DMA1_Channel2
+//#define WS2811_DMA_HANDLER_IDENTIFER    DMA1_CH2_HANDLER
 
 //#define ENABLE_BLACKBOX_LOGGING_ON_SDCARD_BY_DEFAULT
 
@@ -163,12 +162,12 @@
 #define BUTTON_B_PORT           GPIOB // TRIG button, used for BINDPLUG_PIN
 #define BUTTON_B_PIN            Pin_0
 
-#define USE_SPEKTRUM_BIND
+//#define USE_SPEKTRUM_BIND
 // USART3
-#define BIND_PIN                PB11
+//#define BIND_PIN                PB11
 
-#define HARDWARE_BIND_PLUG
-#define BINDPLUG_PIN            PB0
+//#define HARDWARE_BIND_PLUG
+//#define BINDPLUG_PIN            PB0
 
 #define USE_SERIAL_4WAY_BLHELI_INTERFACE
 
