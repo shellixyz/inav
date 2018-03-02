@@ -42,6 +42,8 @@
 
 #include "io/beeper.h"
 
+#include "navigation/navigation.h"
+
 
 #define ADCVREF 3300                 // in mV (3300 = 3.3V)
 
@@ -95,7 +97,14 @@ PG_RESET_TEMPLATE(batteryConfig_t, batteryConfig,
         .warning = 0,
         .critical = 0,
         .unit = BAT_CAPACITY_UNIT_MAH,
-    }
+    },
+
+    .cruise = {
+        .speed = 0,
+        .power = 0
+    },
+
+    .rth_energy_margin = 5
 
 );
 
@@ -352,3 +361,33 @@ uint8_t calculateBatteryPercentage(void)
     } else
         return constrain((vbat - batteryCriticalVoltage) * 100L / (batteryFullVoltage - batteryCriticalVoltage), 0, 100);
 }
+
+#if defined(USE_ADC) && defined(USE_GPS)
+
+int32_t remainingFlyTimeBeforeRTH() {
+    if (!(feature(FEATURE_VBAT) && feature(FEATURE_CURRENT_METER) && navigationPositionEstimateIsHealthy() && (power != 0) && (batteryConfig()->cruise.power > 0) &&
+            (batteryConfig()->cruise.speed > 0) && (batteryConfig()->capacity.unit == BAT_CAPACITY_UNIT_MWH) && (batteryConfig()->capacity.value > 0) && batteryFullWhenPluggedIn))
+        return -1;
+
+    int16_t wind_speed = 0; // m/s (unknown for the moment)
+
+    if (wind_speed >= batteryConfig()->cruise.speed)
+        return -2; // wind is too strong
+
+    uint16_t time_to_home = GPS_distanceToHome / (batteryConfig()->cruise.speed - wind_speed);
+    uint16_t energy_to_home = batteryConfig()->cruise.power * time_to_home / 3600;
+    uint16_t energy_margin_abs = (batteryConfig()->capacity.value - batteryConfig()->capacity.critical) * batteryConfig()->rth_energy_margin / 100;
+    int32_t remaining_energy_before_rth = batteryRemainingCapacity - energy_margin_abs - energy_to_home;
+
+    if (remaining_energy_before_rth < 0) // No energy left = No time left
+        return 0;
+
+    uint32_t time_before_rth = remaining_energy_before_rth * 3600 / power;
+
+    if (time_before_rth > 0x7FFFFFFF) // int32 overflow
+        return -1;
+
+    return time_before_rth;
+}
+
+#endif

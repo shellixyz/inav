@@ -1006,6 +1006,18 @@ static bool osdDrawSingleElement(uint8_t item)
             break;
         }
 
+    case OSD_REMAINING_FLY_TIME_BEFORE_RTH:;
+
+        int32_t time_seconds = remainingFlyTimeBeforeRTH();
+        if ((!ARMING_FLAG(ARMED)) || (time_seconds < 0))
+            strcpy(buff, "--:--");
+        else {
+            osdFormatTime(buff, time_seconds, SYM_FLY_M, SYM_FLY_H);
+            if (time_seconds == 0)
+                TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
+        }
+        break;
+
     case OSD_FLYMODE:
         {
             char *p = "ACRO";
@@ -1561,36 +1573,6 @@ static bool osdDrawSingleElement(uint8_t item)
 static uint8_t osdIncElementIndex(uint8_t elementIndex)
 {
     ++elementIndex;
-    if (!sensors(SENSOR_ACC)) {
-        if (elementIndex == OSD_CROSSHAIRS) {
-            elementIndex = OSD_ONTIME;
-        }
-    }
-    if (!feature(FEATURE_CURRENT_METER)) {
-        if (elementIndex == OSD_CURRENT_DRAW) {
-            elementIndex = OSD_GPS_SPEED;
-        }
-        if (elementIndex == OSD_TRIP_DIST) {
-            STATIC_ASSERT(OSD_TRIP_DIST == OSD_ITEM_COUNT - 1, OSD_TRIP_DIST_not_last_element);
-            elementIndex = OSD_ITEM_COUNT;
-        }
-    }
-    if (!feature(FEATURE_GPS)) {
-        if (elementIndex == OSD_GPS_SPEED) {
-            elementIndex = OSD_ALTITUDE;
-        }
-        if (elementIndex == OSD_GPS_LON) {
-            elementIndex = OSD_VARIO;
-        }
-        if (elementIndex == OSD_GPS_HDOP) {
-            elementIndex = OSD_MAIN_BATT_CELL_VOLTAGE;
-        }
-        if (elementIndex == OSD_TRIP_DIST) {
-            STATIC_ASSERT(OSD_TRIP_DIST == OSD_ITEM_COUNT - 1, OSD_TRIP_DIST_not_last_element);
-            elementIndex = OSD_ITEM_COUNT;
-        }
-    }
-
     if (elementIndex == OSD_ITEM_COUNT) {
         elementIndex = 0;
     }
@@ -1646,6 +1628,7 @@ void pgResetFn_osdConfig(osdConfig_t *osdConfig)
     osdConfig->item_pos[0][OSD_FLYTIME] = OSD_POS(23, 9);
     osdConfig->item_pos[0][OSD_ONTIME_FLYTIME] = OSD_POS(23, 11) | OSD_VISIBLE_FLAG;
     osdConfig->item_pos[0][OSD_RTC_TIME] = OSD_POS(23, 12);
+    osdConfig->item_pos[0][OSD_REMAINING_FLY_TIME_BEFORE_RTH] = OSD_POS(23, 7);
 
     osdConfig->item_pos[0][OSD_GPS_SATS] = OSD_POS(0, 11) | OSD_VISIBLE_FLAG;
     osdConfig->item_pos[0][OSD_GPS_HDOP] = OSD_POS(0, 10);
