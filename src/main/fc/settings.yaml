@@ -535,6 +535,17 @@ groups:
         field: current.type
         table: current_sensor
         type: uint8_t
+      - name: cruise_speed
+        field: cruise.speed
+        min: 0
+        max: 255
+      - name: cruise_power
+        field: cruise.power
+        min: 0
+        max: 4294967295
+      - name: rth_energy_margin
+        min: 0
+        max: 100
 
   - name: PG_MIXER_CONFIG
     type: mixerConfig_t
@@ -1581,6 +1592,9 @@ groups:
         max: OSD_POS_MAX_CLI
       - name: osd_efficiency_wh_pos
         field: item_pos[OSD_EFFICIENCY_WH_PER_KM]
+        max: OSD_POS_MAX_CLI
+      - name: osd_remain_time_before_rth_pos
+        field: item_pos[OSD_REMAINING_FLY_TIME_BEFORE_RTH]
         max: OSD_POS_MAX_CLI
 
   - name: PG_SYSTEM_CONFIG

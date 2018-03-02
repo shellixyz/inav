@@ -976,6 +976,18 @@ static bool osdDrawSingleElement(uint8_t item)
             break;
         }
 
+    case OSD_REMAINING_FLY_TIME_BEFORE_RTH:;
+
+        int32_t time_seconds = remainingFlyTimeBeforeRTH();
+        if ((!ARMING_FLAG(ARMED)) || (time_seconds < 0))
+            strcpy(buff, "--:--");
+        else {
+            osdFormatTime(buff, time_seconds, SYM_FLY_M, SYM_FLY_H);
+            if (time_seconds == 0)
+                TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
+        }
+        break;
+
     case OSD_FLYMODE:
         {
             char *p = "ACRO";
@@ -1537,7 +1549,7 @@ static uint8_t osdIncElementIndex(uint8_t elementIndex)
             elementIndex = OSD_GPS_SPEED;
         }
         if (elementIndex == OSD_EFFICIENCY_WH_PER_KM) {
-            STATIC_ASSERT(OSD_EFFICIENCY_WH_PER_KM == OSD_ITEM_COUNT - 1, OSD_EFFICIENCY_MWH_PER_KM_not_last_element);
+            STATIC_ASSERT(OSD_REMAINING_FLY_TIME_BEFORE_RTH == OSD_ITEM_COUNT - 1, OSD_REMAINING_FLY_TIME_BEFORE_RTH_not_last_element);
             elementIndex = OSD_ITEM_COUNT;
         }
     }
@@ -1552,7 +1564,7 @@ static uint8_t osdIncElementIndex(uint8_t elementIndex)
             elementIndex = OSD_MAIN_BATT_CELL_VOLTAGE;
         }
         if (elementIndex == OSD_EFFICIENCY_WH_PER_KM) {
-            STATIC_ASSERT(OSD_EFFICIENCY_WH_PER_KM == OSD_ITEM_COUNT - 1, OSD_EFFICIENCY_MWH_PER_KM_not_last_element);
+            STATIC_ASSERT(OSD_REMAINING_FLY_TIME_BEFORE_RTH == OSD_ITEM_COUNT - 1, OSD_REMAINING_FLY_TIME_BEFORE_RTH_not_last_element);
             elementIndex = OSD_ITEM_COUNT;
         }
     }
@@ -1609,6 +1621,7 @@ void pgResetFn_osdConfig(osdConfig_t *osdConfig)
     osdConfig->item_pos[OSD_FLYTIME] = OSD_POS(23, 9);
     osdConfig->item_pos[OSD_ONTIME_FLYTIME] = OSD_POS(23, 11) | VISIBLE_FLAG;
     osdConfig->item_pos[OSD_RTC_TIME] = OSD_POS(23, 12);
+    osdConfig->item_pos[OSD_REMAINING_FLY_TIME_BEFORE_RTH] = OSD_POS(23, 7);
 
     osdConfig->item_pos[OSD_GPS_SATS] = OSD_POS(0, 11) | VISIBLE_FLAG;
     osdConfig->item_pos[OSD_GPS_HDOP] = OSD_POS(0, 10);
