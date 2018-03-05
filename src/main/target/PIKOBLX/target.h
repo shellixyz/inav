@@ -28,6 +28,9 @@
 #define BEEPER                  PA0
 #define BEEPER_INVERTED
 
+#define USE_LIGHTS
+#define LIGHTS_PIN              PA2
+
 // MPU6000 interrupts
 #define USE_EXTI
 #define MPU_INT_EXTI            PA15
