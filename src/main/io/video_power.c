@@ -43,7 +43,18 @@ PG_RESET_TEMPLATE(lightsConfig_t, lightsConfig,
 );
 */
 
+typedef enum {
+  VTX_PROTECTION_DISABLED,
+  VTX_PROTECTION_WAIT_OFF,
+  VTX_PROTECTION_ENABLED
+} vtx_protection_state_e;
+
 static IO_t videoIO = DEFIO_IO(NONE);
+static bool video_power_status = false;
+
+#ifdef VTX_PROTECTION
+static vtx_protection_state_e vtx_protection_state = VTX_PROTECTION_ENABLED;
+#endif
 
 /*static bool lights_on = false;*/
 /*static timeUs_t last_status_change = 0;*/
@@ -51,14 +62,10 @@ static IO_t videoIO = DEFIO_IO(NONE);
 /*static void videoPowerSwitchSetStatus(bool status, timeUs_t currentTimeUs)*/
 static void videoPowerSwitchSetStatus(bool status)
 {
-    /*if (status != lights_on) {*/
-        /*lights_on = status;*/
-        /*wingLightsHardwareSetStatus(status);*/
-        /*frontLightsHardwareSetStatus(status);*/
-        /*last_status_change = currentTimeUs;*/
-    /*}*/
-    if (videoIO)
+    if (videoIO && ((video_power_status == false) || ((video_power_status == true) && (!ARMING_FLAG(ARMED))))) {
         IOWrite(videoIO, status);
+        video_power_status = status;
+    }
 }
 
 /*
@@ -68,7 +75,23 @@ static void videoPowerSwitchSetStatus(bool status)
 void videoPowerSwitchUpdate(timeUs_t currentTimeUs)
 {
     UNUSED(currentTimeUs);
+#ifdef VTX_PROTECTION
+    if (!ARMING_FLAG(ARMED))
+        switch (vtx_protection_state) {
+            case VTX_PROTECTION_ENABLED:
+                if (IS_RC_MODE_ACTIVE(BOXVIDEOPWR))
+                    vtx_protection_state = VTX_PROTECTION_WAIT_OFF;
+                break;
+            case VTX_PROTECTION_WAIT_OFF:
+                if (!IS_RC_MODE_ACTIVE(BOXVIDEOPWR))
+                    vtx_protection_state = VTX_PROTECTION_DISABLED;
+                break;
+            default:
+                videoPowerSwitchSetStatus(IS_RC_MODE_ACTIVE(BOXVIDEOPWR));
+        }
+#else
     videoPowerSwitchSetStatus(IS_RC_MODE_ACTIVE(BOXVIDEOPWR));
+#endif
 }
 
 void videoPowerSwitchInit()

@@ -29,6 +29,7 @@
 #define FRONT_LIGHTS_PIN        PA8
 
 #define USE_VIDEO_POWER_SWITCH
+#define VTX_PROTECTION
 #define VIDEO_POWER_PIN         PB0
 
 #define USE_SPI
