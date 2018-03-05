@@ -20,9 +20,6 @@
 
 #include "config/feature.h"
 
-/*#include "config/parameter_group.h"*/
-/*#include "config/parameter_group_ids.h"*/
-
 #include "io/video_power.h"
 
 #ifdef USE_VIDEO_POWER_SWITCH
@@ -30,18 +27,6 @@
 #ifndef VIDEO_POWER_SWITCH_OUTPUT_MODE
     #define VIDEO_POWER_SWITCH_OUTPUT_MODE IOCFG_OUT_PP
 #endif
-
-/*
-PG_REGISTER_WITH_RESET_TEMPLATE(lightsConfig_t, lightsConfig, PG_LIGHTS_CONFIG, 0);
-
-PG_RESET_TEMPLATE(lightsConfig_t, lightsConfig,
-        .failsafe = {
-            .enabled = true,
-            .flash_period = 1000,
-            .flash_on_time = 100
-        }
-);
-*/
 
 typedef enum {
   VTX_PROTECTION_DISABLED,
@@ -56,10 +41,7 @@ static bool video_power_status = false;
 static vtx_protection_state_e vtx_protection_state = VTX_PROTECTION_ENABLED;
 #endif
 
-/*static bool lights_on = false;*/
-/*static timeUs_t last_status_change = 0;*/
 
-/*static void videoPowerSwitchSetStatus(bool status, timeUs_t currentTimeUs)*/
 static void videoPowerSwitchSetStatus(bool status)
 {
     if (videoIO && ((video_power_status == false) || ((video_power_status == true) && (!ARMING_FLAG(ARMED))))) {
@@ -69,7 +51,7 @@ static void videoPowerSwitchSetStatus(bool status)
 }
 
 /*
- * Lights handler function to be called periodically in loop. Updates lights
+ * Video power switch handler function to be called periodically in loop. Updates switch
  * state via time schedule.
  */
 void videoPowerSwitchUpdate(timeUs_t currentTimeUs)
