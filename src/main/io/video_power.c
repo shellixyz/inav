@@ -20,9 +20,6 @@
 
 #include "config/feature.h"
 
-/*#include "config/parameter_group.h"*/
-/*#include "config/parameter_group_ids.h"*/
-
 #include "io/video_power.h"
 
 #ifdef USE_VIDEO_POWER_SWITCH
@@ -31,44 +28,52 @@
     #define VIDEO_POWER_SWITCH_OUTPUT_MODE IOCFG_OUT_PP
 #endif
 
-/*
-PG_REGISTER_WITH_RESET_TEMPLATE(lightsConfig_t, lightsConfig, PG_LIGHTS_CONFIG, 0);
-
-PG_RESET_TEMPLATE(lightsConfig_t, lightsConfig,
-        .failsafe = {
-            .enabled = true,
-            .flash_period = 1000,
-            .flash_on_time = 100
-        }
-);
-*/
+typedef enum {
+  VTX_PROTECTION_DISABLED,
+  VTX_PROTECTION_WAIT_OFF,
+  VTX_PROTECTION_ENABLED
+} vtx_protection_state_e;
 
 static IO_t videoIO = DEFIO_IO(NONE);
+static bool video_power_status = false;
 
-/*static bool lights_on = false;*/
-/*static timeUs_t last_status_change = 0;*/
+#ifdef VTX_PROTECTION
+static vtx_protection_state_e vtx_protection_state = VTX_PROTECTION_ENABLED;
+#endif
 
-/*static void videoPowerSwitchSetStatus(bool status, timeUs_t currentTimeUs)*/
+
 static void videoPowerSwitchSetStatus(bool status)
 {
-    /*if (status != lights_on) {*/
-        /*lights_on = status;*/
-        /*wingLightsHardwareSetStatus(status);*/
-        /*frontLightsHardwareSetStatus(status);*/
-        /*last_status_change = currentTimeUs;*/
-    /*}*/
-    if (videoIO)
+    if (videoIO && ((video_power_status == false) || ((video_power_status == true) && (!ARMING_FLAG(ARMED))))) {
         IOWrite(videoIO, status);
+        video_power_status = status;
+    }
 }
 
 /*
- * Lights handler function to be called periodically in loop. Updates lights
+ * Video power switch handler function to be called periodically in loop. Updates switch
  * state via time schedule.
  */
 void videoPowerSwitchUpdate(timeUs_t currentTimeUs)
 {
     UNUSED(currentTimeUs);
+#ifdef VTX_PROTECTION
+    if (!ARMING_FLAG(ARMED))
+        switch (vtx_protection_state) {
+            case VTX_PROTECTION_ENABLED:
+                if (IS_RC_MODE_ACTIVE(BOXVIDEOPWR))
+                    vtx_protection_state = VTX_PROTECTION_WAIT_OFF;
+                break;
+            case VTX_PROTECTION_WAIT_OFF:
+                if (!IS_RC_MODE_ACTIVE(BOXVIDEOPWR))
+                    vtx_protection_state = VTX_PROTECTION_DISABLED;
+                break;
+            default:
+                videoPowerSwitchSetStatus(IS_RC_MODE_ACTIVE(BOXVIDEOPWR));
+        }
+#else
     videoPowerSwitchSetStatus(IS_RC_MODE_ACTIVE(BOXVIDEOPWR));
+#endif
 }
 
 void videoPowerSwitchInit()
