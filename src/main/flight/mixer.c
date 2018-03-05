@@ -74,7 +74,9 @@ PG_REGISTER_WITH_RESET_TEMPLATE(mixerConfig_t, mixerConfig, PG_MIXER_CONFIG, 0);
 PG_RESET_TEMPLATE(mixerConfig_t, mixerConfig,
     .mixerMode = MIXER_QUADX,
     .yaw_motor_direction = 1,
-    .yaw_jump_prevention_limit = 200
+    .yaw_jump_prevention_limit = 200,
+    .fw_flapperons_throw_diff = 0,
+    .fw_elevator_throw_diff = 0
 );
 
 #ifdef BRUSHED_MOTORS
