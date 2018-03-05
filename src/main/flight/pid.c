@@ -384,7 +384,11 @@ static float calcHorizonRateMagnitude(void)
 static void pidLevel(pidState_t *pidState, flight_dynamics_index_t axis, float horizonRateMagnitude)
 {
     // This is ROLL/PITCH, run ANGLE/HORIZON controllers
-    const float angleTarget = pidRcCommandToAngle(rcCommand[axis], pidProfile()->max_angle_inclination[axis]);
+    float angleTarget = pidRcCommandToAngle(rcCommand[axis], pidProfile()->max_angle_inclination[axis]);
+
+    // Flaperon PITCH compensation
+    if ((axis == FD_PITCH) && FLIGHT_MODE(ANGLE_MODE) && FLIGHT_MODE(FLAPERON)) angleTarget -= mixerConfig()->flaperon_pitch_comp_angle;
+
     const float angleErrorDeg = DECIDEGREES_TO_DEGREES(angleTarget - attitude.raw[axis]);
 
     float angleRateTarget = constrainf(angleErrorDeg * (pidBank()->pid[PID_LEVEL].P / FP_PID_LEVEL_P_MULTIPLIER), -currentControlRateProfile->stabilized.rates[axis] * 10.0f, currentControlRateProfile->stabilized.rates[axis] * 10.0f);
