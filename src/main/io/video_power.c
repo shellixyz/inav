@@ -58,19 +58,23 @@ void videoPowerSwitchUpdate(timeUs_t currentTimeUs)
 {
     UNUSED(currentTimeUs);
 #ifdef VTX_PROTECTION
-    if (!ARMING_FLAG(ARMED))
-        switch (vtx_protection_state) {
-            case VTX_PROTECTION_ENABLED:
-                if (IS_RC_MODE_ACTIVE(BOXVIDEOPWR))
-                    vtx_protection_state = VTX_PROTECTION_WAIT_OFF;
-                break;
-            case VTX_PROTECTION_WAIT_OFF:
-                if (!IS_RC_MODE_ACTIVE(BOXVIDEOPWR))
-                    vtx_protection_state = VTX_PROTECTION_DISABLED;
-                break;
-            default:
-                videoPowerSwitchSetStatus(IS_RC_MODE_ACTIVE(BOXVIDEOPWR));
-        }
+    if (!ARMING_FLAG(ARMED)) {
+        if (FLIGHT_MODE(FAILSAFE_MODE))
+            videoPowerSwitchSetStatus(false);
+        else
+            switch (vtx_protection_state) {
+                case VTX_PROTECTION_ENABLED:
+                    if (IS_RC_MODE_ACTIVE(BOXVIDEOPWR))
+                        vtx_protection_state = VTX_PROTECTION_WAIT_OFF;
+                    break;
+                case VTX_PROTECTION_WAIT_OFF:
+                    if (!IS_RC_MODE_ACTIVE(BOXVIDEOPWR))
+                        vtx_protection_state = VTX_PROTECTION_DISABLED;
+                    break;
+                default:
+                    videoPowerSwitchSetStatus(IS_RC_MODE_ACTIVE(BOXVIDEOPWR));
+            }
+    }
 #else
     videoPowerSwitchSetStatus(IS_RC_MODE_ACTIVE(BOXVIDEOPWR));
 #endif
