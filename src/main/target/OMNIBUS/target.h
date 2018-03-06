@@ -24,6 +24,14 @@
 #define BEEPER                  PC15
 #define BEEPER_INVERTED
 
+#define USE_LIGHTS
+#define WING_LIGHTS_PIN         PB10
+#define FRONT_LIGHTS_PIN        PA8
+
+#define USE_VIDEO_POWER_SWITCH
+#define VTX_PROTECTION
+#define VIDEO_POWER_PIN         PB0
+
 #define USE_SPI
 #define USE_SPI_DEVICE_1
 
@@ -133,6 +141,8 @@
 #define MAX7456_SPI_BUS             BUS_SPI1
 #define MAX7456_CS_PIN              PB1
 
+#define USE_PITOT_ADC
+
 #define USE_ADC
 #define ADC_INSTANCE                ADC1
 //#define BOARD_HAS_VOLTAGE_DIVIDER
@@ -142,7 +152,7 @@
 #define ADC_CHANNEL_3_INSTANCE      ADC2
 #define VBAT_ADC_CHANNEL            ADC_CHN_1
 #define CURRENT_METER_ADC_CHANNEL   ADC_CHN_2
-#define RSSI_ADC_CHANNEL            ADC_CHN_3
+#define AIRSPEED_ADC_CHANNEL        ADC_CHN_3
 
 //#define USE_LED_STRIP
 //#define WS2811_PIN                      PA8

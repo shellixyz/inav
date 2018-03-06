@@ -5,6 +5,7 @@
 
 
 bool lightsHardwareInit();
-void lightsHardwareSetStatus(bool status);
+void wingLightsHardwareSetStatus(bool status);
+void frontLightsHardwareSetStatus(bool status);
 
 #endif /* USE_LIGHTS */

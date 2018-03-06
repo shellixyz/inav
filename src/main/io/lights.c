@@ -44,7 +44,8 @@ static void lightsSetStatus(bool status, timeUs_t currentTimeUs)
 {
     if (status != lights_on) {
         lights_on = status;
-        lightsHardwareSetStatus(status);
+        wingLightsHardwareSetStatus(status);
+        frontLightsHardwareSetStatus(status);
         last_status_change = currentTimeUs;
     }
 }
@@ -68,8 +69,11 @@ void lightsUpdate(timeUs_t currentTimeUs)
                     lightsSetStatus(true, currentTimeUs);
             }
         }
-    } else
-        lightsSetStatus(IS_RC_MODE_ACTIVE(BOXLIGHTS), currentTimeUs);
+    } else {
+        lights_on = true;
+        wingLightsHardwareSetStatus(IS_RC_MODE_ACTIVE(BOXWLIGHTS));
+        frontLightsHardwareSetStatus(IS_RC_MODE_ACTIVE(BOXFLIGHTS));
+    }
 }
 
 void lightsInit()
