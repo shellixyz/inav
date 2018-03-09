@@ -17,22 +17,16 @@
 
 #pragma once
 
-//#include "config/parameter_group.h"
+#include "config/parameter_group.h"
 #include "common/time.h"
 
 #ifdef USE_VIDEO_POWER_SWITCH
 
-/*
-typedef struct lightsConfig_s {
-    struct {
-        bool enabled;
-        uint16_t flash_period;
-        uint16_t flash_on_time;
-    } failsafe;
-} lightsConfig_t;
+typedef struct videoPowerConfig_s {
+    uint16_t disarmed_video_off_delay;
+} videoPowerConfig_t;
 
-PG_DECLARE(lightsConfig_t, lightsConfig);
-*/
+PG_DECLARE(videoPowerConfig_t, videoPowerConfig);
 
 void videoPowerSwitchInit();
 void videoPowerSwitchUpdate(timeUs_t currentTimeUs);

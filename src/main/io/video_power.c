@@ -22,11 +22,20 @@
 
 #include "io/video_power.h"
 
+#include "config/parameter_group.h"
+#include "config/parameter_group_ids.h"
+
 #ifdef USE_VIDEO_POWER_SWITCH
 
 #ifndef VIDEO_POWER_SWITCH_OUTPUT_MODE
     #define VIDEO_POWER_SWITCH_OUTPUT_MODE IOCFG_OUT_PP
 #endif
+
+PG_REGISTER_WITH_RESET_TEMPLATE(videoPowerConfig_t, videoPowerConfig, PG_VIDEO_POWER_CONFIG, 0);
+
+PG_RESET_TEMPLATE(videoPowerConfig_t, videoPowerConfig,
+        .disarmed_video_off_delay = 120
+);
 
 typedef enum {
   VTX_PROTECTION_DISABLED,
@@ -36,6 +45,7 @@ typedef enum {
 
 static IO_t videoIO = DEFIO_IO(NONE);
 static bool video_power_status = false;
+static timeUs_t disarmed_timestamp = 0;
 
 #ifdef VTX_PROTECTION
 static vtx_protection_state_e vtx_protection_state = VTX_PROTECTION_ENABLED;
@@ -59,22 +69,29 @@ void videoPowerSwitchUpdate(timeUs_t currentTimeUs)
     UNUSED(currentTimeUs);
 #ifdef VTX_PROTECTION
     if (!ARMING_FLAG(ARMED)) {
-        if (FLIGHT_MODE(FAILSAFE_MODE))
-            videoPowerSwitchSetStatus(false);
-        else
-            switch (vtx_protection_state) {
-                case VTX_PROTECTION_ENABLED:
-                    if (IS_RC_MODE_ACTIVE(BOXVIDEOPWR))
-                        vtx_protection_state = VTX_PROTECTION_WAIT_OFF;
-                    break;
-                case VTX_PROTECTION_WAIT_OFF:
-                    if (!IS_RC_MODE_ACTIVE(BOXVIDEOPWR))
-                        vtx_protection_state = VTX_PROTECTION_DISABLED;
-                    break;
-                default:
+        if (disarmed_timestamp) {
+            if (cmpTimeUs(currentTimeUs, disarmed_timestamp) >= videoPowerConfig()->disarmed_video_off_delay * 1000000)
+                videoPowerSwitchSetStatus(false);
+        } else
+          disarmed_timestamp = currentTimeUs;
+
+        switch (vtx_protection_state) {
+            case VTX_PROTECTION_ENABLED:
+                if (IS_RC_MODE_ACTIVE(BOXVIDEOPWR))
+                    vtx_protection_state = VTX_PROTECTION_WAIT_OFF;
+                break;
+            case VTX_PROTECTION_WAIT_OFF:
+                if (!IS_RC_MODE_ACTIVE(BOXVIDEOPWR))
+                    vtx_protection_state = VTX_PROTECTION_DISABLED;
+                break;
+            default:
+                if (IS_RC_MODE_ACTIVE(BOXVIDEOPWR) != video_power_status) {
                     videoPowerSwitchSetStatus(IS_RC_MODE_ACTIVE(BOXVIDEOPWR));
-            }
-    }
+                    disarmed_timestamp = 0;
+                }
+        }
+    } else
+        disarmed_timestamp = 0;
 #else
     videoPowerSwitchSetStatus(IS_RC_MODE_ACTIVE(BOXVIDEOPWR));
 #endif
