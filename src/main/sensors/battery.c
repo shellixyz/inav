@@ -65,6 +65,8 @@ bool batteryFullWhenPluggedIn = false;
 uint16_t vbat = 0;                   // battery voltage in 0.1V steps (filtered)
 uint16_t vbatLatestADC = 0;         // most recent unsmoothed raw reading from vbat ADC
 uint16_t amperageLatestADC = 0;     // most recent raw reading from current ADC
+uint16_t power_supply_impedance = 0;// calculated impedance in milliohm
+uint16_t no_load_vbat = 0;          // calculated no load vbat
 
 int32_t amperage = 0;               // amperage read by current sensor in centiampere (1/100th A)
 int32_t power = 0;                  // power draw in cW (0.01W resolution)
@@ -261,6 +263,31 @@ void powerMeterUpdate(int32_t timeDelta)
     power = amperage * vbat / 100; // power unit is cW (0.01W resolution)
     mWhDrawnRaw += (power_mW * timeDelta) / 10000;
     mWhDrawn = mWhDrawnRaw / (3600 * 100);
+}
+
+void noLoadVBATUpdate(timeUs_t currentTime)
+{
+    static timeUs_t recordTimestamp = 0;
+    static int32_t amperageRecord;
+    static uint16_t vbatRecord;
+
+    if (cmpTime(currentTime, recordTimestamp) > 20000000)
+        recordTimestamp = 0;
+
+    if (!recordTimestamp) {
+        amperageRecord = amperage;
+        vbatRecord = vbat;
+        recordTimestamp = currentTime;
+    } else if (ABS(amperage - amperageRecord) > 100) {
+        power_supply_impedance = (int32_t)(vbatRecord - vbat) * 1000 / (amperage - amperageRecord);
+        amperageRecord = amperage;
+        vbatRecord = vbat;
+        recordTimestamp = currentTime;
+    }
+
+    // TODO: use unfiltered VBAT and amperage ?
+    // TODO: filter no_load_vbat
+    no_load_vbat = vbat + power_supply_impedance * amperage / 1000;
 }
 
 uint8_t calculateBatteryPercentage(void)
