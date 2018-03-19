@@ -105,7 +105,6 @@
 #endif
 
 extern timeDelta_t cycleTime; // FIXME dependency on mw.c
-extern uint16_t rssi; // FIXME dependency on mw.c
 
 static const char * const flightControllerIdentifier = INAV_IDENTIFIER; // 4 UPPER CASE alpha numeric characters that identify the flight controller.
 static const char * const boardIdentifier = TARGET_BOARD_IDENTIFIER;
@@ -536,23 +535,23 @@ static bool mspFcProcessOutCommand(uint16_t cmdMSP, sbuf_t *dst, mspPostProcessF
         break;
 
     case MSP_ANALOG:
-        sbufWriteU8(dst, (uint8_t)constrain(vbat / 10, 0, 255));
-        sbufWriteU16(dst, (uint16_t)constrain(mAhDrawn, 0, 0xFFFF)); // milliamp hours drawn from battery
-        sbufWriteU16(dst, rssi);
-        sbufWriteU16(dst, (int16_t)constrain(amperage, -0x8000, 0x7FFF)); // send amperage in 0.01 A steps, range is -320A to 320A
+        sbufWriteU8(dst, (uint8_t)constrain(getBatteryVoltage() / 10, 0, 255));
+        sbufWriteU16(dst, (uint16_t)constrain(getMAhDrawn(), 0, 0xFFFF)); // milliamp hours drawn from battery
+        sbufWriteU16(dst, getRSSI());
+        sbufWriteU16(dst, (int16_t)constrain(getAmperage(), -0x8000, 0x7FFF)); // send amperage in 0.01 A steps, range is -320A to 320A
         break;
 
     case MSP2_INAV_ANALOG:
-        sbufWriteU16(dst, vbat);
-        sbufWriteU8(dst, batteryCellCount);
+        sbufWriteU16(dst, getBatteryVoltage());
+        sbufWriteU8(dst, getBatteryCellCount());
         sbufWriteU8(dst, calculateBatteryPercentage());
-        sbufWriteU16(dst, constrain(power, 0, 0x7FFFFFFF));           // power draw
-        sbufWriteU16(dst, (uint16_t)constrain(mAhDrawn, 0, 0xFFFF)); // milliamp hours drawn from battery
-        sbufWriteU16(dst, (uint16_t)constrain(mWhDrawn, 0, 0xFFFF)); // milliWatt hours drawn from battery
-        sbufWriteU16(dst, rssi);
-        sbufWriteU16(dst, (int16_t)constrain(amperage, -0x8000, 0x7FFF)); // send amperage in 0.01 A steps, range is -320A to 320A
-        sbufWriteU8(dst, batteryFullWhenPluggedIn | (batteryUseCapacityThresholds << 1) | (batteryState << 2));
-        sbufWriteU32(dst, batteryRemainingCapacity);
+        sbufWriteU16(dst, constrain(getPower(), 0, 0x7FFFFFFF));           // power draw
+        sbufWriteU16(dst, (uint16_t)constrain(getMAhDrawn(), 0, 0xFFFF)); // milliamp hours drawn from battery
+        sbufWriteU16(dst, (uint16_t)constrain(getMWhDrawn(), 0, 0xFFFF)); // milliWatt hours drawn from battery
+        sbufWriteU16(dst, getRSSI());
+        sbufWriteU16(dst, (int16_t)constrain(getAmperage(), -0x8000, 0x7FFF)); // send amperage in 0.01 A steps, range is -320A to 320A
+        sbufWriteU8(dst, batteryWasFullWhenPluggedIn() | (batteryUsesCapacityThresholds() << 1) | (getBatteryState() << 2));
+        sbufWriteU32(dst, getBatteryRemainingCapacity());
         break;
 
     case MSP_ARMING_CONFIG:
@@ -1229,6 +1228,16 @@ static bool mspFcProcessOutCommand(uint16_t cmdMSP, sbuf_t *dst, mspPostProcessF
 #endif
         break;
 
+    case MSP_TX_INFO:
+        sbufWriteU8(dst, getRSSISource());
+        uint8_t rtcDateTimeIsSet = 0;
+        dateTime_t dt;
+        if (rtcGetDateTime(&dt)) {
+            rtcDateTimeIsSet = 1;
+        }
+        sbufWriteU8(dst, rtcDateTimeIsSet);
+        break;
+
     case MSP_RTC:
         {
             int32_t seconds = 0;
@@ -1283,6 +1292,14 @@ static bool mspFcProcessOutCommand(uint16_t cmdMSP, sbuf_t *dst, mspPostProcessF
 
     case MSP2_COMMON_TZ:
         sbufWriteU16(dst, (uint16_t)timeConfig()->tz_offset);
+        break;
+
+    case MSP2_INAV_AIR_SPEED:
+#ifdef USE_PITOT
+        sbufWriteU32(dst, pitot.airSpeed);
+#else
+        sbufWriteU32(dst, 0);
+#endif
         break;
 
     default:
@@ -1536,6 +1553,7 @@ static mspResult_e mspFcProcessInCommand(uint16_t cmdMSP, sbuf_t *src)
 #endif
         sbufReadU8(src); // multiwiiCurrentMeterOutput
         rxConfigMutable()->rssi_channel = sbufReadU8(src);
+        rxUpdateRSSISource(); // Changing rssi_channel might change the RSSI source
         sbufReadU8(src);
 
 #ifdef USE_MAG
@@ -2052,6 +2070,7 @@ static mspResult_e mspFcProcessInCommand(uint16_t cmdMSP, sbuf_t *src)
     case MSP_SET_FEATURE:
         featureClearAll();
         featureSet(sbufReadU32(src)); // features bitmap
+        rxUpdateRSSISource(); // For FEATURE_RSSI_ADC
         break;
 
     case MSP_SET_BOARD_ALIGNMENT:
@@ -2233,6 +2252,18 @@ static mspResult_e mspFcProcessInCommand(uint16_t cmdMSP, sbuf_t *src)
             uint16_t millis = sbufReadU16(src);
             rtcTime_t t = rtcTimeMake(secs, millis);
             rtcSet(&t);
+        }
+        break;
+
+    case MSP_SET_TX_INFO:
+        {
+            // This message will be sent while the aircraft is
+            // armed. Better to guard ourselves against potentially
+            // malformed requests.
+            uint8_t rssi;
+            if (sbufReadU8Safe(&rssi, src)) {
+                setRSSIFromMSP(rssi);
+            }
         }
         break;
 
