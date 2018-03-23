@@ -108,8 +108,8 @@ uint16_t batteryAdcToVoltage(uint16_t src)
 
 int32_t currentSensorToCentiamps(uint16_t src)
 {
-    int32_t millivolts = ((uint32_t)src * ADCVREF) / 0xFFF - batteryConfig()->current.offset;
-    return millivolts * 1000 / batteryConfig()->current.scale; // current in 0.01A steps
+    int32_t microvolts = ((uint32_t)src * ADCVREF * 1000) / 0xFFF - (int32_t)batteryConfig()->current.offset * 1000;
+    return microvolts / batteryConfig()->current.scale; // current in 0.01A steps
 }
 
 void batteryInit(void)
@@ -346,7 +346,7 @@ uint8_t calculateBatteryPercentage(void)
     if (batteryState == BATTERY_NOT_PRESENT)
         return 0;
 
-    if (batteryFullWhenPluggedIn && (batteryConfig()->capacity.value > 0) && (batteryConfig()->capacity.critical > 0)) {
+    if (batteryFullWhenPluggedIn && feature(FEATURE_CURRENT_METER) && (batteryConfig()->capacity.value > 0) && (batteryConfig()->capacity.critical > 0)) {
         uint32_t capacityDiffBetweenFullAndEmpty = batteryConfig()->capacity.value - batteryConfig()->capacity.critical;
         return constrain(batteryRemainingCapacity * 100 / capacityDiffBetweenFullAndEmpty, 0, 100);
     } else

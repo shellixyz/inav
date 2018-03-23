@@ -167,7 +167,7 @@ static const char * const featureNames[] = {
 
 /* Sensor names (used in lookup tables for *_hardware settings and in status command output) */
 // sync with gyroSensor_e
-static const char * const gyroNames[] = { "NONE", "AUTO", "MPU6050", "L3G4200D", "MPU3050", "L3GD20", "MPU6000", "MPU6500", "MPU9250", "FAKE"};
+static const char * const gyroNames[] = { "NONE", "AUTO", "MPU6050", "L3G4200D", "MPU3050", "L3GD20", "MPU6000", "MPU6500", "MPU9250", "BMI160", "FAKE"};
 
 // sync this with sensors_e
 static const char * const sensorTypeNames[] = {
@@ -1893,25 +1893,26 @@ static void printMap(uint8_t dumpMask, const rxConfig_t *rxConfig, const rxConfi
 static void cliMap(char *cmdline)
 {
     uint32_t len;
-    char out[9];
+    char out[5];
 
     len = strlen(cmdline);
 
-    if (len == 8) {
+    if (len == 4) {
         // uppercase it
-        for (uint32_t i = 0; i < 8; i++)
+        for (uint32_t i = 0; i < 4; i++)
             cmdline[i] = sl_toupper((unsigned char)cmdline[i]);
-        for (uint32_t i = 0; i < 8; i++) {
+        for (uint32_t i = 0; i < 4; i++) {
             if (strchr(rcChannelLetters, cmdline[i]) && !strchr(cmdline + i + 1, cmdline[i]))
                 continue;
             cliShowParseError();
             return;
         }
         parseRcChannels(cmdline);
-    }
+    } else if (len != 0)
+        cliShowParseError();
     cliPrint("Map: ");
     uint32_t i;
-    for (i = 0; i < 8; i++)
+    for (i = 0; i < 4; i++)
         out[rxConfig()->rcmap[i]] = rcChannelLetters[i];
     out[i] = '\0';
     cliPrintLinef("%s", out);
