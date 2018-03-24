@@ -94,6 +94,7 @@ typedef struct mixerConfig_s {
     uint16_t yaw_jump_prevention_limit;      // make limit configurable (original fixed value was 100)
     uint8_t fw_roll2pitch_comp;
     uint8_t fw_pitch_to_throttle;
+    uint16_t flaperon_pitch_comp_angle;
 } mixerConfig_t;
 
 PG_DECLARE(mixerConfig_t, mixerConfig);
