@@ -17,30 +17,18 @@
 
 #pragma once
 
-#include <stdbool.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <ctype.h>
-
+#include "config/parameter_group.h"
 #include "common/time.h"
-#include "io/rcdevice.h"
-#include "fc/rc_modes.h"
 
-#ifdef USE_RCDEVICE
+#ifdef USE_VIDEO_POWER_SWITCH
 
-typedef struct rcdeviceSwitchState_s {
-    bool isActivated;
-} rcdeviceSwitchState_t;
+typedef struct videoPowerConfig_s {
+    uint16_t disarmed_video_off_delay;
+} videoPowerConfig_t;
 
-extern runcamDevice_t *camDevice;
-extern bool rcdeviceInMenu;
+PG_DECLARE(videoPowerConfig_t, videoPowerConfig);
 
-bool rcdeviceInit(void);
-void rcdeviceUpdate(timeUs_t currentTimeUs);
+void videoPowerSwitchInit();
+void videoPowerSwitchUpdate(timeUs_t currentTimeUs);
 
-bool rcdeviceIsEnabled(void);
-
-// used for unit test
-rcdeviceSwitchState_t switchStates[BOXCAMERA3 - BOXCAMERA1 + 1];
-
-#endif
+#endif /* USE_VIDEO_POWER_SWITCH */
