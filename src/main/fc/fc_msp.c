@@ -699,6 +699,7 @@ static bool mspFcProcessOutCommand(uint16_t cmdMSP, sbuf_t *dst, mspPostProcessF
 #endif
         sbufWriteU8(dst, rxConfig()->rssi_channel);
 
+        sbufWriteU8(dst, positionEstimationConfig()->automatic_mag_declination);
         sbufWriteU16(dst, compassConfig()->mag_declination / 10);
 
         sbufWriteU16(dst, batteryConfig()->voltage.scale);
@@ -1390,7 +1391,7 @@ static mspResult_e mspFcProcessInCommand(uint16_t cmdMSP, sbuf_t *src)
     case MSP_SET_ARMING_CONFIG:
         if (dataSize >= 2) {
             armingConfigMutable()->auto_disarm_delay = constrain(sbufReadU8(src), AUTO_DISARM_DELAY_MIN, AUTO_DISARM_DELAY_MAX);
-            armingConfigMutable()->disarm_kill_switch = ~~sbufReadU8(src);
+            armingConfigMutable()->disarm_kill_switch = !!sbufReadU8(src);
         } else
             return MSP_RESULT_ERROR;
         break;
@@ -1571,7 +1572,7 @@ static mspResult_e mspFcProcessInCommand(uint16_t cmdMSP, sbuf_t *src)
         break;
 
     case MSP2_INAV_SET_MISC:
-        if (dataSize == 37) {
+        if (dataSize == 38) {
             rxConfigMutable()->midrc = constrain(sbufReadU16(src), MIDRC_MIN, MIDRC_MAX);
 
             motorConfigMutable()->minthrottle = constrain(sbufReadU16(src), PWM_RANGE_MIN, PWM_RANGE_MAX);
@@ -1595,10 +1596,16 @@ static mspResult_e mspFcProcessInCommand(uint16_t cmdMSP, sbuf_t *src)
                 rxConfigMutable()->rssi_channel = tmp_u8;
 
 #ifdef USE_MAG
+#ifdef USE_NAV
+            positionEstimationConfigMutable()->automatic_mag_declination = !!sbufReadU8(src);
+#else
+            sbufReadU8(src);
+#endif // USE_NAV
             compassConfigMutable()->mag_declination = sbufReadU16(src) * 10;
 #else
+            sbufReadU8(src);
             sbufReadU16(src);
-#endif
+#endif // USE_MAG
 
             batteryConfigMutable()->voltage.scale = sbufReadU16(src);
             batteryConfigMutable()->voltage.cellMin = sbufReadU16(src);
