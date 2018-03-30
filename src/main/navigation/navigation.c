@@ -51,7 +51,9 @@
 
 #include "sensors/sensors.h"
 #include "sensors/acceleration.h"
+#include "sensors/compass.h"
 #include "sensors/boardalignment.h"
+#include "sensors/diagnostics.h"
 
 
 // Multirotors:
@@ -2485,7 +2487,9 @@ bool navigationBlockArming(void)
         return false;
 
     // Apply extra arming safety only if pilot has any of GPS modes configured
-    if ((isUsingNavigationModes() || failsafeMayRequireNavigationMode()) && !((posControl.flags.estPosStatue >= EST_USABLE) && STATE(GPS_FIX_HOME))) {
+    const bool compassIsHealthyOrNotRequiredNorConfigured = (STATE(FIXED_WING) && !compassIsConfigured()) || (getHwCompassStatus() == HW_SENSOR_OK);
+    const bool navigationIsSafe = (compassIsHealthyOrNotRequiredNorConfigured && (posControl.flags.estPosStatue >= EST_USABLE) && STATE(GPS_FIX_HOME));
+    if ((isUsingNavigationModes() || failsafeMayRequireNavigationMode()) && !navigationIsSafe) {
         shouldBlockArming = true;
     }
 

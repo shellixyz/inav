@@ -78,6 +78,12 @@ PG_RESET_TEMPLATE(compassConfig_t, compassConfig,
     .yawDeciDegrees = 0,
 );
 
+
+bool compassIsConfigured()
+{
+    return ((compassConfig()->mag_hardware != MAG_NONE) && (compassConfig()->mag_hardware != MAG_AUTODETECT));
+}
+
 #ifdef USE_MAG
 
 static uint8_t magUpdatedAtLeastOnce = 0;
