@@ -128,6 +128,22 @@ STATIC_UNIT_TESTED void imuComputeRotationMatrix(void)
     rMat[2][2] = 1.0f - 2.0f * q1q1 - 2.0f * q2q2;
 }
 
+#if defined(USE_GPS) && defined(USE_NAV)
+#define GPS_VEL_BUF_LENGTH 5
+static float gpsVelBuf_X[GPS_VEL_BUF_LENGTH], gpsVelBuf_Y[GPS_VEL_BUF_LENGTH], gpsVelBuf_Z[GPS_VEL_BUF_LENGTH];
+static firFilter_t gpsVelFilter_X, gpsVelFilter_Y, gpsVelFilter_Z;
+static float gpsInvDt = 0;
+
+static void imuInitGpsAccelFilter(void)
+{
+    /* First update or recovering from outage - reset filters */
+    const float gpsDefivCoeffs[GPS_VEL_BUF_LENGTH] = {5.0f/8, 2.0f/8, -8.0f/8, -2.0f/8, 3.0f/8};
+    firFilterInit(&gpsVelFilter_X, gpsVelBuf_X, GPS_VEL_BUF_LENGTH, gpsDefivCoeffs);
+    firFilterInit(&gpsVelFilter_Y, gpsVelBuf_Y, GPS_VEL_BUF_LENGTH, gpsDefivCoeffs);
+    firFilterInit(&gpsVelFilter_Z, gpsVelBuf_Z, GPS_VEL_BUF_LENGTH, gpsDefivCoeffs);
+}
+#endif
+
 void imuConfigure(void)
 {
     imuRuntimeConfig.dcm_kp_acc = imuConfig()->dcm_kp_acc / 10000.0f;
@@ -156,6 +172,10 @@ void imuInit(void)
 
     quaternionInitUnit(&orientation);
     imuComputeRotationMatrix();
+
+#if defined(USE_GPS) && defined(USE_NAV)
+    imuInitGpsAccelFilter();
+#endif
 }
 
 void imuSetMagneticDeclination(float declinationDeg)
@@ -430,19 +450,30 @@ STATIC_UNIT_TESTED void imuUpdateEulerAngles(void)
     }
 }
 
-static bool imuCanUseAccelerometerForCorrection(void)
+static bool imuCanUseAccelerometerForCorrection(fpVector3_t * grav)
 {
-    float accMagnitudeSq = 0;
-
-    for (int axis = 0; axis < 3; axis++) {
-        accMagnitudeSq += acc.accADCf[axis] * acc.accADCf[axis];
-    }
-
-    // Magnitude^2 in percent of G^2
-    const float nearness = ABS(100 - (accMagnitudeSq * 100));
-
+    float accMagnitudeSq = sq(grav->x) + sq(grav->y) + sq(grav->z);
+    const float nearness = ABS(100.0f - 100.0f * accMagnitudeSq / sq(GRAVITY_CMSS));
     return (nearness > MAX_ACC_SQ_NEARNESS) ? false : true;
 }
+
+#if defined(USE_GPS) && defined(USE_NAV)
+void imuReceiveGPSUpdate(const bool isFirstGPSUpdate, const float gpsDt, const fpVector3_t * gpsVel)
+{
+    if (isFirstGPSUpdate) {
+        firFilterReset(&gpsVelFilter_X, gpsVel->x);
+        firFilterReset(&gpsVelFilter_Y, gpsVel->y);
+        firFilterReset(&gpsVelFilter_Z, gpsVel->z);
+        gpsInvDt = 0;
+    }
+    else {
+        firFilterUpdate(&gpsVelFilter_X, gpsVel->x);
+        firFilterUpdate(&gpsVelFilter_Y, gpsVel->y);
+        firFilterUpdate(&gpsVelFilter_Z, gpsVel->z);
+        gpsInvDt = 1.0f / gpsDt;
+     }
+}
+#endif
 
 static void imuCalculateEstimatedAttitude(float dT)
 {
@@ -452,7 +483,30 @@ static void imuCalculateEstimatedAttitude(float dT)
     const bool canUseMAG = false;
 #endif
 
-    const bool useAcc = imuCanUseAccelerometerForCorrection();
+    /*const bool useAcc = imuCanUseAccelerometerForCorrection();*/
+
+    // Calculate gravity in body frame (apply GPS-calculated acceleration if available)
+    fpVector3_t imuGravityInBodyFrame;
+    imuGravityInBodyFrame.x = imuMeasuredAccelBF.x;
+    imuGravityInBodyFrame.y = imuMeasuredAccelBF.y;
+    imuGravityInBodyFrame.z = imuMeasuredAccelBF.z;
+
+#if defined(USE_GPS) && defined(USE_NAV)
+    if (isImuHeadingValid() && sensors(SENSOR_GPS) && STATE(GPS_FIX) && gpsSol.numSat >= 6) {
+        // Calculate GPS acceleration and rotate to body frame
+        fpVector3_t gpsAccelInBodyFrame;
+        gpsAccelInBodyFrame.x = firFilterApply(&gpsVelFilter_X) * gpsInvDt;
+        gpsAccelInBodyFrame.y = firFilterApply(&gpsVelFilter_Y) * gpsInvDt;
+        gpsAccelInBodyFrame.z = firFilterApply(&gpsVelFilter_Z) * gpsInvDt;
+        imuTransformVectorEarthToBody(&gpsAccelInBodyFrame);
+
+        imuGravityInBodyFrame.x -= gpsAccelInBodyFrame.x;
+        imuGravityInBodyFrame.y -= gpsAccelInBodyFrame.y;
+        imuGravityInBodyFrame.z -= gpsAccelInBodyFrame.z;
+    }
+#endif
+
+    bool useAcc = imuCanUseAccelerometerForCorrection(&imuGravityInBodyFrame);
 
     float courseOverGround = 0;
     bool useMag = false;
@@ -505,7 +559,7 @@ static void imuCalculateEstimatedAttitude(float dT)
     fpVector3_t measuredMagBF = { .v = { mag.magADC[X], mag.magADC[Y], mag.magADC[Z] } };
 
     imuMahonyAHRSupdate(dT, &imuMeasuredRotationBF, 
-                            useAcc ? &imuMeasuredAccelBF : NULL, 
+                            useAcc ? &imuGravityInBodyFrame : NULL, 
                             useMag ? &measuredMagBF : NULL, 
                             useCOG, courseOverGround);
 

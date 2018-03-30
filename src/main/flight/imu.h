@@ -60,6 +60,7 @@ typedef struct imuRuntimeConfig_s {
 
 void imuConfigure(void);
 
+void imuReceiveGPSUpdate(const bool isFirstGPSUpdate, const float gpsDt, const fpVector3_t * gpsVel);
 void imuSetMagneticDeclination(float declinationDeg);
 void imuUpdateAttitude(timeUs_t currentTimeUs);
 void imuUpdateAccelerometer(void);
