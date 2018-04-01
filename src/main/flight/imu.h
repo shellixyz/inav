@@ -29,6 +29,7 @@ extern fpVector3_t imuMeasuredRotationBF;       // rad/s
 
 extern bool useAccNew;
 extern fpVector3_t imuGravityInBodyFrame;
+extern fpVector3_t gpsAccelInBodyFrame;
 
 typedef union {
     int16_t raw[XYZ_AXIS_COUNT];

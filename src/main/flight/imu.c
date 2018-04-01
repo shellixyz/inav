@@ -94,6 +94,7 @@ STATIC_FASTRAM bool gpsHeadingInitialized;
 
 bool useAccNew = false;
 fpVector3_t imuGravityInBodyFrame;
+fpVector3_t gpsAccelInBodyFrame;
 
 PG_REGISTER_WITH_RESET_TEMPLATE(imuConfig_t, imuConfig, PG_IMU_CONFIG, 0);
 
@@ -510,7 +511,6 @@ static void imuCalculateEstimatedAttitude(float dT)
 #if defined(USE_GPS) && defined(USE_NAV)
     if (isImuHeadingValid() && sensors(SENSOR_GPS) && STATE(GPS_FIX) && gpsSol.numSat >= 6) {
         // Calculate GPS acceleration and rotate to body frame
-        fpVector3_t gpsAccelInBodyFrame;
         gpsAccelInBodyFrame.x = firFilterApply(&gpsVelFilter_X) * gpsInvDt;
         gpsAccelInBodyFrame.y = firFilterApply(&gpsVelFilter_Y) * gpsInvDt;
         gpsAccelInBodyFrame.z = firFilterApply(&gpsVelFilter_Z) * gpsInvDt;
