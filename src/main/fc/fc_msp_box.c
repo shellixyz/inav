@@ -72,6 +72,7 @@ static const box_t boxes[CHECKBOX_ITEM_COUNT + 1] = {
     { BOXCAMERA1, "CAMERA CONTROL 1", 39 },
     { BOXCAMERA2, "CAMERA CONTROL 2", 40 },
     { BOXCAMERA3, "CAMERA CONTROL 3", 41 },
+    { BOXVIDEOPWR, "VIDEO PWR", 42 },
     { CHECKBOX_ITEM_COUNT, NULL, 0xFF }
 };
 
@@ -242,6 +243,11 @@ void initActiveBoxIds(void)
     activeBoxIds[activeBoxIdCount++] = BOXCAMERA2;
     activeBoxIds[activeBoxIdCount++] = BOXCAMERA3;
 #endif
+
+#ifdef USE_VIDEO_POWER_SWITCH
+    activeBoxIds[activeBoxIdCount++] = BOXVIDEOPWR;
+#endif
+
 }
 
 #define IS_ENABLED(mask) (mask == 0 ? 0 : 1)
@@ -291,6 +297,9 @@ void packBoxModeFlags(boxBitmask_t * mspBoxModeFlags)
     CHECK_ACTIVE_BOX(IS_ENABLED(IS_RC_MODE_ACTIVE(BOXCAMERA1)),     BOXCAMERA1);
     CHECK_ACTIVE_BOX(IS_ENABLED(IS_RC_MODE_ACTIVE(BOXCAMERA2)),     BOXCAMERA2);
     CHECK_ACTIVE_BOX(IS_ENABLED(IS_RC_MODE_ACTIVE(BOXCAMERA3)),     BOXCAMERA3);
+#ifdef USE_VIDEO_POWER_SWITCH
+    CHECK_ACTIVE_BOX(IS_ENABLED(IS_RC_MODE_ACTIVE(BOXVIDEOPWR)),    BOXVIDEOPWR);
+#endif
 
     memset(mspBoxModeFlags, 0, sizeof(boxBitmask_t));
     for (uint32_t i = 0; i < activeBoxIdCount; i++) {

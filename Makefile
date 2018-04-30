@@ -630,6 +630,7 @@ COMMON_SRC = \
             flight/servos.c \
             io/beeper.c \
             io/lights.c \
+	    io/video_power.c \
             io/pwmdriver_i2c.c \
             io/serial.c \
             io/serial_4way.c \
