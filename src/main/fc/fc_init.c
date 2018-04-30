@@ -93,6 +93,7 @@
 #include "io/asyncfatfs/asyncfatfs.h"
 #include "io/beeper.h"
 #include "io/lights.h"
+#include "io/video_power.h"
 #include "io/dashboard.h"
 #include "io/displayport_msp.h"
 #include "io/displayport_max7456.h"
@@ -369,8 +370,13 @@ void init(void)
 
     beeperInit(&beeperDevConfig);
 #endif
+
 #ifdef USE_LIGHTS
     lightsInit();
+#endif
+
+#ifdef USE_VIDEO_POWER_SWITCH
+    videoPowerSwitchInit();
 #endif
 
 #ifdef USE_UART_INVERTER

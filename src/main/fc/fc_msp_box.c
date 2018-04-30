@@ -85,6 +85,7 @@ static const box_t boxes[CHECKBOX_ITEM_COUNT + 1] = {
     { BOXUSER1, "USER1", 47 },
     { BOXUSER2, "USER2", 48 },
     { BOXLOITERDIRCHN, "LOITER CHANGE", 49 },
+    { BOXVIDEOPWR, "VIDEO PWR", 50 },
     { CHECKBOX_ITEM_COUNT, NULL, 0xFF }
 };
 
@@ -292,6 +293,11 @@ void initActiveBoxIds(void)
 #endif
 #endif
 #endif
+
+#ifdef USE_VIDEO_POWER_SWITCH
+    activeBoxIds[activeBoxIdCount++] = BOXVIDEOPWR;
+#endif
+
 }
 
 #define IS_ENABLED(mask) (mask == 0 ? 0 : 1)
@@ -348,6 +354,9 @@ void packBoxModeFlags(boxBitmask_t * mspBoxModeFlags)
     CHECK_ACTIVE_BOX(IS_ENABLED(IS_RC_MODE_ACTIVE(BOXUSER1)),       BOXUSER1);
     CHECK_ACTIVE_BOX(IS_ENABLED(IS_RC_MODE_ACTIVE(BOXUSER2)),       BOXUSER2);
     CHECK_ACTIVE_BOX(IS_ENABLED(IS_RC_MODE_ACTIVE(BOXLOITERDIRCHN)),BOXLOITERDIRCHN);
+#ifdef USE_VIDEO_POWER_SWITCH
+    CHECK_ACTIVE_BOX(IS_ENABLED(IS_RC_MODE_ACTIVE(BOXVIDEOPWR)),    BOXVIDEOPWR);
+#endif
 
     memset(mspBoxModeFlags, 0, sizeof(boxBitmask_t));
     for (uint32_t i = 0; i < activeBoxIdCount; i++) {
