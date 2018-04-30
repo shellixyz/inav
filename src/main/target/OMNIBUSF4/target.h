@@ -41,6 +41,13 @@
 #define BEEPER                  PB4
 #define BEEPER_INVERTED
 
+#define USE_VIDEO_POWER_SWITCH
+#define VTX_PROTECTION
+#define VIDEO_POWER_PIN PA8
+
+#define USE_LIGHTS
+#define LIGHTS_PIN PD2
+
 #if defined(OMNIBUSF4V3)
   #define INVERTER_PIN_UART6      PC8
 #else
