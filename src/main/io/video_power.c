@@ -54,7 +54,7 @@ static vtx_protection_state_e vtx_protection_state = VTX_PROTECTION_ENABLED;
 
 static void videoPowerSwitchSetStatus(bool status)
 {
-    if (videoIO && ((video_power_status == false) || ((video_power_status == true) && (!ARMING_FLAG(ARMED))))) {
+    if (videoIO) {
         IOWrite(videoIO, status);
         video_power_status = status;
     }
@@ -70,28 +70,28 @@ void videoPowerSwitchUpdate(timeUs_t currentTimeUs)
 #ifdef VTX_PROTECTION
     if (!ARMING_FLAG(ARMED)) {
         if (disarmed_timestamp) {
-            if (cmpTimeUs(currentTimeUs, disarmed_timestamp) >= videoPowerConfig()->disarmed_video_off_delay * 1000000)
+            if (cmpTimeUs(currentTimeUs, disarmed_timestamp) >= videoPowerConfig()->disarmed_video_off_delay * 1000000) {
                 videoPowerSwitchSetStatus(false);
+                vtx_protection_state = VTX_PROTECTION_ENABLED;
+            }
         } else
-          disarmed_timestamp = currentTimeUs;
-
-        switch (vtx_protection_state) {
-            case VTX_PROTECTION_ENABLED:
-                if (IS_RC_MODE_ACTIVE(BOXVIDEOPWR))
-                    vtx_protection_state = VTX_PROTECTION_WAIT_OFF;
-                break;
-            case VTX_PROTECTION_WAIT_OFF:
-                if (!IS_RC_MODE_ACTIVE(BOXVIDEOPWR))
-                    vtx_protection_state = VTX_PROTECTION_DISABLED;
-                break;
-            default:
-                if (IS_RC_MODE_ACTIVE(BOXVIDEOPWR) != video_power_status) {
-                    videoPowerSwitchSetStatus(IS_RC_MODE_ACTIVE(BOXVIDEOPWR));
-                    disarmed_timestamp = 0;
-                }
-        }
+            disarmed_timestamp = currentTimeUs;
     } else
         disarmed_timestamp = 0;
+
+    switch (vtx_protection_state) {
+        case VTX_PROTECTION_ENABLED:
+            if (IS_RC_MODE_ACTIVE(BOXVIDEOPWR))
+                vtx_protection_state = VTX_PROTECTION_WAIT_OFF;
+            break;
+        case VTX_PROTECTION_WAIT_OFF:
+            if (!IS_RC_MODE_ACTIVE(BOXVIDEOPWR))
+                vtx_protection_state = VTX_PROTECTION_DISABLED;
+            break;
+        default:
+            if (!ARMING_FLAG(ARMED) || !video_power_status)
+                videoPowerSwitchSetStatus(IS_RC_MODE_ACTIVE(BOXVIDEOPWR));
+    }
 #else
     videoPowerSwitchSetStatus(IS_RC_MODE_ACTIVE(BOXVIDEOPWR));
 #endif
