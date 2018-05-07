@@ -68,6 +68,9 @@ typedef struct batteryConfig_s {
         batCapacityUnit_e unit; // Describes unit of capacity.value, capacity.warning and capacity.critical
     } capacity;
 
+    bool impedanceFiltering;
+    bool sagCompVBatFiltering;
+
 } batteryConfig_t;
 
 PG_DECLARE(batteryConfig_t, batteryConfig);
@@ -103,7 +106,7 @@ int32_t getMAhDrawn(void);
 int32_t getMWhDrawn(void);
 
 void currentMeterUpdate(int32_t lastUpdateAt);
-void noLoadVBATUpdate(timeUs_t currentTime);
+void sagCompensatedVBatUpdate(timeUs_t currentTime);
 void powerMeterUpdate(int32_t lastUpdateAt);
 
 uint8_t calculateBatteryPercentage(void);

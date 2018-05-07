@@ -544,6 +544,12 @@ groups:
         field: current.type
         table: current_sensor
         type: uint8_t
+      - name: vbat_impedance_filtering
+        field: impedanceFiltering
+        type: bool
+      - name: vbat_sag_comp_filtering
+        field: sagCompVBatFiltering
+        type: bool
 
   - name: PG_MIXER_CONFIG
     type: mixerConfig_t
