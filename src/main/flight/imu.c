@@ -497,6 +497,7 @@ void imuReceiveGPSUpdate(const bool isFirstGPSUpdate, const float gpsDt, const f
 
 static void imuCalculateEstimatedAttitude(float dT)
 {
+    static uint16_t counter = 0;
 #if defined(USE_MAG)
     const bool canUseMAG = sensors(SENSOR_MAG) && compassIsHealthy();
 #else
@@ -518,6 +519,10 @@ static void imuCalculateEstimatedAttitude(float dT)
         gpsAccelInBodyFrame.y = firFilterApply(&gpsVelFilter_Y) * gpsInvDt;
         gpsAccelInBodyFrame.z = firFilterApply(&gpsVelFilter_Z) * gpsInvDt;
         imuTransformVectorEarthToBody(&gpsAccelInBodyFrame);
+
+        for (uint8_t i = 0; i < XYZ_AXIS_COUNT; ++i)
+            debug[i] = lrintf(gpsAccelInBodyFrame.v[i] * 1000);
+        debug[3] = counter++;
 
         imuGravityInBodyFrame.x -= gpsAccelInBodyFrame.x;
         imuGravityInBodyFrame.y -= gpsAccelInBodyFrame.y;
