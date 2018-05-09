@@ -16,4 +16,5 @@ TARGET_SRC = \
             drivers/light_ws2811strip.c \
             drivers/light_ws2811strip_stdperiph.c \
             drivers/serial_usb_vcp.c \
+	    drivers/serial_softserial.c \
             drivers/max7456.c
