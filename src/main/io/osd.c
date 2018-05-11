@@ -1006,15 +1006,24 @@ static bool osdDrawSingleElement(uint8_t item)
             break;
         }
 
-    case OSD_REMAINING_FLY_TIME_BEFORE_RTH:;
-
-        int32_t time_seconds = remainingFlyTimeBeforeRTH();
-        if ((!ARMING_FLAG(ARMED)) || (time_seconds < 0))
-            strcpy(buff, "--:--");
-        else {
-            osdFormatTime(buff, time_seconds, SYM_FLY_M, SYM_FLY_H);
-            if (time_seconds == 0)
-                TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
+    case OSD_REMAINING_FLIGHT_TIME_BEFORE_RTH:
+        {
+            static timeUs_t updatedTimestamp = 0;
+            static int32_t updatedTimeSeconds = 0;
+            timeUs_t currentTimeUs = micros();
+            int32_t timeSeconds = remainingFlyTimeBeforeRTH();
+            if ((!ARMING_FLAG(ARMED)) || (timeSeconds < 0)) {
+                strcpy(buff, "--:--");
+                updatedTimestamp = 0;
+            } else {
+                if ((timeSeconds == 0) || (ABS(timeSeconds - updatedTimeSeconds) >= 30) || (cmpTimeUs(currentTimeUs, updatedTimestamp) >= 5000000)) {
+                    updatedTimeSeconds = timeSeconds;
+                    updatedTimestamp = currentTimeUs;
+                }
+                osdFormatTime(buff, updatedTimeSeconds, SYM_FLY_M, SYM_FLY_H);
+                if (timeSeconds == 0)
+                    TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
+            }
         }
         break;
 
@@ -1600,7 +1609,7 @@ static uint8_t osdIncElementIndex(uint8_t elementIndex)
             elementIndex = OSD_MAIN_BATT_CELL_VOLTAGE;
         }
         if (elementIndex == OSD_TRIP_DIST) {
-            STATIC_ASSERT(OSD_REMAINING_FLY_TIME_BEFORE_RTH == OSD_ITEM_COUNT - 1, OSD_REMAINING_FLY_TIME_BEFORE_RTH_not_last_element);
+            STATIC_ASSERT(OSD_REMAINING_FLIGHT_TIME_BEFORE_RTH == OSD_ITEM_COUNT - 1, OSD_REMAINING_FLIGHT_TIME_BEFORE_RTH_not_last_element);
             elementIndex = OSD_ITEM_COUNT;
         }
     }
@@ -1660,7 +1669,7 @@ void pgResetFn_osdConfig(osdConfig_t *osdConfig)
     osdConfig->item_pos[0][OSD_FLYTIME] = OSD_POS(23, 9);
     osdConfig->item_pos[0][OSD_ONTIME_FLYTIME] = OSD_POS(23, 11) | OSD_VISIBLE_FLAG;
     osdConfig->item_pos[0][OSD_RTC_TIME] = OSD_POS(23, 12);
-    osdConfig->item_pos[0][OSD_REMAINING_FLY_TIME_BEFORE_RTH] = OSD_POS(23, 7);
+    osdConfig->item_pos[0][OSD_REMAINING_FLIGHT_TIME_BEFORE_RTH] = OSD_POS(23, 7);
 
     osdConfig->item_pos[0][OSD_GPS_SATS] = OSD_POS(0, 11) | OSD_VISIBLE_FLAG;
     osdConfig->item_pos[0][OSD_GPS_HDOP] = OSD_POS(0, 10);
