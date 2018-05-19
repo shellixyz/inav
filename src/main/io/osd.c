@@ -1231,7 +1231,7 @@ static bool osdDrawSingleElement(uint8_t item)
             timeUs_t currentTimeUs = micros();
             int32_t timeSeconds = remainingFlyTimeBeforeRTH();
             if ((!ARMING_FLAG(ARMED)) || (timeSeconds < 0)) {
-                strcpy(buff, "--:--");
+                strcpy(buff, " --:--");
                 updatedTimestamp = 0;
             } else {
                 if ((timeSeconds == 0) || (ABS(timeSeconds - updatedTimeSeconds) >= 30) || (cmpTimeUs(currentTimeUs, updatedTimestamp) >= 5000000)) {
