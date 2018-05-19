@@ -356,7 +356,7 @@ static const navigationFSMStateDescriptor_t navFSM[NAV_STATE_COUNT] = {
         .onEntry = navOnEnteringState_NAV_STATE_CRUISE_2D_IN_PROGRESS,
         .timeoutMs = 10,
         .stateFlags = NAV_CTL_POS | NAV_CTL_YAW | NAV_REQUIRE_ANGLE | NAV_RC_POS | NAV_RC_YAW,  //CHECK IF RC_POS IS NEEDED
-        .mapToFlightModes = NAV_POSHOLD_MODE,
+        .mapToFlightModes = NAV_CRUISE_MODE,
         .mwState = MW_NAV_STATE_NONE, ///////FIX ME
         .mwError = MW_NAV_ERROR_NONE,
         .onEvent = {
@@ -391,7 +391,7 @@ static const navigationFSMStateDescriptor_t navFSM[NAV_STATE_COUNT] = {
         .onEntry = navOnEnteringState_NAV_STATE_CRUISE_3D_IN_PROGRESS,
         .timeoutMs = 10,
         .stateFlags = NAV_CTL_POS | NAV_CTL_YAW | NAV_REQUIRE_ANGLE | NAV_RC_POS | NAV_RC_YAW,  //CHECK IF RC_POS IS NEEDED
-        .mapToFlightModes = NAV_ALTHOLD_MODE || NAV_POSHOLD_MODE,
+        .mapToFlightModes = NAV_ALTHOLD_MODE || NAV_CRUISE_MODE,
         .mwState = MW_NAV_STATE_NONE, ///////FIX ME
         .mwError = MW_NAV_ERROR_NONE,
         .onEvent = {
@@ -2463,7 +2463,7 @@ void applyWaypointNavigationAndAltitudeHold(void)
 void swithNavigationFlightModes(void)
 {
     const flightModeFlags_e enabledNavFlightModes = navGetMappedFlightModes(posControl.navState);
-    const flightModeFlags_e disabledFlightModes = (NAV_ALTHOLD_MODE | NAV_RTH_MODE | NAV_POSHOLD_MODE | NAV_WP_MODE | NAV_LAUNCH_MODE) & (~enabledNavFlightModes);
+    const flightModeFlags_e disabledFlightModes = (NAV_ALTHOLD_MODE | NAV_RTH_MODE | NAV_POSHOLD_MODE | NAV_WP_MODE | NAV_LAUNCH_MODE | NAV_CRUISE_MODE) & (~enabledNavFlightModes);
     DISABLE_FLIGHT_MODE(disabledFlightModes);
     ENABLE_FLIGHT_MODE(enabledNavFlightModes);
 }
