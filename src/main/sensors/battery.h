@@ -68,6 +68,13 @@ typedef struct batteryConfig_s {
         batCapacityUnit_e unit; // Describes unit of capacity.value, capacity.warning and capacity.critical
     } capacity;
 
+    struct {
+        uint8_t speed;          // m/s
+        uint32_t power;         // mW
+    } cruise;
+
+    uint8_t rth_energy_margin;
+
 } batteryConfig_t;
 
 PG_DECLARE(batteryConfig_t, batteryConfig);
@@ -106,3 +113,7 @@ void currentMeterUpdate(int32_t lastUpdateAt);
 void powerMeterUpdate(int32_t lastUpdateAt);
 
 uint8_t calculateBatteryPercentage(void);
+
+#if defined(USE_ADC) && defined(USE_GPS)
+int32_t remainingFlyTimeBeforeRTH();
+#endif

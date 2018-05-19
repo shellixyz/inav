@@ -557,6 +557,17 @@ groups:
         field: current.type
         table: current_sensor
         type: uint8_t
+      - name: cruise_speed
+        field: cruise.speed
+        min: 0
+        max: 255
+      - name: cruise_power
+        field: cruise.power
+        min: 0
+        max: 4294967295
+      - name: rth_energy_margin
+        min: 0
+        max: 100
 
   - name: PG_MIXER_CONFIG
     type: mixerConfig_t
