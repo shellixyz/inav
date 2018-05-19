@@ -81,6 +81,7 @@ typedef enum {
     OSD_MAP_TAKEOFF,
     OSD_RADAR,
     OSD_REMAINING_FLIGHT_TIME_BEFORE_RTH,
+    OSD_SAG_COMPENSATED_MAIN_BATT_VOLTAGE,
     OSD_DEBUG, // Number 46. Intentionally absent from configurator and CMS. Set it from CLI.
     OSD_ITEM_COUNT // MUST BE LAST
 } osd_items_e;

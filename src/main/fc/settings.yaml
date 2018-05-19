@@ -568,6 +568,12 @@ groups:
       - name: rth_energy_margin
         min: 0
         max: 100
+      - name: vbat_impedance_filtering
+        field: impedanceFiltering
+        type: bool
+      - name: vbat_sag_comp_filtering
+        field: sagCompVBatFiltering
+        type: bool
 
   - name: PG_MIXER_CONFIG
     type: mixerConfig_t
