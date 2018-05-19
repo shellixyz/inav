@@ -223,6 +223,8 @@
 
 // Air speed
 #define SYM_AIR 151
+#define SYM_WIND_HORIZONTAL 171
+#define SYM_WIND_VERTICAL 172
 
 //Misc
 #define SYM_COLON 0x2D

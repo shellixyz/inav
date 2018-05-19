@@ -27,6 +27,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <math.h>
 
 #include "platform.h"
 
@@ -69,6 +70,7 @@
 
 #include "flight/imu.h"
 #include "flight/pid.h"
+#include "flight/wind_estimator.h"
 
 #include "navigation/navigation.h"
 
@@ -351,6 +353,39 @@ static void osdFormatVelocityStr(char* buff, int32_t vel)
         break;
     }
 }
+
+/**
+ * Converts wind speed into a string based on the current unit system, using
+ * always 3 digits and an additional character for the unit at the right. buff
+ * is null terminated.
+ * @param ws Raw wind speed in cm/s
+ */
+#ifdef USE_WIND_ESTIMATOR
+static void osdFormatWindSpeedStr(char *buff, int32_t ws, bool isValid)
+{
+    int32_t centivalue;
+    char suffix;
+    switch (osdConfig()->units) {
+        case OSD_UNIT_UK:
+            FALLTHROUGH;
+        case OSD_UNIT_IMPERIAL:
+            centivalue = (ws * 224) / 100;
+            suffix = SYM_MPH;
+            break;
+        case OSD_UNIT_METRIC:
+            centivalue = (ws * 36) / 10;
+            suffix = SYM_KMH;
+            break;
+    }
+    if (isValid) {
+        osdFormatCentiNumber(buff, centivalue, 0, 2, 0, 3);
+    } else {
+        buff[0] = buff[1] = buff[2] = '-';
+    }
+    buff[3] = suffix;
+    buff[4] = '\0';
+}
+#endif
 
 /**
 * Converts altitude into a string based on the current unit system
@@ -1780,6 +1815,64 @@ static bool osdDrawSingleElement(uint8_t item)
             tfp_sprintf(buff, "[2]=%6d [3]=%6d", debug[2], debug[3]);
             break;
         }
+
+#if 0
+    case OSD_WIND_SPEED_HORIZONTAL:
+#ifdef USE_WIND_ESTIMATOR
+        {
+            bool valid = isEstimatedWindSpeedValid();
+            float horizontalWindSpeed;
+            if (valid) {
+                float xWindSpeed = getEstimatedWindSpeed(X);
+                float yWindSpeed = getEstimatedWindSpeed(Y);
+                horizontalWindSpeed = sqrtf(sq(xWindSpeed) + sq(yWindSpeed));
+                float horizontalWindAngle = atan2_approx(yWindSpeed, xWindSpeed);
+                int16_t h = RADIANS_TO_DEGREES(horizontalWindAngle) - DECIDEGREES_TO_DEGREES(attitude.values.yaw);
+                if (h < 0) {
+                    h += 360;
+                }
+                if (h >= 360) {
+                    h -= 360;
+                }
+                h = h*2/90;
+                buff[1] = SYM_DIRECTION + h;
+            } else {
+                horizontalWindSpeed = 0;
+                buff[1] = SYM_BLANK;
+            }
+            buff[0] = SYM_WIND_HORIZONTAL;
+            osdFormatWindSpeedStr(buff + 2, horizontalWindSpeed, valid);
+            break;
+        }
+#else
+        return false;
+#endif
+
+    case OSD_WIND_SPEED_VERTICAL:
+#ifdef USE_WIND_ESTIMATOR
+        {
+            buff[0] = SYM_WIND_VERTICAL;
+            buff[1] = SYM_BLANK;
+            bool valid = isEstimatedWindSpeedValid();
+            float verticalWindSpeed;
+            if (valid) {
+                verticalWindSpeed = getEstimatedWindSpeed(Z);
+                if (verticalWindSpeed < 0) {
+                    buff[1] = SYM_AH_DECORATION_DOWN;
+                    verticalWindSpeed = -verticalWindSpeed;
+                } else if (verticalWindSpeed > 0) {
+                    buff[1] = SYM_AH_DECORATION_UP;
+                }
+            } else {
+                verticalWindSpeed = 0;
+            }
+            osdFormatWindSpeedStr(buff + 2, verticalWindSpeed, valid);
+            break;
+        }
+#else
+        return false;
+#endif
+#endif
 
     default:
         return false;
