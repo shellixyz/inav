@@ -8,24 +8,51 @@
 #endif
 
 
-static IO_t lightsIO = DEFIO_IO(NONE);
+#ifdef WING_LIGHTS_PIN
+static IO_t wlightsIO = DEFIO_IO(NONE);
 
-bool lightsHardwareInit()
-{
-    lightsIO = IOGetByTag(IO_TAG(LIGHTS_PIN));
-
-    if (lightsIO) {
-        IOInit(lightsIO, OWNER_LED, RESOURCE_OUTPUT, 0);
-        IOConfigGPIO(lightsIO, LIGHTS_OUTPUT_MODE);
-        return(true);
-    } else
-        return(false);
+static void wingLightsInit() {
+    wlightsIO = IOGetByTag(IO_TAG(WING_LIGHTS_PIN));
+    if (wlightsIO) {
+        IOInit(wlightsIO, OWNER_LED, RESOURCE_OUTPUT, 0);
+        IOConfigGPIO(wlightsIO, LIGHTS_OUTPUT_MODE);
+    }
 }
 
-void lightsHardwareSetStatus(bool status)
+void wingLightsHardwareSetStatus(bool status)
 {
-    if (lightsIO)
-        IOWrite(lightsIO, status);
+    if (wlightsIO)
+        IOWrite(wlightsIO, status);
+}
+#endif
+
+#ifdef FRONT_LIGHTS_PIN
+static IO_t flightsIO = DEFIO_IO(NONE);
+
+static void frontLightsInit() {
+    flightsIO = IOGetByTag(IO_TAG(FRONT_LIGHTS_PIN));
+
+    if (flightsIO) {
+        IOInit(flightsIO, OWNER_LED, RESOURCE_OUTPUT, 0);
+        IOConfigGPIO(flightsIO, LIGHTS_OUTPUT_MODE);
+    }
+}
+
+void frontLightsHardwareSetStatus(bool status)
+{
+    if (flightsIO)
+        IOWrite(flightsIO, status);
+}
+#endif
+
+void lightsHardwareInit()
+{
+#ifdef WING_LIGHTS_PIN
+    wingLightsInit();
+#endif
+#ifdef FRONT_LIGHTS_PIN
+    frontLightsInit();
+#endif
 }
 
 #endif /* USE_LIGHTS */
