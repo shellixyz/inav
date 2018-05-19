@@ -578,6 +578,10 @@ groups:
       - name: flaperon_pitch_comp_angle
         min: 0
         max: 900
+      - name: fw_pitch2thr
+        field: fw_pitch_to_throttle
+        min: 0
+        max: 100
 
   - name: PG_MOTOR_3D_CONFIG
     type: flight3DConfig_t
