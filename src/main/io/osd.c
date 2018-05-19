@@ -1726,7 +1726,7 @@ static bool osdDrawSingleElement(uint8_t item)
                     value = eFilterState.state;
                 }
             }
-            if (value > 0 && value <= 999) {
+            if (value > 0 && value <= 999999) {
                 osdFormatCentiNumber(buff, value / 10, 0, 2, 0, 3);
             } else {
                 buff[0] = buff[1] = buff[2] = '-';
