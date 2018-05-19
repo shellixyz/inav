@@ -24,6 +24,14 @@
 #define BEEPER                  PC15
 #define BEEPER_INVERTED
 
+#define USE_LIGHTS
+#define WING_LIGHTS_PIN         PB10
+#define FRONT_LIGHTS_PIN        PA8
+
+#define USE_VIDEO_POWER_SWITCH
+#define VTX_PROTECTION
+#define VIDEO_POWER_PIN         PB0
+
 #define USE_SPI
 #define USE_SPI_DEVICE_1
 
@@ -51,25 +59,24 @@
 #define BMP280_SPI_BUS          BUS_SPI1
 #define BMP280_CS_PIN           PA13
 
-#define BARO_I2C_BUS             BUS_I2C1
-#define USE_BARO_BMP085 // External
-#define USE_BARO_BMP180 // External
-#define USE_BARO_MS5611 // External
+//#define BARO_I2C_BUS             BUS_I2C1
+//#define USE_BARO_BMP085 // External
+//#define USE_BARO_BMP180 // External
+//#define USE_BARO_MS5611 // External
 
 #define USE_MAG
 #define MAG_I2C_BUS             BUS_I2C1
 #define USE_MAG_HMC5883
-#define USE_MAG_QMC5883
-#define USE_MAG_IST8310
-#define USE_MAG_IST8308
-#define USE_MAG_MAG3110
+//#define USE_MAG_QMC5883
+//#define USE_MAG_IST8310
+//#define USE_MAG_MAG3110
 
-#define USE_RANGEFINDER
-#define USE_RANGEFINDER_HCSR04
-#define RANGEFINDER_HCSR04_ECHO_PIN          PB2  // Has 1K series resistor
-#define RANGEFINDER_HCSR04_TRIGGER_PIN       PB4  // FT
-#define USE_RANGEFINDER_HCSR04_I2C
-#define RANGEFINDER_I2C_BUS                  BUS_I2C1
+//#define USE_RANGEFINDER
+//#define USE_RANGEFINDER_HCSR04
+//#define RANGEFINDER_HCSR04_ECHO_PIN          PB2  // Has 1K series resistor
+//#define RANGEFINDER_HCSR04_TRIGGER_PIN       PB4  // FT
+//#define USE_RANGEFINDER_HCSR04_I2C
+//#define RANGEFINDER_I2C_BUS                  BUS_I2C1
 
 #define USB_CABLE_DETECTION
 #define USB_DETECT_PIN          PB5
@@ -78,7 +85,8 @@
 #define USE_UART1
 #define USE_UART2
 #define USE_UART3
-#define SERIAL_PORT_COUNT       4
+#define USE_SOFTSERIAL1
+#define SERIAL_PORT_COUNT       5
 
 #define UART1_TX_PIN            PA9
 #define UART1_RX_PIN            PA10
@@ -89,13 +97,16 @@
 #define UART3_TX_PIN            PB10 // PB10 (AF7)
 #define UART3_RX_PIN            PB11 // PB11 (AF7)
 
+#define SOFTSERIAL_1_RX_PIN      PB4
+#define SOFTSERIAL_1_TX_PIN      PB4
+
 // Enable I2C instead of PWM7&8 for iNav
 #define USE_I2C
 #define USE_I2C_DEVICE_1 // PB6/SCL(PWM8), PB7/SDA(PWM7)
 #define USE_I2C_PULLUP
 
-#define USE_PITOT_MS4525
-#define PITOT_I2C_BUS           BUS_I2C1
+//#define USE_PITOT_MS4525
+//#define PITOT_I2C_BUS           BUS_I2C1
 
 #define USE_SPI
 #define USE_SPI_DEVICE_2 // PB12,13,14,15 on AF5
@@ -130,6 +141,8 @@
 #define MAX7456_SPI_BUS             BUS_SPI1
 #define MAX7456_CS_PIN              PB1
 
+#define USE_PITOT_ADC
+
 #define USE_ADC
 #define ADC_INSTANCE                ADC1
 //#define BOARD_HAS_VOLTAGE_DIVIDER
@@ -139,41 +152,41 @@
 #define ADC_CHANNEL_3_INSTANCE      ADC2
 #define VBAT_ADC_CHANNEL            ADC_CHN_1
 #define CURRENT_METER_ADC_CHANNEL   ADC_CHN_2
-#define RSSI_ADC_CHANNEL            ADC_CHN_3
+#define AIRSPEED_ADC_CHANNEL        ADC_CHN_3
 
-#define USE_LED_STRIP
-#define WS2811_PIN                      PA8
-#define WS2811_DMA_STREAM               DMA1_Channel2
-#define WS2811_DMA_HANDLER_IDENTIFER    DMA1_CH2_HANDLER
+//#define USE_LED_STRIP
+//#define WS2811_PIN                      PA8
+//#define WS2811_DMA_STREAM               DMA1_Channel2
+//#define WS2811_DMA_HANDLER_IDENTIFER    DMA1_CH2_HANDLER
 
 //#define ENABLE_BLACKBOX_LOGGING_ON_SDCARD_BY_DEFAULT
 
 #define DEFAULT_RX_TYPE         RX_TYPE_PPM
 #define DEFAULT_FEATURES        (FEATURE_TX_PROF_SEL | FEATURE_VBAT | FEATURE_CURRENT_METER | FEATURE_BLACKBOX | FEATURE_OSD)
 
-#define BUTTONS
-#define BUTTON_A_PORT           GPIOB // Non-existent (PB1 used for RSSI/MAXCS)
-#define BUTTON_A_PIN            Pin_1
-#define BUTTON_B_PORT           GPIOB // TRIG button, used for BINDPLUG_PIN
-#define BUTTON_B_PIN            Pin_0
+//#define BUTTONS
+//#define BUTTON_A_PORT           GPIOB // Non-existent (PB1 used for RSSI/MAXCS)
+//#define BUTTON_A_PIN            Pin_1
+//#define BUTTON_B_PORT           GPIOB // TRIG button, used for BINDPLUG_PIN
+//#define BUTTON_B_PIN            Pin_0
 
-#define USE_SPEKTRUM_BIND
+//#define USE_SPEKTRUM_BIND
 // USART3
-#define BIND_PIN                PB11
+//#define BIND_PIN                PB11
 
-#define HARDWARE_BIND_PLUG
-#define BINDPLUG_PIN            PB0
+//#define HARDWARE_BIND_PLUG
+//#define BINDPLUG_PIN            PB0
 
 #define USE_SERIAL_4WAY_BLHELI_INTERFACE
 
 // Number of available PWM outputs
-#define MAX_PWM_OUTPUT_PORTS    6
+#define MAX_PWM_OUTPUT_PORTS    4
 
 #define TARGET_IO_PORTA         0xffff
 #define TARGET_IO_PORTB         0xffff
 #define TARGET_IO_PORTC         (BIT(13)|BIT(14)|BIT(15))
 #define TARGET_IO_PORTF         (BIT(0)|BIT(1)|BIT(4))
 
-#define USABLE_TIMER_CHANNEL_COUNT  8
+#define USABLE_TIMER_CHANNEL_COUNT  5
 
-#define USED_TIMERS             (TIM_N(1) | TIM_N(2) | TIM_N(3) | TIM_N(4) | TIM_N(15))
+#define USED_TIMERS             (TIM_N(3) | TIM_N(4) | TIM_N(8) | TIM_N(15))
