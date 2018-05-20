@@ -104,13 +104,13 @@ void updateWindEstimator(timeUs_t currentTimeUs)
     fuselageDirectionDiff[Y] = fuselageDirection[Y] - lastFuselageDirection[Y];
     fuselageDirectionDiff[Z] = fuselageDirection[Z] - lastFuselageDirection[Z];
 
-    float diff_length = sqrtf(sq(fuselageDirectionDiff[X]) + sq(fuselageDirectionDiff[Y]) + sq(fuselageDirectionDiff[Z]));
+    float diffLengthSq = sq(fuselageDirectionDiff[X]) + sq(fuselageDirectionDiff[Y]) + sq(fuselageDirectionDiff[Z]);
     // Very small changes in attitude will result in a denominator
     // very close to zero which will introduce too much error in the
     // estimation.
     //
     // TODO: Is 0.2f an adequate threshold?
-    if (diff_length > 0.2f) {
+    if (diffLengthSq > sq(0.2f)) {
         // when turning, use the attitude response to estimate wind speed
         groundVelocityDiff[X] = groundVelocity[X] - lastGroundVelocity[X];
         groundVelocityDiff[Y] = groundVelocity[Y] - lastGroundVelocity[Y];
@@ -139,20 +139,19 @@ void updateWindEstimator(timeUs_t currentTimeUs)
         wind[Y] = (groundVelocitySum[Y] - V * (sintheta * fuselageDirectionSum[X] + costheta * fuselageDirectionSum[Y])) * 0.5f;// equation 11
         wind[Z] = (groundVelocitySum[Z] - V * fuselageDirectionSum[Z]) * 0.5f;// equation 12
 
-        float prev_wind_length = sqrtf(sq(estimatedWind[X]) + sq(estimatedWind[Y]) + sq(estimatedWind[Z]));
-        float wind_length = sqrtf(sq(wind[X]) + sq(wind[Y]) + sq(wind[Z]));
+        float prevWindLength = sqrtf(sq(estimatedWind[X]) + sq(estimatedWind[Y]) + sq(estimatedWind[Z]));
+        float windLength = sqrtf(sq(wind[X]) + sq(wind[Y]) + sq(wind[Z]));
 
-        // TODO: Better filtering
-        if (wind_length < prev_wind_length + 20) {
+        if (windLength < prevWindLength + 2000) {
+            // TODO: Better filtering
             estimatedWind[X] = estimatedWind[X] * 0.95f + wind[X] * 0.05f;
             estimatedWind[Y] = estimatedWind[Y] * 0.95f + wind[Y] * 0.05f;
             estimatedWind[Z] = estimatedWind[Z] * 0.95f + wind[Z] * 0.05f;
 
-            DEBUG_SET(DEBUG_WIND_ESTIMATOR, 0, estimatedWind[X] * 100);
-            DEBUG_SET(DEBUG_WIND_ESTIMATOR, 1, estimatedWind[Y] * 100);
-            DEBUG_SET(DEBUG_WIND_ESTIMATOR, 2, estimatedWind[Z] * 100);
+            DEBUG_SET(DEBUG_WIND_ESTIMATOR, 0, estimatedWind[X]);
+            DEBUG_SET(DEBUG_WIND_ESTIMATOR, 1, estimatedWind[Y]);
+            DEBUG_SET(DEBUG_WIND_ESTIMATOR, 2, estimatedWind[Z]);
         }
-
         lastUpdateUs = currentTimeUs;
         hasValidWindEstimate = true;
     }
