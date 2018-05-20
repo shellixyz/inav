@@ -20,6 +20,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <math.h>
+#include <string.h>
 
 #include "platform.h"
 
@@ -135,7 +136,6 @@ STATIC_UNIT_TESTED void imuComputeRotationMatrix(void)
 #define GPS_VEL_BUF_LENGTH 5
 static float gpsVelBuf_X[GPS_VEL_BUF_LENGTH], gpsVelBuf_Y[GPS_VEL_BUF_LENGTH], gpsVelBuf_Z[GPS_VEL_BUF_LENGTH];
 static firFilter_t gpsVelFilter_X, gpsVelFilter_Y, gpsVelFilter_Z;
-static float gpsInvDt = 0;
 
 static void imuInitGpsAccelFilter(void)
 {
@@ -478,26 +478,43 @@ static bool imuCanUseAccelerometerForCorrectionNew(fpVector3_t * grav)
 }
 
 #if defined(USE_GPS) && defined(USE_NAV)
+
+static fpVector3_t gpsAccelInBodyFrame = { .x = 0, .y = 0, .z = 0 };
+
 void imuReceiveGPSUpdate(const bool isFirstGPSUpdate, const float gpsDt, const fpVector3_t * gpsVel)
 {
+    static fpVector3_t prevGpsVel;
+    static uint16_t counter = 0;
     if (isFirstGPSUpdate) {
         firFilterReset(&gpsVelFilter_X, gpsVel->x);
         firFilterReset(&gpsVelFilter_Y, gpsVel->y);
         firFilterReset(&gpsVelFilter_Z, gpsVel->z);
-        gpsInvDt = 0;
-    }
-    else {
+        memcpy(&prevGpsVel, gpsVel, sizeof(*gpsVel));
+    } else {
         firFilterUpdate(&gpsVelFilter_X, gpsVel->x);
         firFilterUpdate(&gpsVelFilter_Y, gpsVel->y);
         firFilterUpdate(&gpsVelFilter_Z, gpsVel->z);
-        gpsInvDt = 1.0f / gpsDt;
-     }
+        static fpVector3_t updatedGpsVel;
+        updatedGpsVel.x = firFilterApply(&gpsVelFilter_X);
+        updatedGpsVel.y = firFilterApply(&gpsVelFilter_Y);
+        updatedGpsVel.z = firFilterApply(&gpsVelFilter_Z);
+        // Calculate GPS acceleration and rotate to body frame
+        gpsAccelInBodyFrame.x = (updatedGpsVel.x - prevGpsVel.x) / gpsDt;
+        gpsAccelInBodyFrame.y = (updatedGpsVel.y - prevGpsVel.y) / gpsDt;
+        gpsAccelInBodyFrame.z = (updatedGpsVel.z - prevGpsVel.z) / gpsDt;
+        /*imuTransformVectorEarthToBody(&gpsAccelInBodyFrame);*/
+        memcpy(&prevGpsVel, &updatedGpsVel, sizeof(*gpsVel));
+    }
+
+    for (uint8_t i = 0; i < XYZ_AXIS_COUNT; ++i)
+        debug[i] = lrintf(gpsAccelInBodyFrame.v[i] * 1000);
+    debug[3] = counter++;
+
 }
 #endif
 
 static void imuCalculateEstimatedAttitude(float dT)
 {
-    static uint16_t counter = 0;
 #if defined(USE_MAG)
     const bool canUseMAG = sensors(SENSOR_MAG) && compassIsHealthy();
 #else
@@ -513,17 +530,6 @@ static void imuCalculateEstimatedAttitude(float dT)
 
 #if defined(USE_GPS) && defined(USE_NAV)
     if (isImuHeadingValid() && sensors(SENSOR_GPS) && STATE(GPS_FIX) && gpsSol.numSat >= 6) {
-        // Calculate GPS acceleration and rotate to body frame
-        fpVector3_t gpsAccelInBodyFrame;
-        gpsAccelInBodyFrame.x = firFilterApply(&gpsVelFilter_X) * gpsInvDt;
-        gpsAccelInBodyFrame.y = firFilterApply(&gpsVelFilter_Y) * gpsInvDt;
-        gpsAccelInBodyFrame.z = firFilterApply(&gpsVelFilter_Z) * gpsInvDt;
-        imuTransformVectorEarthToBody(&gpsAccelInBodyFrame);
-
-        for (uint8_t i = 0; i < XYZ_AXIS_COUNT; ++i)
-            debug[i] = lrintf(gpsAccelInBodyFrame.v[i] * 1000);
-        debug[3] = counter++;
-
         imuGravityInBodyFrame.x -= gpsAccelInBodyFrame.x;
         imuGravityInBodyFrame.y -= gpsAccelInBodyFrame.y;
         imuGravityInBodyFrame.z -= gpsAccelInBodyFrame.z;
