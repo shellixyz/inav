@@ -502,13 +502,13 @@ void imuReceiveGPSUpdate(const bool isFirstGPSUpdate, const float gpsDt, const f
         gpsAccelInBodyFrame.x = (updatedGpsVel.x - prevGpsVel.x) / gpsDt;
         gpsAccelInBodyFrame.y = (updatedGpsVel.y - prevGpsVel.y) / gpsDt;
         gpsAccelInBodyFrame.z = (updatedGpsVel.z - prevGpsVel.z) / gpsDt;
-        /*imuTransformVectorEarthToBody(&gpsAccelInBodyFrame);*/
+        imuTransformVectorEarthToBody(&gpsAccelInBodyFrame);
         memcpy(&prevGpsVel, &updatedGpsVel, sizeof(*gpsVel));
     }
 
     for (uint8_t i = 0; i < XYZ_AXIS_COUNT; ++i)
-        debug[i] = lrintf(gpsAccelInBodyFrame.v[i] * 1000);
-    debug[3] = counter++;
+        DEBUG_SET(DEBUG_GPS_ACCEL, i, lrintf(gpsAccelInBodyFrame.v[i] * 1000));
+    DEBUG_SET(DEBUG_GPS_ACCEL, 3, ++counter);
 
 }
 #endif
