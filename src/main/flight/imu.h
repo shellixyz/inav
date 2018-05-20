@@ -27,6 +27,9 @@
 extern fpVector3_t imuMeasuredAccelBF;         // cm/s/s
 extern fpVector3_t imuMeasuredRotationBF;       // rad/s
 
+extern bool useAccNew;
+extern fpVector3_t imuGravityInBodyFrame;
+
 typedef union {
     int16_t raw[XYZ_AXIS_COUNT];
     struct {
@@ -61,6 +64,7 @@ typedef struct imuRuntimeConfig_s {
 
 void imuConfigure(void);
 
+void imuReceiveGPSUpdate(const bool isFirstGPSUpdate, const float gpsDt, const fpVector3_t * gpsVel);
 void imuSetMagneticDeclination(float declinationDeg);
 void imuUpdateAttitude(timeUs_t currentTimeUs);
 void imuUpdateAccelerometer(void);

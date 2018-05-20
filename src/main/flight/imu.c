@@ -20,6 +20,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <math.h>
+#include <string.h>
 
 #include "platform.h"
 
@@ -92,6 +93,9 @@ STATIC_FASTRAM imuRuntimeConfig_t imuRuntimeConfig;
 
 STATIC_FASTRAM bool gpsHeadingInitialized;
 
+bool useAccNew = false;
+fpVector3_t imuGravityInBodyFrame;
+
 PG_REGISTER_WITH_RESET_TEMPLATE(imuConfig_t, imuConfig, PG_IMU_CONFIG, 0);
 
 PG_RESET_TEMPLATE(imuConfig_t, imuConfig,
@@ -128,6 +132,21 @@ STATIC_UNIT_TESTED void imuComputeRotationMatrix(void)
     rMat[2][2] = 1.0f - 2.0f * q1q1 - 2.0f * q2q2;
 }
 
+#if defined(USE_GPS) && defined(USE_NAV)
+#define GPS_VEL_BUF_LENGTH 5
+static float gpsVelBuf_X[GPS_VEL_BUF_LENGTH], gpsVelBuf_Y[GPS_VEL_BUF_LENGTH], gpsVelBuf_Z[GPS_VEL_BUF_LENGTH];
+static firFilter_t gpsVelFilter_X, gpsVelFilter_Y, gpsVelFilter_Z;
+
+static void imuInitGpsAccelFilter(void)
+{
+    /* First update or recovering from outage - reset filters */
+    const float gpsDefivCoeffs[GPS_VEL_BUF_LENGTH] = {5.0f/8, 2.0f/8, -8.0f/8, -2.0f/8, 3.0f/8};
+    firFilterInit(&gpsVelFilter_X, gpsVelBuf_X, GPS_VEL_BUF_LENGTH, gpsDefivCoeffs);
+    firFilterInit(&gpsVelFilter_Y, gpsVelBuf_Y, GPS_VEL_BUF_LENGTH, gpsDefivCoeffs);
+    firFilterInit(&gpsVelFilter_Z, gpsVelBuf_Z, GPS_VEL_BUF_LENGTH, gpsDefivCoeffs);
+}
+#endif
+
 void imuConfigure(void)
 {
     imuRuntimeConfig.dcm_kp_acc = imuConfig()->dcm_kp_acc / 10000.0f;
@@ -156,6 +175,10 @@ void imuInit(void)
 
     quaternionInitUnit(&orientation);
     imuComputeRotationMatrix();
+
+#if defined(USE_GPS) && defined(USE_NAV)
+    imuInitGpsAccelFilter();
+#endif
 }
 
 void imuSetMagneticDeclination(float declinationDeg)
@@ -447,6 +470,49 @@ static bool imuCanUseAccelerometerForCorrection(void)
     return (nearness > MAX_ACC_SQ_NEARNESS) ? false : true;
 }
 
+static bool imuCanUseAccelerometerForCorrectionNew(fpVector3_t * grav)
+{
+    float accMagnitudeSq = sq(grav->x) + sq(grav->y) + sq(grav->z);
+    const float nearness = ABS(100.0f - 100.0f * accMagnitudeSq / sq(GRAVITY_CMSS));
+    return (nearness > MAX_ACC_SQ_NEARNESS) ? false : true;
+}
+
+#if defined(USE_GPS) && defined(USE_NAV)
+
+static fpVector3_t gpsAccelInBodyFrame = { .x = 0, .y = 0, .z = 0 };
+
+void imuReceiveGPSUpdate(const bool isFirstGPSUpdate, const float gpsDt, const fpVector3_t * gpsVel)
+{
+    static fpVector3_t prevGpsVel;
+    static uint16_t counter = 0;
+    if (isFirstGPSUpdate) {
+        firFilterReset(&gpsVelFilter_X, gpsVel->x);
+        firFilterReset(&gpsVelFilter_Y, gpsVel->y);
+        firFilterReset(&gpsVelFilter_Z, gpsVel->z);
+        memcpy(&prevGpsVel, gpsVel, sizeof(*gpsVel));
+    } else {
+        firFilterUpdate(&gpsVelFilter_X, gpsVel->x);
+        firFilterUpdate(&gpsVelFilter_Y, gpsVel->y);
+        firFilterUpdate(&gpsVelFilter_Z, gpsVel->z);
+        static fpVector3_t updatedGpsVel;
+        updatedGpsVel.x = firFilterApply(&gpsVelFilter_X);
+        updatedGpsVel.y = firFilterApply(&gpsVelFilter_Y);
+        updatedGpsVel.z = firFilterApply(&gpsVelFilter_Z);
+        // Calculate GPS acceleration and rotate to body frame
+        gpsAccelInBodyFrame.x = (updatedGpsVel.x - prevGpsVel.x) / gpsDt;
+        gpsAccelInBodyFrame.y = (updatedGpsVel.y - prevGpsVel.y) / gpsDt;
+        gpsAccelInBodyFrame.z = (updatedGpsVel.z - prevGpsVel.z) / gpsDt;
+        /*imuTransformVectorEarthToBody(&gpsAccelInBodyFrame);*/
+        memcpy(&prevGpsVel, &updatedGpsVel, sizeof(*gpsVel));
+    }
+
+    for (uint8_t i = 0; i < XYZ_AXIS_COUNT; ++i)
+        debug[i] = lrintf(gpsAccelInBodyFrame.v[i] * 1000);
+    debug[3] = counter++;
+
+}
+#endif
+
 static void imuCalculateEstimatedAttitude(float dT)
 {
 #if defined(USE_MAG)
@@ -456,6 +522,21 @@ static void imuCalculateEstimatedAttitude(float dT)
 #endif
 
     const bool useAcc = imuCanUseAccelerometerForCorrection();
+
+    // Calculate gravity in body frame (apply GPS-calculated acceleration if available)
+    imuGravityInBodyFrame.x = imuMeasuredAccelBF.x;
+    imuGravityInBodyFrame.y = imuMeasuredAccelBF.y;
+    imuGravityInBodyFrame.z = imuMeasuredAccelBF.z;
+
+#if defined(USE_GPS) && defined(USE_NAV)
+    if (isImuHeadingValid() && sensors(SENSOR_GPS) && STATE(GPS_FIX) && gpsSol.numSat >= 6) {
+        imuGravityInBodyFrame.x -= gpsAccelInBodyFrame.x;
+        imuGravityInBodyFrame.y -= gpsAccelInBodyFrame.y;
+        imuGravityInBodyFrame.z -= gpsAccelInBodyFrame.z;
+    }
+#endif
+
+    useAccNew = imuCanUseAccelerometerForCorrectionNew(&imuGravityInBodyFrame);
 
     float courseOverGround = 0;
     bool useMag = false;

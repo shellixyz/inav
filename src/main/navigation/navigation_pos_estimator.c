@@ -391,6 +391,9 @@ void onNewGPSData(void)
                     posEstimator.gps.vel.z = (posEstimator.gps.vel.z + (gpsSol.llh.alt - previousAlt) / dT) / 2.0f;
                 }
 
+                // Report GPS velocity to IMU
+                imuReceiveGPSUpdate(false, dT, &posEstimator.gps.vel);
+
 #if defined(NAV_GPS_GLITCH_DETECTION)
                 /* GPS glitch protection. We have local coordinates and local velocity for current GPS update. Check if they are sane */
                 if (detectGPSGlitch(currentTimeUs)) {
@@ -416,6 +419,9 @@ void onNewGPSData(void)
 
                 /* Indicate a last valid reading of Pos/Vel */
                 posEstimator.gps.lastUpdateTime = currentTimeUs;
+            } else {
+                // First GPS update
+                imuReceiveGPSUpdate(true, 0, &posEstimator.gps.vel);
             }
 
             previousLat = gpsSol.llh.lat;
