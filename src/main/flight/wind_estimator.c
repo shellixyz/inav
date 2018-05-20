@@ -117,7 +117,7 @@ void updateWindEstimator(timeUs_t currentTimeUs)
         groundVelocityDiff[Z] = groundVelocity[X] - lastGroundVelocity[Z];
 
         // estimate airspeed it using equation 6
-        float V = (sqrtf(sq(groundVelocityDiff[0]) + sq(groundVelocityDiff[1]) + sq(groundVelocityDiff[2]))) / diff_length;
+        float V = (sqrtf(sq(groundVelocityDiff[0]) + sq(groundVelocityDiff[1]) + sq(groundVelocityDiff[2]))) / sqrtf(diffLengthSq);
 
         fuselageDirectionSum[X] = fuselageDirection[X] + lastFuselageDirection[X];
         fuselageDirectionSum[Y] = fuselageDirection[Y] + lastFuselageDirection[Y];
