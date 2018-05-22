@@ -432,6 +432,14 @@ void applyFixedWingPitchRollThrottleController(navigationFSMStateFlags_t navStat
         pitchCorrection += posControl.rcAdjustment[PITCH];
         throttleCorrection += DECIDEGREES_TO_DEGREES(pitchCorrection) * navConfig()->fw.pitch_to_throttle;
 
+        // manual throttle increase
+        if (!FLIGHT_MODE(FAILSAFE_MODE)) {
+            if (rcCommand[THROTTLE] < 1950)
+                throttleCorrection += scaleRange(MAX(1500, rcCommand[THROTTLE]), 1500, PWM_RANGE_MAX, 0, maxThrottleCorrection);
+            else
+                throttleCorrection = maxThrottleCorrection;
+        }
+
 #ifdef NAV_FIXED_WING_LANDING
         if (navStateFlags & NAV_CTL_LAND) {
             /*
