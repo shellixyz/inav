@@ -82,6 +82,14 @@ typedef enum {
     OSD_RADAR,
     OSD_REMAINING_FLIGHT_TIME_BEFORE_RTH,
     OSD_SAG_COMPENSATED_MAIN_BATT_VOLTAGE,
+    OSD_LEVEL_PIDS,
+    OSD_POS_XY_PIDS,
+    OSD_POS_Z_PIDS,
+    OSD_VEL_XY_PIDS,
+    OSD_VEL_Z_PIDS,
+    OSD_HEADING_P,
+    OSD_BOARD_ALIGN_ROLL,
+    OSD_BOARD_ALIGN_PITCH,
     OSD_DEBUG, // Number 46. Intentionally absent from configurator and CMS. Set it from CLI.
     OSD_ITEM_COUNT // MUST BE LAST
 } osd_items_e;
