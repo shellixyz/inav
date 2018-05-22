@@ -76,6 +76,7 @@
 #include "rx/rx.h"
 
 #include "sensors/battery.h"
+#include "sensors/boardalignment.h"
 #include "sensors/diagnostics.h"
 #include "sensors/sensors.h"
 #include "sensors/pitotmeter.h"
@@ -1603,6 +1604,16 @@ static bool osdDrawSingleElement(uint8_t item)
             return true;
         }
 
+    case OSD_BOARD_ALIGN_ROLL:
+        strcpy(buff, "AR ");
+        osdFormatCentiNumber(buff + 1, boardAlignment()->rollDeciDegrees * 10, 0, 1, 0, 4);
+        break;
+
+    case OSD_BOARD_ALIGN_PITCH:
+        strcpy(buff, "AP ");
+        osdFormatCentiNumber(buff + 1, boardAlignment()->pitchDeciDegrees * 10, 0, 1, 0, 4);
+        break;
+
     case OSD_POWER:
         {
             buff[0] = SYM_WATT;
@@ -1969,6 +1980,8 @@ void pgResetFn_osdConfig(osdConfig_t *osdConfig)
     osdConfig->item_pos[0][OSD_VEL_XY_PIDS] = OSD_POS(2, 12);
     osdConfig->item_pos[0][OSD_VEL_Z_PIDS] = OSD_POS(2, 12);
     osdConfig->item_pos[0][OSD_HEADING_P] = OSD_POS(2, 12);
+    osdConfig->item_pos[0][OSD_BOARD_ALIGN_ROLL] = OSD_POS(2, 10);
+    osdConfig->item_pos[0][OSD_BOARD_ALIGN_PITCH] = OSD_POS(2, 11);
 
     osdConfig->item_pos[0][OSD_POWER] = OSD_POS(15, 1);
 
