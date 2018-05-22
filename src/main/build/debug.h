@@ -60,6 +60,7 @@ typedef enum {
     DEBUG_STAGE2,
     DEBUG_WIND_ESTIMATOR,
     DEBUG_SAG_COMP_VOLTAGE,
+    DEBUG_CRUISE,
     DEBUG_COUNT
 } debugType_e;
 
