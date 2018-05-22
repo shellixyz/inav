@@ -1281,9 +1281,9 @@ static bool osdDrawSingleElement(uint8_t item)
                 p = " AH ";
             }
             else if (FLIGHT_MODE(NAV_CRUISE_MODE) && FLIGHT_MODE(NAV_ALTHOLD_MODE))
-                p = " 3D CRUISE ";
+                p = "3CRS";
             else if (FLIGHT_MODE(NAV_CRUISE_MODE))
-                p = " 2D CRUISE "; 
+                p = "CRS"; 
             else if (FLIGHT_MODE(NAV_WP_MODE))
                 p = " WP ";
             else if (FLIGHT_MODE(ANGLE_MODE))
@@ -1791,7 +1791,7 @@ static bool osdDrawSingleElement(uint8_t item)
     case OSD_EFFICIENCY_WH_PER_KM:
         {
             // amperage is in centi amps, speed is in cms/s. We want
-            // mah/km. Values over 999 are considered useless and
+            // mWh/km. Values over 999Wh/km are considered useless and
             // displayed as "---""
             static pt1Filter_t eFilterState;
             static timeUs_t efficiencyUpdated = 0;

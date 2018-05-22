@@ -67,7 +67,7 @@ tables:
   - name: i2c_speed
     values: ["400KHZ", "800KHZ", "100KHZ", "200KHZ"]
   - name: debug_modes
-    values: ["NONE", "GYRO", "NOTCH", "NAV_LANDING", "FW_ALTITUDE", "AGL", "FLOW_RAW", "SBUS", "FPORT", "ALWAYS", "STAGE2", "WIND_ESTIMATOR", "GPS_ACCEL"]
+    values: ["NONE", "GYRO", "NOTCH", "NAV_LANDING", "FW_ALTITUDE", "AGL", "FLOW_RAW", "SBUS", "FPORT", "ALWAYS", "STAGE2", "WIND_ESTIMATOR", "GPS_ACCEL", "CRUISE"]
   - name: async_mode
     values: ["NONE", "GYRO", "ALL"]
   - name: aux_operator
@@ -91,6 +91,9 @@ tables:
   - name: platform_type
     values: ["MULTIROTOR", "AIRPLANE", "HELICOPTER", "TRICOPTER", "ROVER", "BOAT"]
     enum: flyingPlatformType_e
+  - name: tz_automatic_dst
+    values: ["OFF", "EU", "USA"]
+    enum: tz_automatic_dst_e
 
 groups:
   - name: PG_GYRO_CONFIG
@@ -1361,6 +1364,14 @@ groups:
       - name: nav_fw_launch_climb_angle_awaits_motor
         field: fw.launch_climb_angle_awaits_motor
         type: bool
+      - name: nav_cruise_virtual_wp_radius
+        field: fw.cruise_virtual_wp_radius
+        min: 1000
+        max: 15000
+      - name: nav_cruise_virtual_nextwp_multiplier
+        field: fw.cruise_virtual_nav_cruise_virtual_nextwp_multiplier
+        min: 5
+        max: 70
 
   - name: PG_TELEMETRY_CONFIG
     type: telemetryConfig_t
@@ -1590,6 +1601,8 @@ groups:
       - name: tz_offset
         min: -1440
         max: 1440
+      - name: tz_automatic_dst
+        type: uint8_t
 
   - name: PG_DISPLAY_CONFIG
     type: displayConfig_t

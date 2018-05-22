@@ -222,7 +222,7 @@ static void calculateVirtualPositionTarget_FW(float trackingPeriod)
     #define TAN_15DEG    0.26795f
     bool needToCalculateCircularLoiter = isApproachingLastWaypoint()
                                             && (distanceToActualTarget <= (navConfig()->fw.loiter_radius / TAN_15DEG))
-                                            && (distanceToActualTarget > 50.0f);
+                                            && (distanceToActualTarget > 50.0f) && !FLIGHT_MODE(NAV_CRUISE_MODE);
 
     // Calculate virtual position for straight movement
     if (needToCalculateCircularLoiter) {

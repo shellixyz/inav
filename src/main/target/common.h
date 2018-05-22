@@ -43,7 +43,6 @@
 #define USE_GPS
 #define USE_GPS_PROTO_UBLOX
 #define USE_NAV
-#define USE_FLM_TURN_ASSIST     // This is mandatory for fixed-wing navigation
 #define USE_TELEMETRY
 #define USE_TELEMETRY_LTM
 #define USE_TELEMETRY_FRSKY
@@ -117,6 +116,8 @@
 
 // Wind estimator
 #define USE_WIND_ESTIMATOR
+//Enable DST calculations
+#define RTC_AUTOMATIC_DST
 
 #else // FLASH_SIZE < 128
 #define CLI_MINIMAL_VERBOSITY

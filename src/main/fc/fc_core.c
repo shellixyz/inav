@@ -538,7 +538,6 @@ void processRx(timeUs_t currentTimeUs)
         DISABLE_FLIGHT_MODE(FLAPERON);
     }
 
-#ifdef USE_FLM_TURN_ASSIST
     /* Turn assistant mode */
     if (IS_RC_MODE_ACTIVE(BOXTURNASSIST)) {
         if (!FLIGHT_MODE(TURN_ASSISTANT)) {
@@ -547,7 +546,6 @@ void processRx(timeUs_t currentTimeUs)
     } else {
         DISABLE_FLIGHT_MODE(TURN_ASSISTANT);
     }
-#endif
 
     if (sensors(SENSOR_ACC)) {
         if (IS_RC_MODE_ACTIVE(BOXHEADINGHOLD)) {

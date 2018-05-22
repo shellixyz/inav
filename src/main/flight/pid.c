@@ -668,7 +668,6 @@ float pidHeadingHold(void)
     return headingHoldRate;
 }
 
-#ifdef USE_FLM_TURN_ASSIST
 /*
  * TURN ASSISTANT mode is an assisted mode to do a Yaw rotation on a ground plane, allowing one-stick turn in RATE more
  * and keeping ROLL and PITCH attitude though the turn.
@@ -730,7 +729,6 @@ static void pidTurnAssistant(pidState_t *pidState)
         pidState[YAW].rateTarget = constrainf(targetRates.z, -currentControlRateProfile->stabilized.rates[YAW] * 10.0f, currentControlRateProfile->stabilized.rates[YAW] * 10.0f);
     }
 }
-#endif
 
 void pidController(void)
 {
@@ -764,11 +762,9 @@ void pidController(void)
         pidLevel(&pidState[FD_PITCH], FD_PITCH, horizonRateMagnitude);
     }
 
-#ifdef USE_FLM_TURN_ASSIST
     if (FLIGHT_MODE(TURN_ASSISTANT) || navigationRequiresTurnAssistance()) {
         pidTurnAssistant(pidState);
     }
-#endif
 
     // Apply setpoint rate of change limits
     for (int axis = 0; axis < 3; axis++) {

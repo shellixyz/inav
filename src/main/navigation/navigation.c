@@ -76,7 +76,7 @@ PG_DECLARE_ARRAY(navWaypoint_t, NAV_MAX_WAYPOINTS, nonVolatileWaypointList);
 PG_REGISTER_ARRAY(navWaypoint_t, NAV_MAX_WAYPOINTS, nonVolatileWaypointList, PG_WAYPOINT_MISSION_STORAGE, 0);
 #endif
 
-PG_REGISTER_WITH_RESET_TEMPLATE(navConfig_t, navConfig, PG_NAV_CONFIG, 1);
+PG_REGISTER_WITH_RESET_TEMPLATE(navConfig_t, navConfig, PG_NAV_CONFIG, 2);
 
 PG_RESET_TEMPLATE(navConfig_t, navConfig,
     .general = {
@@ -145,6 +145,8 @@ PG_RESET_TEMPLATE(navConfig_t, navConfig,
         .launch_climb_angle = 18,               // 18 degrees
         .launch_max_angle = 45,                 // 45 deg
         .launch_climb_angle_awaits_motor = false,
+        .cruise_virtual_wp_radius=7000,
+        .cruise_virtual_nav_cruise_virtual_nextwp_multiplier=25
     }
 );
 
@@ -754,6 +756,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_IDLE(navigationFSMState
 {
     UNUSED(previousState);
     resetNavigation();
+    DEBUG_SET(DEBUG_CRUISE, 0, 0);
     return NAV_FSM_EVENT_NONE;
 }
 
@@ -871,7 +874,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_2D_INITIALIZE(na
 {   
     const navigationFSMStateFlags_t prevFlags = navGetStateFlags(previousState);
 
-    debug[0]=1;
+    DEBUG_SET(DEBUG_CRUISE, 0, 1);
     if(checkForPositionSensorTimeout()){ return NAV_FSM_EVENT_SWITCH_TO_IDLE; }  //we do not have an healty position. switch to idle and try on next iteration
  
     if (!STATE(FIXED_WING)) {return NAV_FSM_EVENT_ERROR;} //only on FW for now
@@ -882,15 +885,15 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_2D_INITIALIZE(na
         resetPositionController();
     }
 
-        //store initial cruise starting point and yaw
+    //store initial cruise starting point and yaw
 
-        //FUTURE USE
-        //posControl.cruise.cruiseStartPosition.x = posControl.actualState.pos.x;
-        //posControl.cruise.cruiseStartPosition.y = posControl.actualState.pos.y;
-        posControl.cruise.cruiseYaw=posControl.actualState.yaw; 
+    //FUTURE USE
+    //posControl.cruise.cruiseStartPosition.x = posControl.actualState.pos.x;
+    //posControl.cruise.cruiseStartPosition.y = posControl.actualState.pos.y;
+    posControl.cruise.cruiseYaw=posControl.actualState.yaw; 
 
-        calculateFarAwayTarget(&posControl.cruise.cruiseTargetPos, posControl.cruise.cruiseYaw, 25000); //calculate a 250m far away target
-        setDesiredPosition(&posControl.cruise.cruiseTargetPos, posControl.cruise.cruiseYaw, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_HEADING);
+    calculateFarAwayTarget(&posControl.cruise.cruiseTargetPos, posControl.cruise.cruiseYaw, 25000); //calculate a 250m far away target
+    setDesiredPosition(&posControl.cruise.cruiseTargetPos, posControl.cruise.cruiseYaw, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_HEADING);
 
     return NAV_FSM_EVENT_SUCCESS;
 }
@@ -902,19 +905,18 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_2D_IN_PROGRESS(n
       if(checkForPositionSensorTimeout()){ return NAV_FSM_EVENT_SWITCH_TO_IDLE; }  //in case of invalid position, re init.
       
       if(posControl.flags.isAdjustingPosition || posControl.flags.isAdjustingHeading) { return NAV_FSM_EVENT_SWITCH_TO_IDLE; } //pilot has input a roll command (need to take YAW in account too!!!!) and the new heading to maintain has to be processed
-      debug[0]=2;
-      debug[1]=0;
-      if(calculateDistanceToDestination(&posControl.cruise.cruiseTargetPos)<7000){ //FOR THE MOMENT IS HARDCODED 70m
+        DEBUG_SET(DEBUG_CRUISE, 0, 2);
+        DEBUG_SET(DEBUG_CRUISE, 1, 0);
+        if(calculateDistanceToDestination(&posControl.cruise.cruiseTargetPos)<navConfig()->fw.cruise_virtual_wp_radius){ 
 
-                int32_t targetDistance = gpsSol.groundSpeed*15;
-                debug[2]= targetDistance;
-                calculateNewCruiseTarget(&posControl.cruise.cruiseTargetPos, posControl.cruise.cruiseYaw, targetDistance); 
-                setDesiredPosition(&posControl.cruise.cruiseTargetPos, posControl.cruise.cruiseYaw, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_HEADING);
-                debug[1]=1;
+            int32_t targetDistance = gpsSol.groundSpeed*navConfig()->fw.cruise_virtual_nav_cruise_virtual_nextwp_multiplier;
+            DEBUG_SET(DEBUG_CRUISE, 2, targetDistance);
+            calculateNewCruiseTarget(&posControl.cruise.cruiseTargetPos, posControl.cruise.cruiseYaw, targetDistance); 
+            setDesiredPosition(&posControl.cruise.cruiseTargetPos, posControl.cruise.cruiseYaw, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_HEADING);
+            DEBUG_SET(DEBUG_CRUISE, 1, 1);
       }
       
-            
-        return NAV_FSM_EVENT_NONE;  
+    return NAV_FSM_EVENT_NONE;  
 }
 
 ////STUBS
@@ -2716,7 +2718,7 @@ void updateFlightBehaviorModifiers(void)
  *  Update rate: RX (data driven or 50Hz)
  */
 void updateWaypointsAndNavigationMode(void)
-{   debug[0]=0;
+{   
     /* Initiate home position update */
     updateHomePosition();
 
@@ -2734,7 +2736,7 @@ void updateWaypointsAndNavigationMode(void)
 
     // Process pilot's RC input to adjust behaviour
     processNavigationRCAdjustments();
-
+    
     // Map navMode back to enabled flight modes
     switchNavigationFlightModes();
 
