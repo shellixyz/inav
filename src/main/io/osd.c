@@ -1263,9 +1263,9 @@ static bool osdDrawSingleElement(uint8_t item)
                 p = " AH ";
             }
             else if (FLIGHT_MODE(NAV_CRUISE_MODE) && FLIGHT_MODE(NAV_ALTHOLD_MODE))
-                p = " 3D CRUISE ";
+                p = "3CRS";
             else if (FLIGHT_MODE(NAV_CRUISE_MODE))
-                p = " 2D CRUISE "; 
+                p = "CRS"; 
             else if (FLIGHT_MODE(NAV_WP_MODE))
                 p = " WP ";
             else if (FLIGHT_MODE(ANGLE_MODE))
