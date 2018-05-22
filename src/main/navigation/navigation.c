@@ -755,7 +755,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_IDLE(navigationFSMState
 {
     UNUSED(previousState);
     resetNavigation();
-    debug[0]=0;
+    DEBUG_SET(DEBUG_CRUISE, 0, 0);
     return NAV_FSM_EVENT_NONE;
 }
 
@@ -873,7 +873,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_2D_INITIALIZE(na
 {   
     const navigationFSMStateFlags_t prevFlags = navGetStateFlags(previousState);
 
-    debug[0]=1;
+    DEBUG_SET(DEBUG_CRUISE, 0, 1);
     if(checkForPositionSensorTimeout()){ return NAV_FSM_EVENT_SWITCH_TO_IDLE; }  //we do not have an healty position. switch to idle and try on next iteration
  
     if (!STATE(FIXED_WING)) {return NAV_FSM_EVENT_ERROR;} //only on FW for now
@@ -904,15 +904,15 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_2D_IN_PROGRESS(n
       if(checkForPositionSensorTimeout()){ return NAV_FSM_EVENT_SWITCH_TO_IDLE; }  //in case of invalid position, re init.
       
       if(posControl.flags.isAdjustingPosition || posControl.flags.isAdjustingHeading) { return NAV_FSM_EVENT_SWITCH_TO_IDLE; } //pilot has input a roll command (need to take YAW in account too!!!!) and the new heading to maintain has to be processed
-        debug[0]=2;
-        debug[1]=0;
+        DEBUG_SET(DEBUG_CRUISE, 0, 2);
+        DEBUG_SET(DEBUG_CRUISE, 1, 0);
         if(calculateDistanceToDestination(&posControl.cruise.cruiseTargetPos)<navConfig()->fw.cruise_virtual_wp_radius){ 
 
             int32_t targetDistance = gpsSol.groundSpeed*navConfig()->fw.cruise_virtual_nav_cruise_virtual_nextwp_multiplier;
-            debug[2]= targetDistance;
+            DEBUG_SET(DEBUG_CRUISE, 2, targetDistance);
             calculateNewCruiseTarget(&posControl.cruise.cruiseTargetPos, posControl.cruise.cruiseYaw, targetDistance); 
             setDesiredPosition(&posControl.cruise.cruiseTargetPos, posControl.cruise.cruiseYaw, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_HEADING);
-            debug[1]=1;
+            DEBUG_SET(DEBUG_CRUISE, 1, 1);
       }
       
     return NAV_FSM_EVENT_NONE;  
