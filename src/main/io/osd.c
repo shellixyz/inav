@@ -1605,14 +1605,24 @@ static bool osdDrawSingleElement(uint8_t item)
         }
 
     case OSD_BOARD_ALIGN_ROLL:
-        strcpy(buff, "AR ");
-        osdFormatCentiNumber(buff + 1, boardAlignment()->rollDeciDegrees * 10, 0, 1, 0, 4);
-        break;
+        displayWrite(osdDisplayPort, elemPosX, elemPosY, "AR");
+
+        elemAttr = TEXT_ATTRIBUTES_NONE;
+        osdFormatCentiNumber(buff, boardAlignment()->rollDeciDegrees * 10, 0, 1, 0, 4);
+        if (isAdjustmentFunctionSelected(ADJUSTMENT_ROLL_BOARD_ALIGNMENT))
+            TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
+        displayWriteWithAttr(osdDisplayPort, elemPosX + 3, elemPosY, buff, elemAttr);
+        return true;
 
     case OSD_BOARD_ALIGN_PITCH:
-        strcpy(buff, "AP ");
-        osdFormatCentiNumber(buff + 1, boardAlignment()->pitchDeciDegrees * 10, 0, 1, 0, 4);
-        break;
+        displayWrite(osdDisplayPort, elemPosX, elemPosY, "AP");
+
+        elemAttr = TEXT_ATTRIBUTES_NONE;
+        osdFormatCentiNumber(buff, boardAlignment()->pitchDeciDegrees * 10, 0, 1, 0, 4);
+        if (isAdjustmentFunctionSelected(ADJUSTMENT_PITCH_BOARD_ALIGNMENT))
+            TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
+        displayWriteWithAttr(osdDisplayPort, elemPosX + 3, elemPosY, buff, elemAttr);
+        return true;
 
     case OSD_POWER:
         {
