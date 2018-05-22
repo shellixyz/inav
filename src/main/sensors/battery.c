@@ -398,6 +398,7 @@ void sagCompensatedVBatUpdate(timeUs_t currentTime)
         else
             sagCompensatedVBat = sagCompensatedVBatSample;
 
+        sagCompensatedVBat = MIN(batteryFullVoltage, sagCompensatedVBat);
     }
 
     // TODO: use unfiltered VBAT and amperage ?
