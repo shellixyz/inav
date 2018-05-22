@@ -1505,104 +1505,86 @@ static bool osdDrawSingleElement(uint8_t item)
 #endif
 
     case OSD_ROLL_PIDS:
-        {
-            displayWrite(osdDisplayPort, elemPosX, elemPosY, "ROL");
+        displayWrite(osdDisplayPort, elemPosX, elemPosY, "ROL");
 
-            elemAttr = TEXT_ATTRIBUTES_NONE;
-            tfp_sprintf(buff, "%3d", pidBank()->pid[PID_ROLL].P);
-            if (isAdjustmentFunctionSelected(ADJUSTMENT_PITCH_ROLL_P) || isAdjustmentFunctionSelected(ADJUSTMENT_ROLL_P))
-                TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
-            displayWriteWithAttr(osdDisplayPort, elemPosX + 4, elemPosY, buff, elemAttr);
+        elemAttr = TEXT_ATTRIBUTES_NONE;
+        tfp_sprintf(buff, "%3d", pidBank()->pid[PID_ROLL].P);
+        if (isAdjustmentFunctionSelected(ADJUSTMENT_PITCH_ROLL_P) || isAdjustmentFunctionSelected(ADJUSTMENT_ROLL_P))
+            TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
+        displayWriteWithAttr(osdDisplayPort, elemPosX + 4, elemPosY, buff, elemAttr);
 
-            elemAttr = TEXT_ATTRIBUTES_NONE;
-            tfp_sprintf(buff, "%3d", pidBank()->pid[PID_ROLL].I);
-            if (isAdjustmentFunctionSelected(ADJUSTMENT_PITCH_ROLL_I) || isAdjustmentFunctionSelected(ADJUSTMENT_ROLL_I))
-                TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
-            displayWriteWithAttr(osdDisplayPort, elemPosX + 8, elemPosY, buff, elemAttr);
+        elemAttr = TEXT_ATTRIBUTES_NONE;
+        tfp_sprintf(buff, "%3d", pidBank()->pid[PID_ROLL].I);
+        if (isAdjustmentFunctionSelected(ADJUSTMENT_PITCH_ROLL_I) || isAdjustmentFunctionSelected(ADJUSTMENT_ROLL_I))
+            TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
+        displayWriteWithAttr(osdDisplayPort, elemPosX + 8, elemPosY, buff, elemAttr);
 
-            elemAttr = TEXT_ATTRIBUTES_NONE;
-            tfp_sprintf(buff, "%3d", pidBank()->pid[PID_ROLL].D);
-            if (isAdjustmentFunctionSelected(ADJUSTMENT_PITCH_ROLL_D) || isAdjustmentFunctionSelected(ADJUSTMENT_ROLL_D))
-                TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
-            displayWriteWithAttr(osdDisplayPort, elemPosX + 12, elemPosY, buff, elemAttr);
+        elemAttr = TEXT_ATTRIBUTES_NONE;
+        tfp_sprintf(buff, "%3d", pidBank()->pid[PID_ROLL].D);
+        if (isAdjustmentFunctionSelected(ADJUSTMENT_PITCH_ROLL_D) || isAdjustmentFunctionSelected(ADJUSTMENT_ROLL_D))
+            TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
+        displayWriteWithAttr(osdDisplayPort, elemPosX + 12, elemPosY, buff, elemAttr);
 
-            return true;
-        }
+        return true;
 
     case OSD_PITCH_PIDS:
-        {
-            displayWrite(osdDisplayPort, elemPosX, elemPosY, "PIT");
+        displayWrite(osdDisplayPort, elemPosX, elemPosY, "PIT");
 
-            elemAttr = TEXT_ATTRIBUTES_NONE;
-            tfp_sprintf(buff, "%3d", pidBank()->pid[PID_PITCH].P);
-            if (isAdjustmentFunctionSelected(ADJUSTMENT_PITCH_ROLL_P) || isAdjustmentFunctionSelected(ADJUSTMENT_PITCH_P))
-                TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
-            displayWriteWithAttr(osdDisplayPort, elemPosX + 4, elemPosY, buff, elemAttr);
+        elemAttr = TEXT_ATTRIBUTES_NONE;
+        tfp_sprintf(buff, "%3d", pidBank()->pid[PID_PITCH].P);
+        if (isAdjustmentFunctionSelected(ADJUSTMENT_PITCH_ROLL_P) || isAdjustmentFunctionSelected(ADJUSTMENT_PITCH_P))
+            TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
+        displayWriteWithAttr(osdDisplayPort, elemPosX + 4, elemPosY, buff, elemAttr);
 
-            elemAttr = TEXT_ATTRIBUTES_NONE;
-            tfp_sprintf(buff, "%3d", pidBank()->pid[PID_PITCH].I);
-            if (isAdjustmentFunctionSelected(ADJUSTMENT_PITCH_ROLL_I) || isAdjustmentFunctionSelected(ADJUSTMENT_PITCH_I))
-                TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
-            displayWriteWithAttr(osdDisplayPort, elemPosX + 8, elemPosY, buff, elemAttr);
+        elemAttr = TEXT_ATTRIBUTES_NONE;
+        tfp_sprintf(buff, "%3d", pidBank()->pid[PID_PITCH].I);
+        if (isAdjustmentFunctionSelected(ADJUSTMENT_PITCH_ROLL_I) || isAdjustmentFunctionSelected(ADJUSTMENT_PITCH_I))
+            TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
+        displayWriteWithAttr(osdDisplayPort, elemPosX + 8, elemPosY, buff, elemAttr);
 
-            elemAttr = TEXT_ATTRIBUTES_NONE;
-            tfp_sprintf(buff, "%3d", pidBank()->pid[PID_PITCH].D);
-            if (isAdjustmentFunctionSelected(ADJUSTMENT_PITCH_ROLL_D) || isAdjustmentFunctionSelected(ADJUSTMENT_PITCH_D))
-                TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
-            displayWriteWithAttr(osdDisplayPort, elemPosX + 12, elemPosY, buff, elemAttr);
+        elemAttr = TEXT_ATTRIBUTES_NONE;
+        tfp_sprintf(buff, "%3d", pidBank()->pid[PID_PITCH].D);
+        if (isAdjustmentFunctionSelected(ADJUSTMENT_PITCH_ROLL_D) || isAdjustmentFunctionSelected(ADJUSTMENT_PITCH_D))
+            TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
+        displayWriteWithAttr(osdDisplayPort, elemPosX + 12, elemPosY, buff, elemAttr);
 
-            return true;
-        }
+        return true;
 
     case OSD_YAW_PIDS:
-        {
-            osdDisplayPIDValues(elemPosX, elemPosY, "YAW", &pidBank()->pid[PID_YAW], ADJUSTMENT_YAW_P, ADJUSTMENT_YAW_I, ADJUSTMENT_YAW_D);
-            return true;
-        }
+        osdDisplayPIDValues(elemPosX, elemPosY, "YAW", &pidBank()->pid[PID_YAW], ADJUSTMENT_YAW_P, ADJUSTMENT_YAW_I, ADJUSTMENT_YAW_D);
+        return true;
 
     case OSD_LEVEL_PIDS:
-        {
-            osdDisplayPIDValues(elemPosX, elemPosY, "LEV", &pidBank()->pid[PID_LEVEL], ADJUSTMENT_LEVEL_P, ADJUSTMENT_LEVEL_I, ADJUSTMENT_LEVEL_D);
-            return true;
-        }
+        osdDisplayPIDValues(elemPosX, elemPosY, "LEV", &pidBank()->pid[PID_LEVEL], ADJUSTMENT_LEVEL_P, ADJUSTMENT_LEVEL_I, ADJUSTMENT_LEVEL_D);
+        return true;
 
     case OSD_POS_XY_PIDS:
-        {
-            osdDisplayPIDValues(elemPosX, elemPosY, "PXY", &pidBank()->pid[PID_POS_XY], ADJUSTMENT_POS_XY_P, ADJUSTMENT_POS_XY_I, ADJUSTMENT_POS_XY_D);
-            return true;
-        }
+        osdDisplayPIDValues(elemPosX, elemPosY, "PXY", &pidBank()->pid[PID_POS_XY], ADJUSTMENT_POS_XY_P, ADJUSTMENT_POS_XY_I, ADJUSTMENT_POS_XY_D);
+        return true;
 
     case OSD_POS_Z_PIDS:
-        {
-            osdDisplayPIDValues(elemPosX, elemPosY, "PZ", &pidBank()->pid[PID_POS_Z], ADJUSTMENT_POS_Z_P, ADJUSTMENT_POS_Z_I, ADJUSTMENT_POS_Z_D);
-            return true;
-        }
+        osdDisplayPIDValues(elemPosX, elemPosY, "PZ", &pidBank()->pid[PID_POS_Z], ADJUSTMENT_POS_Z_P, ADJUSTMENT_POS_Z_I, ADJUSTMENT_POS_Z_D);
+        return true;
 
     case OSD_VEL_XY_PIDS:
-        {
-            if (STATE(FIXED_WING))
-                osdDisplayPIDValues(elemPosX, elemPosY, "VXY", &pidBank()->pid[PID_VEL_XY], ADJUSTMENT_VEL_XY_P, ADJUSTMENT_VEL_XY_I, ADJUSTMENT_VEL_XY_D);
-            return true;
-        }
+        if (STATE(FIXED_WING))
+            osdDisplayPIDValues(elemPosX, elemPosY, "VXY", &pidBank()->pid[PID_VEL_XY], ADJUSTMENT_VEL_XY_P, ADJUSTMENT_VEL_XY_I, ADJUSTMENT_VEL_XY_D);
+        return true;
 
     case OSD_VEL_Z_PIDS:
-        {
-            if (STATE(FIXED_WING))
-                osdDisplayPIDValues(elemPosX, elemPosY, "VZ", &pidBank()->pid[PID_VEL_Z], ADJUSTMENT_VEL_Z_P, ADJUSTMENT_VEL_Z_I, ADJUSTMENT_VEL_Z_D);
-            return true;
-        }
+        if (STATE(FIXED_WING))
+            osdDisplayPIDValues(elemPosX, elemPosY, "VZ", &pidBank()->pid[PID_VEL_Z], ADJUSTMENT_VEL_Z_P, ADJUSTMENT_VEL_Z_I, ADJUSTMENT_VEL_Z_D);
+        return true;
 
     case OSD_HEADING_P:
-        {
-            displayWrite(osdDisplayPort, elemPosX, elemPosY, "HP ");
+        displayWrite(osdDisplayPort, elemPosX, elemPosY, "HP ");
 
-            elemAttr = TEXT_ATTRIBUTES_NONE;
-            tfp_sprintf(buff, "%3d", pidBank()->pid[PID_HEADING].P);
-            if (isAdjustmentFunctionSelected(ADJUSTMENT_HEADING_P))
-                TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
-            displayWriteWithAttr(osdDisplayPort, elemPosX + 4, elemPosY, buff, elemAttr);
-            return true;
-        }
+        elemAttr = TEXT_ATTRIBUTES_NONE;
+        tfp_sprintf(buff, "%3d", pidBank()->pid[PID_HEADING].P);
+        if (isAdjustmentFunctionSelected(ADJUSTMENT_HEADING_P))
+            TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
+        displayWriteWithAttr(osdDisplayPort, elemPosX + 4, elemPosY, buff, elemAttr);
+        return true;
 
     case OSD_BOARD_ALIGN_ROLL:
         displayWrite(osdDisplayPort, elemPosX, elemPosY, "AR");
