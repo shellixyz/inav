@@ -45,6 +45,7 @@
 #include "flight/imu.h"
 #include "flight/mixer.h"
 #include "flight/pid.h"
+#include "flight/time.h"
 
 #include "navigation/navigation.h"
 
@@ -304,6 +305,7 @@ void fcTasksInit(void)
     setTaskEnabled(TASK_GYROPID, true);
 #endif
 
+    setTaskEnabled(TASK_FLYTIME, true);
     setTaskEnabled(TASK_SERIAL, true);
 #ifdef BEEPER
     setTaskEnabled(TASK_BEEPER, true);
@@ -380,6 +382,13 @@ cfTask_t cfTasks[TASK_COUNT] = {
         .taskFunc = taskSystem,
         .desiredPeriod = TASK_PERIOD_HZ(10),              // run every 100 ms, 10Hz
         .staticPriority = TASK_PRIORITY_HIGH,
+    },
+
+    [TASK_FLYTIME] = {
+        .taskName = "FLYTIME",
+        .taskFunc = taskUpdateFlyTime,
+        .desiredPeriod = TASK_PERIOD_HZ(10),              // run every 100 ms, 10Hz
+        .staticPriority = TASK_PRIORITY_LOW,
     },
 
     #ifdef USE_ASYNC_GYRO_PROCESSING

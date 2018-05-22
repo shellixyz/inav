@@ -21,6 +21,8 @@
 
 #include "common/time.h"
 
+extern timeUs_t flyTime;
+
 void taskMainPidLoopChecker(timeUs_t currentTimeUs);
 bool taskUpdateRxCheck(timeUs_t currentTimeUs, timeDelta_t currentDeltaTime);
 void taskUpdateRxMain(timeUs_t currentTimeUs);
