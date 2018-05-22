@@ -48,6 +48,9 @@
 #include "navigation/navigation.h"
 #include "navigation/navigation_private.h"
 
+#include "rx/rx.h"
+
+
 // If we are going slower than NAV_FW_MIN_VEL_SPEED_BOOST - boost throttle to fight against the wind
 #define NAV_FW_THROTTLE_SPEED_BOOST_GAIN        1.5f
 #define NAV_FW_MIN_VEL_SPEED_BOOST              700.0f      // 7 m/s
