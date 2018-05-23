@@ -323,7 +323,7 @@ static const navigationFSMStateDescriptor_t navFSM[NAV_STATE_COUNT] = {
     [NAV_STATE_CRUISE_2D_IN_PROGRESS] = {
         .onEntry = navOnEnteringState_NAV_STATE_CRUISE_2D_IN_PROGRESS,
         .timeoutMs = 10,
-        .stateFlags = NAV_CTL_POS | NAV_CTL_YAW | NAV_REQUIRE_ANGLE | NAV_RC_POS | NAV_RC_YAW,  //CHECK IF RC_POS IS NEEDED
+        .stateFlags = NAV_CTL_POS | NAV_CTL_YAW | NAV_REQUIRE_ANGLE | NAV_RC_POS,// | NAV_RC_YAW,  //CHECK IF RC_POS IS NEEDED
         .mapToFlightModes = NAV_CRUISE_MODE,
         .mwState = MW_NAV_STATE_NONE, ///////FIX ME
         .mwError = MW_NAV_ERROR_NONE,
@@ -859,7 +859,8 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_2D_IN_PROGRESS(n
       
       if(checkForPositionSensorTimeout()){ return NAV_FSM_EVENT_SWITCH_TO_IDLE; }  //in case of invalid position, re init.
       
-      if(posControl.flags.isAdjustingPosition || posControl.flags.isAdjustingHeading) { return NAV_FSM_EVENT_SWITCH_TO_IDLE; } //pilot has input a roll command (need to take YAW in account too!!!!) and the new heading to maintain has to be processed
+        //if(posControl.flags.isAdjustingPosition || posControl.flags.isAdjustingHeading) { return NAV_FSM_EVENT_SWITCH_TO_IDLE; } //pilot has input a roll command (need to take YAW in account too!!!!) and the new heading to maintain has to be processed
+        
         DEBUG_SET(DEBUG_CRUISE, 0, 2);
         DEBUG_SET(DEBUG_CRUISE, 1, 0);
         if(calculateDistanceToDestination(&posControl.cruise.cruiseTargetPos)<navConfig()->fw.cruise_virtual_wp_radius){ 
@@ -2892,7 +2893,7 @@ rthState_e getStateOfForcedRTH(void)
 bool navigationIsControllingThrottle(void)
 {
     navigationFSMStateFlags_t stateFlags = navGetCurrentStateFlags();
-    return (stateFlags & (NAV_CTL_ALT | NAV_CTL_EMERG | NAV_CTL_LAUNCH | NAV_CTL_LAND)) || (STATE(FIXED_WING) && (stateFlags & (NAV_CTL_POS)));
+    return (stateFlags & (NAV_CTL_ALT | NAV_CTL_EMERG | NAV_CTL_LAUNCH | NAV_CTL_LAND)) || (STATE(FIXED_WING) & !FLIGHT_MODE(NAV_CRUISE_MODE) && (stateFlags & (NAV_CTL_POS)));
 }
 
 bool navigationIsFlyingAutonomousMode(void)
