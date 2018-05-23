@@ -62,6 +62,8 @@ static bool isPitchAdjustmentValid = false;
 static bool isRollAdjustmentValid = false;
 static float throttleSpeedAdjustment = 0;
 
+bool autoThrottleManuallyIncreased = false;
+
 
 /*-----------------------------------------------------------
  * Altitude controller
@@ -431,14 +433,6 @@ void applyFixedWingPitchRollThrottleController(navigationFSMStateFlags_t navStat
         pitchCorrection += posControl.rcAdjustment[PITCH];
         throttleCorrection += DECIDEGREES_TO_DEGREES(pitchCorrection) * navConfig()->fw.pitch_to_throttle;
 
-        // manual throttle increase
-        if (!FLIGHT_MODE(FAILSAFE_MODE)) {
-            if (rcCommand[THROTTLE] < 1950)
-                throttleCorrection += scaleRange(MAX(1500, rcCommand[THROTTLE]), 1500, PWM_RANGE_MAX, 0, maxThrottleCorrection);
-            else
-                throttleCorrection = maxThrottleCorrection;
-        }
-
 #ifdef NAV_FIXED_WING_LANDING
         if (navStateFlags & NAV_CTL_LAND) {
             /*
@@ -475,6 +469,16 @@ void applyFixedWingPitchRollThrottleController(navigationFSMStateFlags_t navStat
 
     if ((navStateFlags & NAV_CTL_ALT) || (navStateFlags & NAV_CTL_POS)) {
         uint16_t correctedThrottleValue = constrain(navConfig()->fw.cruise_throttle + throttleCorrection, navConfig()->fw.min_throttle, navConfig()->fw.max_throttle);
+
+        // manual throttle increase
+        if (!FLIGHT_MODE(FAILSAFE_MODE)) {
+            if (rcCommand[THROTTLE] < 1950)
+                correctedThrottleValue += scaleRange(MAX(navConfig()->fw.cruise_throttle, rcCommand[THROTTLE]), navConfig()->fw.cruise_throttle, PWM_RANGE_MAX, 0, motorConfig()->maxthrottle - navConfig()->fw.cruise_throttle);
+            else
+                correctedThrottleValue = motorConfig()->maxthrottle;
+            autoThrottleManuallyIncreased = (rcCommand[THROTTLE] > navConfig()->fw.cruise_throttle);
+        }
+
         rcCommand[THROTTLE] = constrain(correctedThrottleValue, motorConfig()->minthrottle, motorConfig()->maxthrottle);
     }
 
