@@ -110,3 +110,4 @@ void sagCompensatedVBatUpdate(timeUs_t currentTime);
 void powerMeterUpdate(int32_t lastUpdateAt);
 
 uint8_t calculateBatteryPercentage(void);
+float calculateThrottleCompensationFactor(void);

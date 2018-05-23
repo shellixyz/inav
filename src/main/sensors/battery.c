@@ -256,6 +256,11 @@ uint16_t getSagCompensatedBatteryVoltage(void)
     return sagCompensatedVBat;
 }
 
+float calculateThrottleCompensationFactor(void)
+{
+    return batteryFullVoltage / sagCompensatedVBat;
+}
+
 uint16_t getBatteryVoltageLatestADC(void)
 {
     return vbatLatestADC;

@@ -50,6 +50,8 @@
 
 #include "rx/rx.h"
 
+#include "sensors/battery.h"
+
 
 //#define MIXER_DEBUG
 
@@ -94,7 +96,8 @@ PG_RESET_TEMPLATE(motorConfig_t, motorConfig,
     .motorPwmProtocol = DEFAULT_PWM_PROTOCOL,
     .motorPwmRate = DEFAULT_PWM_RATE,
     .maxthrottle = 1850,
-    .mincommand = 1000
+    .mincommand = 1000,
+    .throttleVBatCompensation = false
 );
 
 static motorMixer_t currentMixer[MAX_SUPPORTED_MOTORS];
@@ -265,6 +268,10 @@ void mixTable(void)
         throttleCommand = rcCommand[THROTTLE];
         throttleMin = motorConfig()->minthrottle;
         throttleMax = motorConfig()->maxthrottle;
+
+        // Throttle compensation based on battery voltage
+        if (motorConfig()->throttleVBatCompensation && STATE(FIXED_WING) && isAmperageConfigured() && feature(FEATURE_VBAT))
+            throttleCommand = MIN(throttleCommand * calculateThrottleCompensationFactor(), throttleMax);
     }
 
     throttleRange = throttleMax - throttleMin;
