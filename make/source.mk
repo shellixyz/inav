@@ -75,7 +75,6 @@ COMMON_SRC = \
             flight/pid.c \
             flight/pid_autotune.c \
             flight/servos.c \
-            flight/time.c \
             io/beeper.c \
             io/lights.c \
             io/pwmdriver_i2c.c \

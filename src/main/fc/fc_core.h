@@ -17,6 +17,8 @@
 
 #pragma once
 
+#include "common/time.h"
+
 typedef enum disarmReason_e {
     DISARM_NONE         = 0,
     DISARM_TIMEOUT      = 1,
@@ -28,6 +30,8 @@ typedef enum disarmReason_e {
     DISARM_NAVIGATION   = 7,
     DISARM_REASON_COUNT
 } disarmReason_t;
+
+extern timeUs_t flyTime;
 
 void handleInflightCalibrationStickPosition(void);
 

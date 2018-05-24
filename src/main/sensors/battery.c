@@ -30,9 +30,8 @@
 #include "drivers/time.h"
 
 #include "fc/config.h"
+#include "fc/fc_core.h"
 #include "fc/runtime_config.h"
-
-#include "flight/time.h"
 
 #include "config/feature.h"
 
