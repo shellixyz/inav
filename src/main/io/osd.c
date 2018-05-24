@@ -1675,7 +1675,7 @@ static bool osdDrawSingleElement(uint8_t item)
         osdFormatCentiNumber(buff, boardAlignment()->rollDeciDegrees * 10, 0, 1, 0, 4);
         if (isAdjustmentFunctionSelected(ADJUSTMENT_ROLL_BOARD_ALIGNMENT))
             TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
-        displayWriteWithAttr(osdDisplayPort, elemPosX + 5, elemPosY, buff, elemAttr);
+        displayWriteWithAttr(osdDisplayPort, elemPosX + 3, elemPosY, buff, elemAttr);
         return true;
 
     case OSD_BOARD_ALIGN_PITCH:
@@ -1685,7 +1685,7 @@ static bool osdDrawSingleElement(uint8_t item)
         osdFormatCentiNumber(buff, boardAlignment()->pitchDeciDegrees * 10, 0, 1, 0, 4);
         if (isAdjustmentFunctionSelected(ADJUSTMENT_PITCH_BOARD_ALIGNMENT))
             TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
-        displayWriteWithAttr(osdDisplayPort, elemPosX + 5, elemPosY, buff, elemAttr);
+        displayWriteWithAttr(osdDisplayPort, elemPosX + 3, elemPosY, buff, elemAttr);
         return true;
 
     case OSD_POWER:
