@@ -30,6 +30,7 @@
 #include "drivers/time.h"
 
 #include "fc/config.h"
+#include "fc/fc_core.h"
 #include "fc/runtime_config.h"
 
 #include "config/feature.h"
@@ -441,10 +442,14 @@ uint8_t calculateBatteryPercentage(void)
         return constrain((vbat - batteryCriticalVoltage) * 100L / (batteryFullVoltage - batteryCriticalVoltage), 0, 100);
 }
 
+int32_t calculateAveragePower() {
+ return (int64_t)mWhDrawn * 360000000 / flyTime; // cW (0.01W)
+}
+
 #if defined(USE_ADC) && defined(USE_GPS)
 
 int32_t remainingFlyTimeBeforeRTH() {
-    if (!(feature(FEATURE_VBAT) && feature(FEATURE_CURRENT_METER) && navigationPositionEstimateIsHealthy() && (power != 0) && (batteryConfig()->cruise.power > 0) &&
+    if (!(feature(FEATURE_VBAT) && feature(FEATURE_CURRENT_METER) && navigationPositionEstimateIsHealthy() && (power != 0) && (batteryConfig()->cruise.power > 0) && (flyTime != 0) &&
             (batteryConfig()->cruise.speed > 0) && (batteryConfig()->capacity.unit == BAT_CAPACITY_UNIT_MWH) && (batteryConfig()->capacity.value > 0) && batteryFullWhenPluggedIn))
         return -1;
 
@@ -461,7 +466,12 @@ int32_t remainingFlyTimeBeforeRTH() {
     if (remaining_energy_before_rth < 0) // No energy left = No time left
         return 0;
 
-    uint32_t time_before_rth = remaining_energy_before_rth * 360 / power;
+    int32_t averagePower = calculateAveragePower();
+
+    if (averagePower == 0)
+        return -1;
+
+    uint32_t time_before_rth = remaining_energy_before_rth * 360 / averagePower;
 
     if (time_before_rth > 0x7FFFFFFF) // int32 overflow
         return -1;

@@ -68,6 +68,7 @@
 #include "fc/rc_controls.h"
 #include "fc/rc_modes.h"
 #include "fc/runtime_config.h"
+#include "fc/fc_tasks.h"
 
 #include "flight/imu.h"
 #include "flight/pid.h"
@@ -118,7 +119,6 @@
     x; \
 })
 
-static timeUs_t flyTime = 0;
 static unsigned currentLayout = 0;
 static int layoutOverride = -1;
 
@@ -2370,8 +2370,6 @@ static void osdShowArmed(void)
 
 static void osdRefresh(timeUs_t currentTimeUs)
 {
-    static timeUs_t lastTimeUs = 0;
-
     // detect arm/disarm
     if (armState != ARMING_FLAG(ARMED)) {
         if (ARMING_FLAG(ARMED)) {
@@ -2385,13 +2383,6 @@ static void osdRefresh(timeUs_t currentTimeUs)
 
         armState = ARMING_FLAG(ARMED);
     }
-
-    if (ARMING_FLAG(ARMED)) {
-        timeUs_t deltaT = currentTimeUs - lastTimeUs;
-        flyTime += deltaT;
-    }
-
-    lastTimeUs = currentTimeUs;
 
     if (resumeRefreshAt) {
         // If we already reached he time for the next refresh,

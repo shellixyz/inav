@@ -118,6 +118,7 @@ void powerMeterUpdate(int32_t lastUpdateAt);
 
 uint8_t calculateBatteryPercentage(void);
 float calculateThrottleCompensationFactor(void);
+int32_t calculateAveragePower();
 
 #if defined(USE_ADC) && defined(USE_GPS)
 int32_t remainingFlyTimeBeforeRTH();
