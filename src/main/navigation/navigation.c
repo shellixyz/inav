@@ -270,6 +270,8 @@ static const navigationFSMStateDescriptor_t navFSM[NAV_STATE_COUNT] = {
             [NAV_FSM_EVENT_SWITCH_TO_RTH]               = NAV_STATE_RTH_INITIALIZE,
             [NAV_FSM_EVENT_SWITCH_TO_WAYPOINT]          = NAV_STATE_WAYPOINT_INITIALIZE,
             [NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING] = NAV_STATE_EMERGENCY_LANDING_INITIALIZE,
+            [NAV_FSM_EVENT_SWITCH_TO_CRUISE_2D]         = NAV_STATE_CRUISE_2D_INITIALIZE,
+            [NAV_FSM_EVENT_SWITCH_TO_CRUISE_3D]         = NAV_STATE_CRUISE_3D_INITIALIZE,
         }
     },
 
@@ -304,6 +306,8 @@ static const navigationFSMStateDescriptor_t navFSM[NAV_STATE_COUNT] = {
             [NAV_FSM_EVENT_SWITCH_TO_RTH]               = NAV_STATE_RTH_INITIALIZE,
             [NAV_FSM_EVENT_SWITCH_TO_WAYPOINT]          = NAV_STATE_WAYPOINT_INITIALIZE,
             [NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING] = NAV_STATE_EMERGENCY_LANDING_INITIALIZE,
+            [NAV_FSM_EVENT_SWITCH_TO_CRUISE_2D]         = NAV_STATE_CRUISE_2D_INITIALIZE,
+            [NAV_FSM_EVENT_SWITCH_TO_CRUISE_3D]         = NAV_STATE_CRUISE_3D_INITIALIZE,
         }
     },
     /** CRUISE_2D mode ************************************************/
@@ -408,6 +412,8 @@ static const navigationFSMStateDescriptor_t navFSM[NAV_STATE_COUNT] = {
             [NAV_FSM_EVENT_SWITCH_TO_IDLE]              = NAV_STATE_IDLE,
             [NAV_FSM_EVENT_SWITCH_TO_ALTHOLD]           = NAV_STATE_ALTHOLD_INITIALIZE,
             [NAV_FSM_EVENT_SWITCH_TO_POSHOLD_3D]        = NAV_STATE_POSHOLD_3D_INITIALIZE,
+            [NAV_FSM_EVENT_SWITCH_TO_CRUISE_2D]         = NAV_STATE_CRUISE_2D_INITIALIZE,
+            [NAV_FSM_EVENT_SWITCH_TO_CRUISE_3D]         = NAV_STATE_CRUISE_3D_INITIALIZE,
         }
     },
 
@@ -426,6 +432,8 @@ static const navigationFSMStateDescriptor_t navFSM[NAV_STATE_COUNT] = {
             [NAV_FSM_EVENT_SWITCH_TO_ALTHOLD]           = NAV_STATE_ALTHOLD_INITIALIZE,
             [NAV_FSM_EVENT_SWITCH_TO_POSHOLD_3D]        = NAV_STATE_POSHOLD_3D_INITIALIZE,
             [NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING] = NAV_STATE_EMERGENCY_LANDING_INITIALIZE,
+            [NAV_FSM_EVENT_SWITCH_TO_CRUISE_2D]         = NAV_STATE_CRUISE_2D_INITIALIZE,
+            [NAV_FSM_EVENT_SWITCH_TO_CRUISE_3D]         = NAV_STATE_CRUISE_3D_INITIALIZE,
         }
     },
 
@@ -445,6 +453,8 @@ static const navigationFSMStateDescriptor_t navFSM[NAV_STATE_COUNT] = {
             [NAV_FSM_EVENT_SWITCH_TO_ALTHOLD]           = NAV_STATE_ALTHOLD_INITIALIZE,
             [NAV_FSM_EVENT_SWITCH_TO_POSHOLD_3D]        = NAV_STATE_POSHOLD_3D_INITIALIZE,
             [NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING] = NAV_STATE_EMERGENCY_LANDING_INITIALIZE,
+            [NAV_FSM_EVENT_SWITCH_TO_CRUISE_2D]         = NAV_STATE_CRUISE_2D_INITIALIZE,
+            [NAV_FSM_EVENT_SWITCH_TO_CRUISE_3D]         = NAV_STATE_CRUISE_3D_INITIALIZE,
         }
     },
 
@@ -462,6 +472,8 @@ static const navigationFSMStateDescriptor_t navFSM[NAV_STATE_COUNT] = {
             [NAV_FSM_EVENT_SWITCH_TO_ALTHOLD]           = NAV_STATE_ALTHOLD_INITIALIZE,
             [NAV_FSM_EVENT_SWITCH_TO_POSHOLD_3D]        = NAV_STATE_POSHOLD_3D_INITIALIZE,
             [NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING] = NAV_STATE_EMERGENCY_LANDING_INITIALIZE,
+            [NAV_FSM_EVENT_SWITCH_TO_CRUISE_2D]         = NAV_STATE_CRUISE_2D_INITIALIZE,
+            [NAV_FSM_EVENT_SWITCH_TO_CRUISE_3D]         = NAV_STATE_CRUISE_3D_INITIALIZE,
         }
     },
 
@@ -480,6 +492,8 @@ static const navigationFSMStateDescriptor_t navFSM[NAV_STATE_COUNT] = {
             [NAV_FSM_EVENT_SWITCH_TO_ALTHOLD]           = NAV_STATE_ALTHOLD_INITIALIZE,
             [NAV_FSM_EVENT_SWITCH_TO_POSHOLD_3D]        = NAV_STATE_POSHOLD_3D_INITIALIZE,
             [NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING] = NAV_STATE_EMERGENCY_LANDING_INITIALIZE,
+            [NAV_FSM_EVENT_SWITCH_TO_CRUISE_2D]         = NAV_STATE_CRUISE_2D_INITIALIZE,
+            [NAV_FSM_EVENT_SWITCH_TO_CRUISE_3D]         = NAV_STATE_CRUISE_3D_INITIALIZE,
         }
     },
 
@@ -563,6 +577,9 @@ static const navigationFSMStateDescriptor_t navFSM[NAV_STATE_COUNT] = {
             [NAV_FSM_EVENT_SWITCH_TO_POSHOLD_3D]        = NAV_STATE_POSHOLD_3D_INITIALIZE,
             [NAV_FSM_EVENT_SWITCH_TO_RTH]               = NAV_STATE_RTH_INITIALIZE,
             [NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING] = NAV_STATE_EMERGENCY_LANDING_INITIALIZE,
+            [NAV_FSM_EVENT_SWITCH_TO_CRUISE_2D]         = NAV_STATE_CRUISE_2D_INITIALIZE,
+            [NAV_FSM_EVENT_SWITCH_TO_CRUISE_3D]         = NAV_STATE_CRUISE_3D_INITIALIZE,
+            
         }
     },
 
@@ -584,6 +601,8 @@ static const navigationFSMStateDescriptor_t navFSM[NAV_STATE_COUNT] = {
             [NAV_FSM_EVENT_SWITCH_TO_POSHOLD_3D]        = NAV_STATE_POSHOLD_3D_INITIALIZE,
             [NAV_FSM_EVENT_SWITCH_TO_RTH]               = NAV_STATE_RTH_INITIALIZE,
             [NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING] = NAV_STATE_EMERGENCY_LANDING_INITIALIZE,
+            [NAV_FSM_EVENT_SWITCH_TO_CRUISE_2D]         = NAV_STATE_CRUISE_2D_INITIALIZE,
+            [NAV_FSM_EVENT_SWITCH_TO_CRUISE_3D]         = NAV_STATE_CRUISE_3D_INITIALIZE,
         }
     },
 
@@ -603,6 +622,8 @@ static const navigationFSMStateDescriptor_t navFSM[NAV_STATE_COUNT] = {
             [NAV_FSM_EVENT_SWITCH_TO_POSHOLD_3D]        = NAV_STATE_POSHOLD_3D_INITIALIZE,
             [NAV_FSM_EVENT_SWITCH_TO_RTH]               = NAV_STATE_RTH_INITIALIZE,
             [NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING] = NAV_STATE_EMERGENCY_LANDING_INITIALIZE,
+            [NAV_FSM_EVENT_SWITCH_TO_CRUISE_2D]         = NAV_STATE_CRUISE_2D_INITIALIZE,
+            [NAV_FSM_EVENT_SWITCH_TO_CRUISE_3D]         = NAV_STATE_CRUISE_3D_INITIALIZE,
         }
     },
 
@@ -634,6 +655,8 @@ static const navigationFSMStateDescriptor_t navFSM[NAV_STATE_COUNT] = {
             [NAV_FSM_EVENT_SWITCH_TO_POSHOLD_3D]        = NAV_STATE_POSHOLD_3D_INITIALIZE,
             [NAV_FSM_EVENT_SWITCH_TO_RTH]               = NAV_STATE_RTH_INITIALIZE,
             [NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING] = NAV_STATE_EMERGENCY_LANDING_INITIALIZE,
+            [NAV_FSM_EVENT_SWITCH_TO_CRUISE_2D]         = NAV_STATE_CRUISE_2D_INITIALIZE,
+            [NAV_FSM_EVENT_SWITCH_TO_CRUISE_3D]         = NAV_STATE_CRUISE_3D_INITIALIZE,
         }
     },
 
@@ -883,20 +906,21 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_2D_IN_PROGRESS(n
 
     #define MAX_CRUISE_DPS 20.0f
 
-    if(posControl.flags.isAdjustingHeading) { 
-    
-    float rateTarget= scaleRangef((float)rcCommand[YAW], -500.0f, 500.0f, -MAX_CRUISE_DPS,MAX_CRUISE_DPS); //centidegs
-    float centidegsPerIteration= (rateTarget*100.0f)/(1000.0f/(float)(currentYawChangeTime - lastYawChangeTime));
-    posControl.cruise.cruiseYaw-=centidegsPerIteration;
-    posControl.cruise.cruiseYaw= wrap_36000(posControl.cruise.cruiseYaw);
+    if(posControl.flags.isAdjustingHeading) 
+    { 
+        float rateTarget= scaleRangef((float)rcCommand[YAW], -500.0f, 500.0f, -MAX_CRUISE_DPS,MAX_CRUISE_DPS); //centidegs
+        float centidegsPerIteration= (rateTarget*100.0f)/(1000.0f/(float)(currentYawChangeTime - lastYawChangeTime));
+        posControl.cruise.cruiseYaw-=centidegsPerIteration;
+        posControl.cruise.cruiseYaw= wrap_36000(posControl.cruise.cruiseYaw);
 
-    lastYawChangeTime=currentYawChangeTime;
-    
-     }
+        lastYawChangeTime=currentYawChangeTime;
+    }
     
     DEBUG_SET(DEBUG_CRUISE, 0, 2);
     DEBUG_SET(DEBUG_CRUISE, 1, 0);
-    if(posControl.flags.isAdjustingHeading || calculateDistanceToDestination(&posControl.cruise.cruiseTargetPos)<navConfig()->fw.cruise_virtual_wp_radius){ 
+    if(posControl.flags.isAdjustingPosition || posControl.flags.isAdjustingHeading || calculateDistanceToDestination(&posControl.cruise.cruiseTargetPos)<navConfig()->fw.cruise_virtual_wp_radius){ 
+        
+        if(posControl.flags.isAdjustingPosition ) posControl.cruise.cruiseYaw=posControl.actualState.yaw;
 
         int32_t targetDistance = gpsSol.groundSpeed*navConfig()->fw.cruise_virtual_nav_cruise_virtual_nextwp_multiplier;
         DEBUG_SET(DEBUG_CRUISE, 2, targetDistance);
@@ -2628,21 +2652,22 @@ static navigationFSMEvent_t selectNavEventFromBoxModeInput(void)
 
             
         //PH has priority over CRUISE 
-
-        if (IS_RC_MODE_ACTIVE(BOXNAVCRUISE)) {
-            //DEBUG_TRACE_SYNC("BOX CRUISE");
-            if (FLIGHT_MODE(NAV_CRUISE_MODE) || (canActivatePosHold) )
-                return NAV_FSM_EVENT_SWITCH_TO_CRUISE_2D;    
-        }
-
-        /*
+/*
         //CRUISE 3D has priority on AH
         if (IS_RC_MODE_ACTIVE(BOXNAVCRUISE) && IS_RC_MODE_ACTIVE(BOXNAVALTHOLD)) {
             if ((FLIGHT_MODE(NAV_CRUISE_MODE) && FLIGHT_MODE(NAV_ALTHOLD_MODE)) || (canActivatePosHold && canActivateAltHold))
                 return NAV_FSM_EVENT_SWITCH_TO_CRUISE_3D;
 
         }
+
 */
+        if (IS_RC_MODE_ACTIVE(BOXNAVCRUISE)) {
+            if (FLIGHT_MODE(NAV_CRUISE_MODE) || (canActivatePosHold) )
+                return NAV_FSM_EVENT_SWITCH_TO_CRUISE_2D;    
+        }
+        
+        
+
         if (IS_RC_MODE_ACTIVE(BOXNAVALTHOLD)) {
             if ((FLIGHT_MODE(NAV_ALTHOLD_MODE)) || (canActivateAltHold))
                 return NAV_FSM_EVENT_SWITCH_TO_ALTHOLD;

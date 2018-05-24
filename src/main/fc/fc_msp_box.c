@@ -189,7 +189,7 @@ void initActiveBoxIds(void)
         activeBoxIds[activeBoxIdCount++] = BOXNAVWP;
         activeBoxIds[activeBoxIdCount++] = BOXHOMERESET;
         activeBoxIds[activeBoxIdCount++] = BOXGCSNAV;
-        activeBoxIds[activeBoxIdCount++] = BOXNAVCRUISE;
+        if(STATE(FIXED_WING)) {activeBoxIds[activeBoxIdCount++] = BOXNAVCRUISE;} //Temp fix before CRUISE will be active for MC
     }
 #endif
 
