@@ -293,9 +293,10 @@ typedef enum {
     NAV_RC_ALT              = (1 << 11),
     NAV_RC_POS              = (1 << 12),
     NAV_RC_YAW              = (1 << 13),
-
+    NAV_CTL_THR_FW          = (1 << 14),
+    
     /* Additional flags */
-    NAV_CTL_LAND            = (1 << 14),
+    NAV_CTL_LAND            = (1 << 15),
 } navigationFSMStateFlags_t;
 
 typedef struct {
