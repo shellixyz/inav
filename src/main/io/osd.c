@@ -1950,7 +1950,6 @@ static bool osdDrawSingleElement(uint8_t item)
             break;
         }
 
-#if 0
     case OSD_WIND_SPEED_HORIZONTAL:
 #ifdef USE_WIND_ESTIMATOR
         {
@@ -1961,15 +1960,8 @@ static bool osdDrawSingleElement(uint8_t item)
                 float yWindSpeed = getEstimatedWindSpeed(Y);
                 horizontalWindSpeed = sqrtf(sq(xWindSpeed) + sq(yWindSpeed));
                 float horizontalWindAngle = atan2_approx(yWindSpeed, xWindSpeed);
-                int16_t h = RADIANS_TO_DEGREES(horizontalWindAngle) - DECIDEGREES_TO_DEGREES(attitude.values.yaw);
-                if (h < 0) {
-                    h += 360;
-                }
-                if (h >= 360) {
-                    h -= 360;
-                }
-                h = h*2/90;
-                buff[1] = SYM_DIRECTION + h;
+                int16_t windDirection = osdGetHeadingAngle(RADIANS_TO_DEGREES(horizontalWindAngle) - DECIDEGREES_TO_DEGREES(attitude.values.yaw));
+                buff[1] = SYM_DIRECTION + (windDirection * 2 / 90);
             } else {
                 horizontalWindSpeed = 0;
                 buff[1] = SYM_BLANK;
@@ -2005,7 +1997,6 @@ static bool osdDrawSingleElement(uint8_t item)
         }
 #else
         return false;
-#endif
 #endif
 
     default:
@@ -2104,6 +2095,8 @@ void pgResetFn_osdConfig(osdConfig_t *osdConfig)
     osdConfig->item_pos[0][OSD_POWER] = OSD_POS(15, 1);
 
     osdConfig->item_pos[0][OSD_AIR_SPEED] = OSD_POS(3, 5);
+    osdConfig->item_pos[0][OSD_WIND_SPEED_HORIZONTAL] = OSD_POS(3, 6);
+    osdConfig->item_pos[0][OSD_WIND_SPEED_VERTICAL] = OSD_POS(3, 7);
 
     // Under OSD_FLYMODE. TODO: Might not be visible on NTSC?
     osdConfig->item_pos[0][OSD_MESSAGES] = OSD_POS(1, 13) | OSD_VISIBLE_FLAG;

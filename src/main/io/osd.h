@@ -91,6 +91,8 @@ typedef enum {
     OSD_BOARD_ALIGN_ROLL,
     OSD_BOARD_ALIGN_PITCH,
     OSD_DEBUG, // Number 46. Intentionally absent from configurator and CMS. Set it from CLI.
+    OSD_WIND_SPEED_HORIZONTAL,
+    OSD_WIND_SPEED_VERTICAL,
     OSD_ITEM_COUNT // MUST BE LAST
 } osd_items_e;
 
