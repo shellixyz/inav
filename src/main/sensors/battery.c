@@ -43,6 +43,7 @@
 #include "io/beeper.h"
 
 #include "navigation/navigation.h"
+#include "build/debug.h"
 
 
 #define ADCVREF 3300                                    // in mV (3300 = 3.3V)
@@ -264,6 +265,11 @@ uint16_t getSagCompensatedBatteryVoltage(void)
     return sagCompensatedVBat;
 }
 
+float calculateThrottleCompensationFactor(void)
+{
+    return batteryFullVoltage / sagCompensatedVBat;
+}
+
 uint16_t getBatteryVoltageLatestADC(void)
 {
     return vbatLatestADC;
@@ -369,6 +375,7 @@ void sagCompensatedVBatUpdate(timeUs_t currentTime)
     static timeUs_t lastUpdate = 0;
     static pt1Filter_t powerSupplyImpedanceFilterState;
     static pt1Filter_t sagCompVBatFilterState;
+    static pt1Filter_t sagCompVBatFilterState2;
 
 
     if (batteryState == BATTERY_NOT_PRESENT) {
@@ -377,6 +384,8 @@ void sagCompensatedVBatUpdate(timeUs_t currentTime)
         powerSupplyImpedance = 0;
         pt1FilterReset(&powerSupplyImpedanceFilterState, 0);
         pt1FilterReset(&sagCompVBatFilterState, vbat);
+        pt1FilterInitRC(&sagCompVBatFilterState2, 10, 0);
+        pt1FilterReset(&sagCompVBatFilterState2, vbat);
 
         sagCompensatedVBat = vbat;
 
@@ -408,7 +417,12 @@ void sagCompensatedVBatUpdate(timeUs_t currentTime)
         else
             sagCompensatedVBat = sagCompensatedVBatSample;
 
+        sagCompensatedVBat = MIN(batteryFullVoltage, sagCompensatedVBat);
     }
+
+    DEBUG_SET(DEBUG_SAG_COMP_VOLTAGE, 0, powerSupplyImpedance);
+    DEBUG_SET(DEBUG_SAG_COMP_VOLTAGE, 1, sagCompensatedVBat);
+    DEBUG_SET(DEBUG_SAG_COMP_VOLTAGE, 2, pt1FilterApply3(&sagCompVBatFilterState2, sagCompensatedVBat, cmpTimeUs(currentTime, lastUpdate) * 1e-6f));
 
     // TODO: use unfiltered VBAT and amperage ?
     // TODO: filter sagCompensatedVBat

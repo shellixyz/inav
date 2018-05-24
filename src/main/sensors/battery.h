@@ -117,6 +117,7 @@ void sagCompensatedVBatUpdate(timeUs_t currentTime);
 void powerMeterUpdate(int32_t lastUpdateAt);
 
 uint8_t calculateBatteryPercentage(void);
+float calculateThrottleCompensationFactor(void);
 
 #if defined(USE_ADC) && defined(USE_GPS)
 int32_t remainingFlyTimeBeforeRTH();
