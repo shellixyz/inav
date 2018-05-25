@@ -145,7 +145,6 @@ PG_RESET_TEMPLATE(navConfig_t, navConfig,
         .launch_climb_angle = 18,              // 18 degrees
         .launch_max_angle = 45,                 // 45 deg
         .cruise_virtual_wp_radius=7000,
-        .cruise_virtual_nav_cruise_virtual_nextwp_multiplier=25
     }
 );
 
@@ -897,11 +896,11 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_POSHOLD_3D_IN_PROGRESS(
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_2D_INITIALIZE(navigationFSMState_t previousState)
 {   
     const navigationFSMStateFlags_t prevFlags = navGetStateFlags(previousState);
-    
+
+    if (!STATE(FIXED_WING)) {return NAV_FSM_EVENT_ERROR;} //only on FW for now
+
     DEBUG_SET(DEBUG_CRUISE, 0, 1);
     if(checkForPositionSensorTimeout()){ return NAV_FSM_EVENT_SWITCH_TO_IDLE; }  //we do not have an healty position. switch to idle and try on next iteration
- 
-    if (!STATE(FIXED_WING)) {return NAV_FSM_EVENT_ERROR;} //only on FW for now
 
     resetGCSFlags();
     
@@ -909,17 +908,12 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_2D_INITIALIZE(na
         resetPositionController();
     }
 
-    //store initial cruise starting point and yaw
-
-    //FUTURE USE
-    //posControl.cruise.cruiseStartPosition.x = posControl.actualState.pos.x;
-    //posControl.cruise.cruiseStartPosition.y = posControl.actualState.pos.y;
-    posControl.cruise.cruiseYaw=posControl.actualState.yaw; 
+    posControl.cruise.cruiseYaw=posControl.actualState.yaw; //store current heading
 
     calculateFarAwayTarget(&posControl.cruise.cruiseTargetPos, posControl.cruise.cruiseYaw, 25000); //calculate a 250m far away target
     setDesiredPosition(&posControl.cruise.cruiseTargetPos, posControl.cruise.cruiseYaw, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_HEADING);
 
-    return NAV_FSM_EVENT_SUCCESS;
+    return NAV_FSM_EVENT_SUCCESS; //go to NAV_STATE_CRUISE_2D_IN_PROGRESS
 }
 
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_2D_IN_PROGRESS(navigationFSMState_t previousState)
@@ -931,14 +925,16 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_2D_IN_PROGRESS(n
 
     if(checkForPositionSensorTimeout()){ return NAV_FSM_EVENT_SWITCH_TO_IDLE; }  //in case of invalid position, re init.
 
-    #define MAX_CRUISE_DPS 20.0f
+    #define MAX_CRUISE_CENTIDPS 2000.0f
 
     if(posControl.flags.isAdjustingHeading) 
     { 
-        float rateTarget= scaleRangef((float)rcCommand[YAW], -500.0f, 500.0f, -MAX_CRUISE_DPS,MAX_CRUISE_DPS); //centidegs
-        float centidegsPerIteration= (rateTarget*100.0f)/(1000.0f/(float)(currentYawChangeTime - lastYawChangeTime));
+        float rateTarget= scaleRangef((float)rcCommand[YAW], -500.0f, 500.0f, -MAX_CRUISE_CENTIDPS,MAX_CRUISE_CENTIDPS); //centidegs
+        
+        float centidegsPerIteration= rateTarget/(1000.0f/(float)(currentYawChangeTime - lastYawChangeTime));
         posControl.cruise.cruiseYaw-=centidegsPerIteration;
         posControl.cruise.cruiseYaw= wrap_36000(posControl.cruise.cruiseYaw);
+        DEBUG_SET(DEBUG_CRUISE, 2,posControl.cruise.cruiseYaw);
 
         lastYawChangeTime=currentYawChangeTime;
     }
@@ -949,9 +945,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_2D_IN_PROGRESS(n
         
         if(posControl.flags.isAdjustingPosition ) posControl.cruise.cruiseYaw=posControl.actualState.yaw;
 
-        int32_t targetDistance = gpsSol.groundSpeed*navConfig()->fw.cruise_virtual_nav_cruise_virtual_nextwp_multiplier;
-        DEBUG_SET(DEBUG_CRUISE, 2, targetDistance);
-        calculateNewCruiseTarget(&posControl.cruise.cruiseTargetPos, posControl.cruise.cruiseYaw, targetDistance); 
+        calculateNewCruiseTarget(&posControl.cruise.cruiseTargetPos, posControl.cruise.cruiseYaw, 50000); //500m apart
         setDesiredPosition(&posControl.cruise.cruiseTargetPos, posControl.cruise.cruiseYaw, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_HEADING);
         DEBUG_SET(DEBUG_CRUISE, 1, 1);
     }
