@@ -45,19 +45,21 @@
 
 #include "navigation/navigation.h"
 
+#include "build/debug.h"
 
-#define ADCVREF 3300                 // in mV (3300 = 3.3V)
 
-#define VBATT_CELL_FULL_MAX_DIFF 10  // Max difference with cell max voltage for the battery to be considered full (10mV steps)
-#define VBATT_PRESENT_THRESHOLD 100  // Minimum voltage to consider battery present
-#define VBATT_STABLE_DELAY 40        // Delay after connecting battery to begin monitoring
-#define VBATT_HYSTERESIS 10          // Batt Hysteresis of +/-100mV for changing battery state
-#define VBATT_LPF_FREQ  1            // Battery voltage filtering cutoff
-#define AMPERAGE_LPF_FREQ  1         // Battery current filtering cutoff
+#define ADCVREF 3300                                    // in mV (3300 = 3.3V)
+
+#define VBATT_CELL_FULL_MAX_DIFF 14                     // Max difference with cell max voltage for the battery to be considered full (10mV steps)
+#define VBATT_PRESENT_THRESHOLD 100                     // Minimum voltage to consider battery present
+#define VBATT_STABLE_DELAY 40                           // Delay after connecting battery to begin monitoring
+#define VBATT_HYSTERESIS 10                             // Batt Hysteresis of +/-100mV for changing battery state
+#define VBATT_LPF_FREQ  1                               // Battery voltage filtering cutoff
+#define AMPERAGE_LPF_FREQ  1                            // Battery current filtering cutoff
 
 
 // Battery monitoring stuff
-static uint8_t batteryCellCount = 3;       // cell count
+static uint8_t batteryCellCount = 3;                    // cell count
 static uint16_t batteryFullVoltage;
 static uint16_t batteryWarningVoltage;
 static uint16_t batteryCriticalVoltage;
@@ -65,14 +67,16 @@ static uint32_t batteryRemainingCapacity = 0;
 static bool batteryUseCapacityThresholds = false;
 static bool batteryFullWhenPluggedIn = false;
 
-static uint16_t vbat = 0;                   // battery voltage in 0.1V steps (filtered)
-static uint16_t vbatLatestADC = 0;          // most recent unsmoothed raw reading from vbat ADC
-static uint16_t amperageLatestADC = 0;      // most recent raw reading from current ADC
+static uint16_t vbat = 0;                               // battery voltage in 0.1V steps (filtered)
+static uint16_t vbatLatestADC = 0;                      // most recent unsmoothed raw reading from vbat ADC
+static uint16_t amperageLatestADC = 0;                  // most recent raw reading from current ADC
+static uint16_t powerSupplyImpedance = 0;             // calculated impedance in milliohm
+static uint16_t sagCompensatedVBat = 0;                       // calculated no load vbat
 
-static int32_t amperage = 0;               // amperage read by current sensor in centiampere (1/100th A)
-static int32_t power = 0;                  // power draw in cW (0.01W resolution)
-static int32_t mAhDrawn = 0;               // milliampere hours drawn from the battery since start
-static int32_t mWhDrawn = 0;               // energy (milliWatt hours) drawn from the battery since start
+static int32_t amperage = 0;                            // amperage read by current sensor in centiampere (1/100th A)
+static int32_t power = 0;                               // power draw in cW (0.01W resolution)
+static int32_t mAhDrawn = 0;                            // milliampere hours drawn from the battery since start
+static int32_t mWhDrawn = 0;                            // energy (milliWatt hours) drawn from the battery since start
 
 batteryState_e batteryState;
 
@@ -106,7 +110,9 @@ PG_RESET_TEMPLATE(batteryConfig_t, batteryConfig,
         .power = 0
     },
 
-    .rth_energy_margin = 5
+    .rth_energy_margin = 5,
+    .impedanceFiltering = false,
+    .sagCompVBatFiltering = false
 
 );
 
@@ -256,6 +262,11 @@ uint16_t getBatteryVoltage(void)
     return vbat;
 }
 
+uint16_t getSagCompensatedBatteryVoltage(void)
+{
+    return sagCompensatedVBat;
+}
+
 uint16_t getBatteryVoltageLatestADC(void)
 {
     return vbatLatestADC;
@@ -351,6 +362,68 @@ void powerMeterUpdate(int32_t timeDelta)
     power = amperage * vbat / 100; // power unit is cW (0.01W resolution)
     mWhDrawnRaw += (power_mW * timeDelta) / 10000;
     mWhDrawn = mWhDrawnRaw / (3600 * 100);
+}
+
+void sagCompensatedVBatUpdate(timeUs_t currentTime)
+{
+    static timeUs_t recordTimestamp = 0;
+    static int32_t amperageRecord;
+    static uint16_t vbatRecord;
+    static timeUs_t lastUpdate = 0;
+    static pt1Filter_t powerSupplyImpedanceFilterState;
+    static pt1Filter_t sagCompVBatFilterState;
+    static pt1Filter_t sagCompVBatFilterState2;
+
+
+    if (batteryState == BATTERY_NOT_PRESENT) {
+
+        recordTimestamp = 0;
+        powerSupplyImpedance = 0;
+        pt1FilterReset(&powerSupplyImpedanceFilterState, 0);
+        pt1FilterReset(&sagCompVBatFilterState, vbat);
+        pt1FilterInitRC(&sagCompVBatFilterState2, 10, 0);
+        pt1FilterReset(&sagCompVBatFilterState2, vbat);
+
+        sagCompensatedVBat = vbat;
+
+    } else {
+
+        if (cmpTimeUs(currentTime, recordTimestamp) > 20000000)
+            recordTimestamp = 0;
+
+        if (!recordTimestamp) {
+            amperageRecord = amperage;
+            vbatRecord = vbat;
+            recordTimestamp = currentTime;
+        /*} else if (ABS(amperage - amperageRecord) > 100) {*/
+        } else if ((amperage - amperageRecord >= 400) && ((int16_t)vbatRecord - vbat >= 10)) {
+            /*powerSupplyImpedanceRaw = (int32_t)(vbatRecord - vbat) * 1000 / (amperage - amperageRecord);*/
+            uint16_t powerSupplyImpedanceSample = (int32_t)(vbatRecord - vbat) * 1000 / (amperage - amperageRecord);
+            if (batteryConfig()->impedanceFiltering)
+                powerSupplyImpedance = pt1FilterApply4(&powerSupplyImpedanceFilterState, powerSupplyImpedanceSample, VBATT_LPF_FREQ, cmpTimeUs(currentTime, lastUpdate) * 1e-6f);
+            else
+                powerSupplyImpedance = powerSupplyImpedanceSample;
+            amperageRecord = amperage;
+            vbatRecord = vbat;
+            recordTimestamp = currentTime;
+        }
+
+        uint16_t sagCompensatedVBatSample = vbat + powerSupplyImpedance * amperage / 1000;
+        if (batteryConfig()->sagCompVBatFiltering)
+            sagCompensatedVBat = pt1FilterApply4(&sagCompVBatFilterState, sagCompensatedVBatSample, VBATT_LPF_FREQ, cmpTimeUs(currentTime, lastUpdate) * 1e-6f);
+        else
+            sagCompensatedVBat = sagCompensatedVBatSample;
+
+        sagCompensatedVBat = MIN(batteryFullVoltage, sagCompensatedVBat);
+    }
+
+    DEBUG_SET(DEBUG_SAG_COMP_VOLTAGE, 0, powerSupplyImpedance);
+    DEBUG_SET(DEBUG_SAG_COMP_VOLTAGE, 1, sagCompensatedVBat);
+    DEBUG_SET(DEBUG_SAG_COMP_VOLTAGE, 2, pt1FilterApply3(&sagCompVBatFilterState2, sagCompensatedVBat, cmpTimeUs(currentTime, lastUpdate) * 1e-6f));
+
+    // TODO: use unfiltered VBAT and amperage ?
+    // TODO: filter sagCompensatedVBat
+    lastUpdate = currentTime;
 }
 
 uint8_t calculateBatteryPercentage(void)

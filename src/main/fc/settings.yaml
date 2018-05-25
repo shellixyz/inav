@@ -67,7 +67,7 @@ tables:
   - name: i2c_speed
     values: ["400KHZ", "800KHZ", "100KHZ", "200KHZ"]
   - name: debug_modes
-    values: ["NONE", "GYRO", "NOTCH", "NAV_LANDING", "FW_ALTITUDE", "AGL", "FLOW_RAW", "SBUS", "FPORT", "ALWAYS", "STAGE2"]
+    values: ["NONE", "GYRO", "NOTCH", "NAV_LANDING", "FW_ALTITUDE", "AGL", "FLOW_RAW", "SBUS", "FPORT", "ALWAYS", "STAGE2", "SAG_COMP_VOLTAGE"]
   - name: async_mode
     values: ["NONE", "GYRO", "ALL"]
   - name: aux_operator
@@ -571,6 +571,12 @@ groups:
       - name: rth_energy_margin
         min: 0
         max: 100
+      - name: vbat_impedance_filtering
+        field: impedanceFiltering
+        type: bool
+      - name: vbat_sag_comp_filtering
+        field: sagCompVBatFiltering
+        type: bool
 
   - name: PG_MIXER_CONFIG
     type: mixerConfig_t
