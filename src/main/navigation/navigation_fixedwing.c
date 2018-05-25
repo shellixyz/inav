@@ -62,6 +62,8 @@ static bool isPitchAdjustmentValid = false;
 static bool isRollAdjustmentValid = false;
 static float throttleSpeedAdjustment = 0;
 
+bool autoThrottleManuallyIncreased = false;
+
 
 /*-----------------------------------------------------------
  * Altitude controller
@@ -478,6 +480,7 @@ void applyFixedWingPitchRollThrottleController(navigationFSMStateFlags_t navStat
                 correctedThrottleValue += scaleRange(MAX(navConfig()->fw.cruise_throttle, rcCommand[THROTTLE]), navConfig()->fw.cruise_throttle, PWM_RANGE_MAX, 0, motorConfig()->maxthrottle - navConfig()->fw.cruise_throttle);
             else
                 correctedThrottleValue = motorConfig()->maxthrottle;
+            autoThrottleManuallyIncreased = (rcCommand[THROTTLE] > navConfig()->fw.cruise_throttle);
         }
 
         rcCommand[THROTTLE] = constrain(correctedThrottleValue, motorConfig()->minthrottle, motorConfig()->maxthrottle);
@@ -512,6 +515,11 @@ void applyFixedWingPitchRollThrottleController(navigationFSMStateFlags_t navStat
         }
     }
 #endif
+}
+
+bool isFixedWingAutoThrottleManuallyIncreased()
+{
+    return autoThrottleManuallyIncreased;
 }
 
 /*-----------------------------------------------------------
