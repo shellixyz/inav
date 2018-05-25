@@ -597,7 +597,7 @@ void applyFixedWingNavigationController(navigationFSMStateFlags_t navStateFlags,
 #endif
 
         //if (navStateFlags & NAV_CTL_YAW)
-        if ((navStateFlags & NAV_CTL_ALT) || ((navStateFlags & NAV_CTL_POS) && !FLIGHT_MODE(NAV_CRUISE_MODE)))
+        if ((navStateFlags & NAV_CTL_ALT) || (navStateFlags & NAV_CTL_POS & !FLIGHT_MODE(NAV_CRUISE_MODE)))
             applyFixedWingPitchRollThrottleController(navStateFlags, currentTimeUs);
     }
 }
