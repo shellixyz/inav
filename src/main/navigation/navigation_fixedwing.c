@@ -513,6 +513,11 @@ void applyFixedWingPitchRollThrottleController(navigationFSMStateFlags_t navStat
 #endif
 }
 
+bool isFixedWingAutoThrottleManuallyIncreased()
+{
+    return autoThrottleManuallyIncreased;
+}
+
 /*-----------------------------------------------------------
  * FixedWing land detector
  *-----------------------------------------------------------*/
