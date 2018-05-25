@@ -1624,7 +1624,7 @@ static bool osdDrawSingleElement(uint8_t item)
     case OSD_THROTTLE_POS_AUTO_THR:
         {
             osdFormatThrottlePosition(buff, true);
-            if (rcData[THROTTLE] > navConfig()->fw.cruise_throttle)
+            if (autoThrottleManuallyIncreased)
                 TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
             break;
         }
