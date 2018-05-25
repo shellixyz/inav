@@ -1329,14 +1329,6 @@ groups:
         field: fw.launch_climb_angle
         min: 5
         max: 45
-      - name: nav_cruise_virtual_wp_radius
-        field: fw.cruise_virtual_wp_radius
-        min: 1000
-        max: 15000
-      - name: nav_cruise_virtual_nextwp_multiplier
-        field: fw.cruise_virtual_nav_cruise_virtual_nextwp_multiplier
-        min: 5
-        max: 70
 
   - name: PG_TELEMETRY_CONFIG
     type: telemetryConfig_t
