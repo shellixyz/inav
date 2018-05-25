@@ -66,6 +66,7 @@
 #include "fc/rc_controls.h"
 #include "fc/rc_modes.h"
 #include "fc/runtime_config.h"
+#include "fc/fc_tasks.h"
 
 #include "flight/imu.h"
 #include "flight/pid.h"
@@ -114,7 +115,6 @@
     x; \
 })
 
-static timeUs_t flyTime = 0;
 static unsigned currentLayout = 0;
 static int layoutOverride = -1;
 
@@ -1176,6 +1176,27 @@ static bool osdDrawSingleElement(uint8_t item)
             break;
         }
 
+    case OSD_REMAINING_FLIGHT_TIME_BEFORE_RTH:
+        {
+            static timeUs_t updatedTimestamp = 0;
+            static int32_t updatedTimeSeconds = 0;
+            timeUs_t currentTimeUs = micros();
+            int32_t timeSeconds = remainingFlyTimeBeforeRTH();
+            if ((!ARMING_FLAG(ARMED)) || (timeSeconds < 0)) {
+                strcpy(buff, " --:--");
+                updatedTimestamp = 0;
+            } else {
+                if ((timeSeconds == 0) || (ABS(timeSeconds - updatedTimeSeconds) >= 30) || (cmpTimeUs(currentTimeUs, updatedTimestamp) >= 5000000)) {
+                    updatedTimeSeconds = timeSeconds;
+                    updatedTimestamp = currentTimeUs;
+                }
+                osdFormatTime(buff, updatedTimeSeconds, SYM_FLY_M, SYM_FLY_H);
+                if (timeSeconds == 0)
+                    TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
+            }
+        }
+        break;
+
     case OSD_FLYMODE:
         {
             char *p = "ACRO";
@@ -1758,33 +1779,6 @@ static bool osdDrawSingleElement(uint8_t item)
 static uint8_t osdIncElementIndex(uint8_t elementIndex)
 {
     ++elementIndex;
-    if (!sensors(SENSOR_ACC)) {
-        if (elementIndex == OSD_CROSSHAIRS) {
-            elementIndex = OSD_ONTIME;
-        }
-    }
-    if (!feature(FEATURE_CURRENT_METER)) {
-        if (elementIndex == OSD_CURRENT_DRAW) {
-            elementIndex = OSD_GPS_SPEED;
-        }
-        if (elementIndex == OSD_EFFICIENCY_MAH_PER_KM) {
-            elementIndex = OSD_TRIP_DIST;
-        }
-    }
-    if (!feature(FEATURE_GPS)) {
-        if (elementIndex == OSD_GPS_SPEED) {
-            elementIndex = OSD_ALTITUDE;
-        }
-        if (elementIndex == OSD_GPS_LON) {
-            elementIndex = OSD_VARIO;
-        }
-        if (elementIndex == OSD_GPS_HDOP) {
-            elementIndex = OSD_MAIN_BATT_CELL_VOLTAGE;
-        }
-        if (elementIndex == OSD_TRIP_DIST) {
-            elementIndex = OSD_ATTITUDE_PITCH;
-        }
-    }
 
     if (elementIndex == OSD_ITEM_COUNT) {
         elementIndex = 0;
@@ -1844,6 +1838,7 @@ void pgResetFn_osdConfig(osdConfig_t *osdConfig)
     osdConfig->item_pos[0][OSD_FLYTIME] = OSD_POS(23, 9);
     osdConfig->item_pos[0][OSD_ONTIME_FLYTIME] = OSD_POS(23, 11) | OSD_VISIBLE_FLAG;
     osdConfig->item_pos[0][OSD_RTC_TIME] = OSD_POS(23, 12);
+    osdConfig->item_pos[0][OSD_REMAINING_FLIGHT_TIME_BEFORE_RTH] = OSD_POS(23, 7);
 
     osdConfig->item_pos[0][OSD_GPS_SATS] = OSD_POS(0, 11) | OSD_VISIBLE_FLAG;
     osdConfig->item_pos[0][OSD_GPS_HDOP] = OSD_POS(0, 10);
@@ -2131,8 +2126,6 @@ static void osdShowArmed(void)
 
 static void osdRefresh(timeUs_t currentTimeUs)
 {
-    static timeUs_t lastTimeUs = 0;
-
     // detect arm/disarm
     if (armState != ARMING_FLAG(ARMED)) {
         if (ARMING_FLAG(ARMED)) {
@@ -2146,13 +2139,6 @@ static void osdRefresh(timeUs_t currentTimeUs)
 
         armState = ARMING_FLAG(ARMED);
     }
-
-    if (ARMING_FLAG(ARMED)) {
-        timeUs_t deltaT = currentTimeUs - lastTimeUs;
-        flyTime += deltaT;
-    }
-
-    lastTimeUs = currentTimeUs;
 
     if (resumeRefreshAt) {
         // If we already reached he time for the next refresh,
