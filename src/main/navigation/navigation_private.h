@@ -174,6 +174,7 @@ typedef enum {
     NAV_FSM_EVENT_SWITCH_TO_WAYPOINT_FINISHED = NAV_FSM_EVENT_STATE_SPECIFIC_2,
     
     NAV_FSM_EVENT_SWITCH_TO_CRUISE_2D,
+    NAV_FSM_EVENT_SWITCH_TO_CRUISE_2D_ADJ,
     NAV_FSM_EVENT_SWITCH_TO_CRUISE_3D,
     NAV_FSM_EVENT_COUNT,
 } navigationFSMEvent_t;
@@ -215,10 +216,11 @@ typedef enum {
     NAV_STATE_LAUNCH_IN_PROGRESS,               // 28
 
     NAV_STATE_CRUISE_2D_INITIALIZE,            // 29
-    NAV_STATE_CRUISE_2D_IN_PROGRESS,           // 30
+    NAV_STATE_CRUISE_2D_ADJUSTING,              // 30
+    NAV_STATE_CRUISE_2D_IN_PROGRESS,           // 31
     
-    NAV_STATE_CRUISE_3D_INITIALIZE,            // 31
-    NAV_STATE_CRUISE_3D_IN_PROGRESS,           // 32
+    NAV_STATE_CRUISE_3D_INITIALIZE,            // 32
+    NAV_STATE_CRUISE_3D_IN_PROGRESS,           // 33
     
     NAV_STATE_COUNT,
 } navigationFSMState_t;
@@ -268,7 +270,7 @@ typedef struct {
 } rthSanityChecker_t;
 
 typedef struct {
-    //fpVector3_t                 cruiseStartPosition; FUTURE USE
+    bool changePosition;
     fpVector3_t                 cruiseTargetPos;
     int32_t                     cruiseYaw;
 } navCruise_t;
