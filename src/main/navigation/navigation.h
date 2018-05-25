@@ -167,6 +167,7 @@ typedef struct navConfig_s {
         uint8_t  launch_climb_angle;         // Target climb angle for launch (deg)
         uint8_t  launch_max_angle;           // Max tilt angle (pitch/roll combined) to consider launch successful. Set to 180 to disable completely [deg]
         uint8_t  launch_climb_angle_awaits_motor; // Wether the climb angle is applied slowly (true) or from the start (false)
+        uint16_t cruise_virtual_wp_radius;
     } fw;
 } navConfig_t;
 
