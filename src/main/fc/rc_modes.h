@@ -60,6 +60,7 @@ typedef enum {
     BOXOSDALT2      = 33,
     BOXOSDALT3      = 34,
     BOXVIDEOPWR     = 35,
+    BOXNAVCRUISE    = 36,
     CHECKBOX_ITEM_COUNT
 } boxId_e;
 
