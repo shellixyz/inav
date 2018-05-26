@@ -415,11 +415,17 @@ static void pidLevel(pidState_t *pidState, flight_dynamics_index_t axis, float h
     // This is ROLL/PITCH, run ANGLE/HORIZON controllers
     float angleTarget = pidRcCommandToAngle(rcCommand[axis], pidProfile()->max_angle_inclination[axis]);
 
-    // Automatically pitch down if the throttle is reduced bellow cruise throttle
-    if ((axis == FD_PITCH) && STATE(FIXED_WING) && FLIGHT_MODE(ANGLE_MODE))
-        angleTarget += scaleRange(MAX(0, navConfig()->fw.cruise_throttle - rcCommand[THROTTLE]), 0, navConfig()->fw.cruise_throttle - PWM_RANGE_MIN, 0, mixerConfig()->minThrottleDownAngle);
+    if (axis == FD_PITCH) {
 
-    const float angleTarget = pidRcCommandToAngle(rcCommand[axis], pidProfile()->max_angle_inclination[axis]);
+        // Flaperon PITCH compensation
+        if (FLIGHT_MODE(ANGLE_MODE) && FLIGHT_MODE(FLAPERON)) angleTarget += mixerConfig()->flaperon_pitch_comp_angle;
+
+        // Automatically pitch down if the throttle is reduced bellow cruise throttle
+        if (STATE(FIXED_WING) && FLIGHT_MODE(ANGLE_MODE))
+            angleTarget += scaleRange(MAX(0, navConfig()->fw.cruise_throttle - rcCommand[THROTTLE]), 0, navConfig()->fw.cruise_throttle - PWM_RANGE_MIN, 0, mixerConfig()->minThrottleDownAngle);
+
+    }
+
     const float angleErrorDeg = DECIDEGREES_TO_DEGREES(angleTarget - attitude.raw[axis]);
 
     float angleRateTarget = constrainf(angleErrorDeg * (pidBank()->pid[PID_LEVEL].P / FP_PID_LEVEL_P_MULTIPLIER), -currentControlRateProfile->stabilized.rates[axis] * 10.0f, currentControlRateProfile->stabilized.rates[axis] * 10.0f);
