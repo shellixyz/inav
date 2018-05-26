@@ -614,6 +614,10 @@ groups:
       - name: fw_roll2pitch_comp
         min: 0
         max: 100
+      - name: min_throttle_down_angle
+        field: minThrottleDownAngle
+        min: 0
+        max: 450
 
   - name: PG_MOTOR_3D_CONFIG
     type: flight3DConfig_t
@@ -1364,10 +1368,6 @@ groups:
       - name: nav_fw_launch_climb_angle_awaits_motor
         field: fw.launch_climb_angle_awaits_motor
         type: bool
-      - name: nav_cruise_virtual_wp_radius
-        field: fw.cruise_virtual_wp_radius
-        min: 1000
-        max: 15000
 
   - name: PG_TELEMETRY_CONFIG
     type: telemetryConfig_t
