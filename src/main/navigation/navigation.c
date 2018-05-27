@@ -356,7 +356,7 @@ static const navigationFSMStateDescriptor_t navFSM[NAV_STATE_COUNT] = {
             [NAV_FSM_EVENT_SWITCH_TO_RTH]               = NAV_STATE_RTH_INITIALIZE,
             [NAV_FSM_EVENT_SWITCH_TO_WAYPOINT]          = NAV_STATE_WAYPOINT_INITIALIZE,
             [NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING] = NAV_STATE_EMERGENCY_LANDING_INITIALIZE,
-            [NAV_FSM_EVENT_SWITCH_TO_CRUISE_2D_ADJ]     = NAV_STATE_CRUISE_2D_ADJUSTING
+            [NAV_FSM_EVENT_SWITCH_TO_CRUISE_2D_ADJ]     = NAV_STATE_CRUISE_2D_ADJUSTING,
         }
     },
         /** CRUISE_3D mode ************************************************/
