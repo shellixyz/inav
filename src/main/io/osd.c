@@ -27,6 +27,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <math.h>
 
 #include "platform.h"
 
@@ -70,6 +71,7 @@
 
 #include "flight/imu.h"
 #include "flight/pid.h"
+#include "flight/wind_estimator.h"
 
 #include "navigation/navigation.h"
 
@@ -158,7 +160,7 @@ static displayPort_t *osdDisplayPort;
 #define AH_SIDEBAR_WIDTH_POS 7
 #define AH_SIDEBAR_HEIGHT_POS 3
 
-PG_REGISTER_WITH_RESET_FN(osdConfig_t, osdConfig, PG_OSD_CONFIG, 1);
+PG_REGISTER_WITH_RESET_FN(osdConfig_t, osdConfig, PG_OSD_CONFIG, 2);
 
 static int digitCount(int32_t value)
 {
@@ -351,6 +353,39 @@ static void osdFormatVelocityStr(char* buff, int32_t vel)
         break;
     }
 }
+
+/**
+ * Converts wind speed into a string based on the current unit system, using
+ * always 3 digits and an additional character for the unit at the right. buff
+ * is null terminated.
+ * @param ws Raw wind speed in cm/s
+ */
+#ifdef USE_WIND_ESTIMATOR
+static void osdFormatWindSpeedStr(char *buff, int32_t ws, bool isValid)
+{
+    int32_t centivalue;
+    char suffix;
+    switch (osdConfig()->units) {
+        case OSD_UNIT_UK:
+            FALLTHROUGH;
+        case OSD_UNIT_IMPERIAL:
+            centivalue = (ws * 224) / 100;
+            suffix = SYM_MPH;
+            break;
+        case OSD_UNIT_METRIC:
+            centivalue = (ws * 36) / 10;
+            suffix = SYM_KMH;
+            break;
+    }
+    if (isValid) {
+        osdFormatCentiNumber(buff, centivalue, 0, 2, 0, 3);
+    } else {
+        buff[0] = buff[1] = buff[2] = '-';
+    }
+    buff[3] = suffix;
+    buff[4] = '\0';
+}
+#endif
 
 /**
 * Converts altitude into a string based on the current unit system
@@ -813,6 +848,164 @@ static int16_t osdGetHeading(void)
     return attitude.values.yaw;
 }
 
+// Returns a heading angle in degrees normalized to [0, 360).
+static int osdGetHeadingAngle(int angle)
+{
+    while (angle < 0) {
+        angle += 360;
+    }
+    while (angle >= 360) {
+        angle -= 360;
+    }
+    return angle;
+}
+
+#if defined(USE_GPS)
+
+/* Draws a map with the given symbol in the center and given point of interest
+ * defined by its distance in meters and direction in degrees.
+ * referenceHeading indicates the up direction in the map, in degrees, while
+ * referenceSym (if non-zero) is drawn at the upper right corner below a small
+ * arrow to indicate the map reference to the user. The drawn argument is an
+ * in-out used to store the last position where the craft was drawn to avoid
+ * erasing all screen on each redraw.
+ */
+static void osdDrawMap(int referenceHeading, uint8_t referenceSym, uint8_t centerSym,
+                       uint32_t poiDistance, int16_t poiDirection, uint8_t poiSymbol,
+                       uint16_t *drawn)
+{
+    // TODO: These need to be tested with several setups. We might
+    // need to make them configurable.
+    const int hMargin = 1;
+    const int vMargin = 1;
+
+    // TODO: Get this from the display driver?
+    const int charWidth = 12;
+    const int charHeight = 18;
+
+    char buf[16];
+
+    uint8_t minX = hMargin;
+    uint8_t maxX = osdDisplayPort->cols - 1 - hMargin;
+    uint8_t minY = vMargin;
+    uint8_t maxY = osdDisplayPort->rows - 1 - vMargin;
+    uint8_t midX = osdDisplayPort->cols / 2;
+    uint8_t midY = osdDisplayPort->rows / 2;
+
+    // Fixed marks
+    if (referenceSym) {
+        displayWriteChar(osdDisplayPort, maxX, minY, SYM_DIRECTION);
+        displayWriteChar(osdDisplayPort, maxX, minY + 1, referenceSym);
+    }
+    displayWriteChar(osdDisplayPort, minX, maxY, SYM_SCALE);
+    displayWriteChar(osdDisplayPort, midX, midY, centerSym);
+
+    // First, erase the previous drawing.
+    if (OSD_VISIBLE(*drawn)) {
+        displayWriteChar(osdDisplayPort, OSD_X(*drawn), OSD_Y(*drawn), SYM_BLANK);
+        *drawn = 0;
+    }
+
+    uint32_t scale;
+    float scaleToUnit;
+    int scaleUnitDivisor;
+    char symUnscaled;
+    char symScaled;
+    int maxDecimals;
+
+    switch (osdConfig()->units) {
+        case OSD_UNIT_IMPERIAL:
+            scale = 161; // 161m ~= 0.1miles
+            scaleToUnit = 100 / 1609.3440f; // scale to 0.01mi for osdFormatCentiNumber()
+            scaleUnitDivisor = 0;
+            symUnscaled = SYM_MI;
+            symScaled = SYM_MI;
+            maxDecimals = 2;
+            break;
+        case OSD_UNIT_UK:
+            FALLTHROUGH;
+        case OSD_UNIT_METRIC:
+            scale = 100; // 100m as initial scale
+            scaleToUnit = 100; // scale to cm for osdFormatCentiNumber()
+            scaleUnitDivisor = 1000; // Convert to km when scale gets bigger than 999m
+            symUnscaled = SYM_M;
+            symScaled = SYM_KM;
+            maxDecimals = 0;
+            break;
+    }
+
+    if (STATE(GPS_FIX) && poiDistance > scale) {
+
+        int directionToPoi = osdGetHeadingAngle(poiDirection + referenceHeading);
+        float poiAngle = DEGREES_TO_RADIANS(directionToPoi);
+        float poiSin = sin_approx(poiAngle);
+        float poiCos = cos_approx(poiAngle);
+
+        // Now start looking for a valid scale that lets us draw everything
+        for (int ii = 0; ii < 50; ii++, scale *= 2) {
+            // Calculate location of the aircraft in map
+            int points = poiDistance / (float)(scale / charHeight);
+
+            float pointsX = points * poiSin;
+            int poiX = midX + roundf(pointsX / charWidth);
+            if (poiX < minX || poiX > maxX) {
+                continue;
+            }
+
+            float pointsY = points * poiCos;
+            int poiY = midY + roundf(pointsY / charHeight);
+            if (poiY < minY || poiY > maxY) {
+                continue;
+            }
+
+            uint8_t c;
+            if (displayReadCharWithAttr(osdDisplayPort, poiY, poiY, &c, NULL) && c != SYM_BLANK) {
+                // Something else written here, increase scale. If the display doesn't support reading
+                // back characters, we assume there's nothing.
+                continue;
+            }
+
+            // Draw the point on the map
+            if (poiSymbol == SYM_ARROW_UP) {
+                // Drawing aircraft, rotate
+                int mapHeading = osdGetHeadingAngle(DECIDEGREES_TO_DEGREES(osdGetHeading()) - referenceHeading);
+                poiSymbol += mapHeading * 2 / 45;
+            }
+            displayWriteChar(osdDisplayPort, poiX, poiY, poiSymbol);
+
+            // Update saved location
+            *drawn = OSD_POS(poiX, poiY) | OSD_VISIBLE_FLAG;
+            break;
+        }
+    }
+
+    // Draw the used scale
+    bool scaled = osdFormatCentiNumber(buf, scale * scaleToUnit, scaleUnitDivisor, maxDecimals, 2, 3);
+    buf[3] = scaled ? symScaled : symUnscaled;
+    buf[4] = '\0';
+    displayWrite(osdDisplayPort, minX + 1, maxY, buf);
+}
+
+/* Draws a map with the home in the center and the craft moving around.
+ * See osdDrawMap() for reference.
+ */
+static void osdDrawHomeMap(int referenceHeading, uint8_t referenceSym, uint16_t *drawn)
+{
+    osdDrawMap(referenceHeading, referenceSym, SYM_HOME, GPS_distanceToHome, GPS_directionToHome, SYM_ARROW_UP, drawn);
+}
+
+/* Draws a map with the aircraft in the center and the home moving around.
+ * See osdDrawMap() for reference.
+ */
+static void osdDrawRadar(uint16_t *drawn)
+{
+    int16_t reference = DECIDEGREES_TO_DEGREES(osdGetHeading());
+    int16_t poiDirection = osdGetHeadingAngle(GPS_directionToHome + 180);
+    osdDrawMap(reference, 0, SYM_ARROW_UP, GPS_distanceToHome, poiDirection, SYM_HOME, drawn);
+}
+
+#endif
+
 static bool osdDrawSingleElement(uint8_t item)
 {
     uint16_t pos = osdConfig()->item_pos[currentLayout][item];
@@ -913,15 +1106,7 @@ static bool osdDrawSingleElement(uint8_t item)
 
     case OSD_HOME_DIR:
         {
-            int16_t h = GPS_directionToHome - DECIDEGREES_TO_DEGREES(osdGetHeading());
-
-            if (h < 0) {
-                h += 360;
-            }
-            if (h >= 360) {
-                h -= 360;
-            }
-
+            int16_t h = osdGetHeadingAngle(GPS_directionToHome - DECIDEGREES_TO_DEGREES(osdGetHeading()));
             h = h * 2 / 45;
 
             buff[0] = SYM_ARROW_UP + h;
@@ -931,7 +1116,8 @@ static bool osdDrawSingleElement(uint8_t item)
 
     case OSD_HOME_DIST:
         {
-            osdFormatDistanceSymbol(buff, GPS_distanceToHome * 100);
+            buff[0] = SYM_HOME;
+            osdFormatDistanceSymbol(&buff[1], GPS_distanceToHome * 100);
             uint16_t dist_alarm = osdConfig()->dist_alarm;
             if (dist_alarm > 0 && GPS_distanceToHome > dist_alarm) {
                 TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
@@ -967,6 +1153,25 @@ static bool osdDrawSingleElement(uint8_t item)
             int32_t centiHDOP = 100 * gpsSol.hdop / HDOP_SCALE;
             osdFormatCentiNumber(&buff[2], centiHDOP, 0, 1, 0, 2);
             break;
+        }
+
+    case OSD_MAP_NORTH:
+        {
+            static uint16_t drawn = 0;
+            osdDrawHomeMap(0, 'N', &drawn);
+            return true;
+        }
+    case OSD_MAP_TAKEOFF:
+        {
+            static uint16_t drawn = 0;
+            osdDrawHomeMap(CENTIDEGREES_TO_DEGREES(navigationGetHomeHeading()), 'T', &drawn);
+            return true;
+        }
+    case OSD_RADAR:
+        {
+            static uint16_t drawn = 0;
+            osdDrawRadar(&drawn);
+            return true;
         }
 #endif // GPS
 
@@ -1117,6 +1322,23 @@ static bool osdDrawSingleElement(uint8_t item)
                 buff[5] = '\0';
                 break;
         }
+        break;
+
+    case OSD_ATTITUDE_ROLL:
+        buff[0] = SYM_ROLL_LEVEL;
+        if (attitude.values.roll)
+            buff[0] += (attitude.values.roll < 0 ? -1 : 1);
+        osdFormatCentiNumber(buff + 1, ABS(attitude.values.roll) * 10, 0, osdConfig()->attitude_angle_decimals, 0, 2 + osdConfig()->attitude_angle_decimals);
+        break;
+
+    case OSD_ATTITUDE_PITCH:
+        if (attitude.values.pitch == 0)
+            buff[0] = 'P';
+        else if (attitude.values.pitch > 0)
+            buff[0] = SYM_PITCH_DOWN;
+        else if (attitude.values.pitch < 0)
+            buff[0] = SYM_PITCH_UP;
+        osdFormatCentiNumber(buff + 1, ABS(attitude.values.pitch) * 10, 0, osdConfig()->attitude_angle_decimals, 0, 2 + osdConfig()->attitude_angle_decimals);
         break;
 
     case OSD_ARTIFICIAL_HORIZON:
@@ -1543,7 +1765,7 @@ static bool osdDrawSingleElement(uint8_t item)
     case OSD_EFFICIENCY_WH_PER_KM:
         {
             // amperage is in centi amps, speed is in cms/s. We want
-            // mah/km. Values over 999 are considered useless and
+            // mWh/km. Values over 999Wh/km are considered useless and
             // displayed as "---""
             static pt1Filter_t eFilterState;
             static timeUs_t efficiencyUpdated = 0;
@@ -1560,7 +1782,7 @@ static bool osdDrawSingleElement(uint8_t item)
                     value = eFilterState.state;
                 }
             }
-            if (value > 0 && value <= 999) {
+            if (value > 0 && value <= 999999) {
                 osdFormatCentiNumber(buff, value / 10, 0, 2, 0, 3);
             } else {
                 buff[0] = buff[1] = buff[2] = '-';
@@ -1570,6 +1792,63 @@ static bool osdDrawSingleElement(uint8_t item)
             buff[5] = '\0';
             break;
         }
+
+    case OSD_DEBUG:
+        {
+            // Longest representable string is -32768, hence 6 characters
+            tfp_sprintf(buff, "[0]=%6d [1]=%6d", debug[0], debug[1]);
+            displayWrite(osdDisplayPort, elemPosX, elemPosY, buff);
+            elemPosY++;
+            tfp_sprintf(buff, "[2]=%6d [3]=%6d", debug[2], debug[3]);
+            break;
+        }
+
+    case OSD_WIND_SPEED_HORIZONTAL:
+#ifdef USE_WIND_ESTIMATOR
+        {
+            bool valid = isEstimatedWindSpeedValid();
+            float horizontalWindSpeed;
+            if (valid) {
+                uint16_t angle;
+                horizontalWindSpeed = getEstimatedHorizontalWindSpeed(&angle);
+                int16_t windDirection = osdGetHeadingAngle((int)angle - DECIDEGREES_TO_DEGREES(attitude.values.yaw));
+                buff[1] = SYM_DIRECTION + (windDirection * 2 / 90);
+            } else {
+                horizontalWindSpeed = 0;
+                buff[1] = SYM_BLANK;
+            }
+            buff[0] = SYM_WIND_HORIZONTAL;
+            osdFormatWindSpeedStr(buff + 2, horizontalWindSpeed, valid);
+            break;
+        }
+#else
+        return false;
+#endif
+
+    case OSD_WIND_SPEED_VERTICAL:
+#ifdef USE_WIND_ESTIMATOR
+        {
+            buff[0] = SYM_WIND_VERTICAL;
+            buff[1] = SYM_BLANK;
+            bool valid = isEstimatedWindSpeedValid();
+            float verticalWindSpeed;
+            if (valid) {
+                verticalWindSpeed = getEstimatedWindSpeed(Z);
+                if (verticalWindSpeed < 0) {
+                    buff[1] = SYM_AH_DECORATION_DOWN;
+                    verticalWindSpeed = -verticalWindSpeed;
+                } else if (verticalWindSpeed > 0) {
+                    buff[1] = SYM_AH_DECORATION_UP;
+                }
+            } else {
+                verticalWindSpeed = 0;
+            }
+            osdFormatWindSpeedStr(buff + 2, verticalWindSpeed, valid);
+            break;
+        }
+#else
+        return false;
+#endif
 
     default:
         return false;
@@ -1582,37 +1861,6 @@ static bool osdDrawSingleElement(uint8_t item)
 static uint8_t osdIncElementIndex(uint8_t elementIndex)
 {
     ++elementIndex;
-    if (!sensors(SENSOR_ACC)) {
-        if (elementIndex == OSD_CROSSHAIRS) {
-            elementIndex = OSD_ONTIME;
-        }
-    }
-    if (!feature(FEATURE_CURRENT_METER)) {
-        if (elementIndex == OSD_CURRENT_DRAW) {
-            elementIndex = OSD_GPS_SPEED;
-        }
-        if (elementIndex == OSD_EFFICIENCY_MAH_PER_KM) {
-            elementIndex = OSD_TRIP_DIST;
-        }
-        if (elementIndex == OSD_REMAINING_FLIGHT_TIME_BEFORE_RTH) {
-            elementIndex = OSD_ITEM_COUNT;
-        }
-    }
-    if (!feature(FEATURE_GPS)) {
-        if (elementIndex == OSD_GPS_SPEED) {
-            elementIndex = OSD_ALTITUDE;
-        }
-        if (elementIndex == OSD_GPS_LON) {
-            elementIndex = OSD_VARIO;
-        }
-        if (elementIndex == OSD_GPS_HDOP) {
-            elementIndex = OSD_MAIN_BATT_CELL_VOLTAGE;
-        }
-        if (elementIndex == OSD_TRIP_DIST) {
-            STATIC_ASSERT(OSD_REMAINING_FLIGHT_TIME_BEFORE_RTH == OSD_ITEM_COUNT - 1, OSD_REMAINING_FLIGHT_TIME_BEFORE_RTH_not_last_element);
-            elementIndex = OSD_ITEM_COUNT;
-        }
-    }
 
     if (elementIndex == OSD_ITEM_COUNT) {
         elementIndex = 0;
@@ -1654,6 +1902,9 @@ void pgResetFn_osdConfig(osdConfig_t *osdConfig)
     osdConfig->item_pos[0][OSD_EFFICIENCY_MAH_PER_KM] = OSD_POS(1, 5);
     osdConfig->item_pos[0][OSD_EFFICIENCY_WH_PER_KM] = OSD_POS(1, 5);
 
+    osdConfig->item_pos[0][OSD_ATTITUDE_ROLL] = OSD_POS(1, 7);
+    osdConfig->item_pos[0][OSD_ATTITUDE_PITCH] = OSD_POS(1, 8);
+
     // avoid OSD_VARIO under OSD_CROSSHAIRS
     osdConfig->item_pos[0][OSD_VARIO] = OSD_POS(23, 5);
     // OSD_VARIO_NUM at the right of OSD_VARIO
@@ -1684,6 +1935,8 @@ void pgResetFn_osdConfig(osdConfig_t *osdConfig)
     osdConfig->item_pos[0][OSD_POWER] = OSD_POS(15, 1);
 
     osdConfig->item_pos[0][OSD_AIR_SPEED] = OSD_POS(3, 5);
+    osdConfig->item_pos[0][OSD_WIND_SPEED_HORIZONTAL] = OSD_POS(3, 6);
+    osdConfig->item_pos[0][OSD_WIND_SPEED_VERTICAL] = OSD_POS(3, 7);
 
     // Under OSD_FLYMODE. TODO: Might not be visible on NTSC?
     osdConfig->item_pos[0][OSD_MESSAGES] = OSD_POS(1, 13) | OSD_VISIBLE_FLAG;
@@ -1710,6 +1963,7 @@ void pgResetFn_osdConfig(osdConfig_t *osdConfig)
 
     osdConfig->units = OSD_UNIT_METRIC;
     osdConfig->main_voltage_decimals = 1;
+    osdConfig->attitude_angle_decimals = 0;
 }
 
 static void osdSetNextRefreshIn(uint32_t timeMs) {

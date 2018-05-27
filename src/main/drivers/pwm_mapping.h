@@ -64,7 +64,6 @@ typedef struct drv_pwm_config_s {
     bool useTriggerRangefinder;
 #endif
     bool useServoOutputs;
-    bool useChannelForwarding;      // configure additional channels as servos
     uint16_t servoPwmRate;
     uint16_t servoCenterPulse;
     uint8_t pwmProtocolType;
@@ -98,7 +97,7 @@ typedef struct pwmIOConfiguration_s {
     uint8_t ioCount;
     uint8_t pwmInputCount;
     uint8_t ppmInputCount;
-    pwmPortConfiguration_t ioConfigurations[USABLE_TIMER_CHANNEL_COUNT];
+    pwmPortConfiguration_t * ioConfigurations;
 } pwmIOConfiguration_t;
 
 // This indexes into the read-only hardware definition structure, timerHardware_t

@@ -7,16 +7,16 @@ tables:
     values: ["NONE", "AUTO", "ADXL345", "MPU6050", "MMA845x", "BMA280", "LSM303DLHC", "MPU6000", "MPU6500", "MPU9250", "BMI160", "FAKE"]
     enum: accelerationSensor_e
   - name: rangefinder_hardware
-    values: ["NONE", "HCSR04", "SRF10", "HCSR04I2C", "VL53L0X", "UIB"]
+    values: ["NONE", "HCSR04", "SRF10", "HCSR04I2C", "VL53L0X", "MSP", "UIB"]
     enum: rangefinderType_e
   - name: mag_hardware
     values: ["NONE", "AUTO", "HMC5883", "AK8975", "GPSMAG", "MAG3110", "AK8963", "IST8310", "QMC5883", "MPU9250", "IST8308", "FAKE"]
     enum: magSensor_e
   - name: opflow_hardware
-    values: ["NONE", "FAKE", "CXOF", "PMW3901"]
+    values: ["NONE", "PMW3901", "CXOF", "MSP", "FAKE"]
     enum: opticalFlowSensor_e
   - name: baro_hardware
-    values: ["NONE", "AUTO", "BMP085", "MS5611", "BMP280", "MS5607", "FAKE"]
+    values: ["NONE", "AUTO", "BMP085", "MS5611", "BMP280", "MS5607", "LPS25H", "FAKE"]
     enum: baroSensor_e
   - name: pitot_hardware
     values: ["NONE", "AUTO", "MS4525", "ADC", "VIRTUAL", "FAKE"]
@@ -35,8 +35,6 @@ tables:
     values: ["STANDARD", "ONESHOT125", "ONESHOT42", "MULTISHOT", "BRUSHED"]
   - name: failsafe_procedure
     values: ["SET-THR", "DROP", "RTH", "NONE"]
-  - name: gimbal_mode
-    values: ["NORMAL", "MIXTILT"]
   - name: current_sensor
     values: ["NONE", "ADC", "VIRTUAL"]
     enum: currentSensor_e
@@ -49,7 +47,7 @@ tables:
   - name: gps_dyn_model
     values: ["PEDESTRIAN", "AIR_1G", "AIR_4G"]
     enum: gpsDynModel_e
-  - name: reset_altitude
+  - name: reset_type
     values: ["NEVER", "FIRST_ARM", "EACH_ARM"]
   - name: nav_user_control_mode
     values: ["ATTI", "CRUISE"]
@@ -69,7 +67,7 @@ tables:
   - name: i2c_speed
     values: ["400KHZ", "800KHZ", "100KHZ", "200KHZ"]
   - name: debug_modes
-    values: ["NONE", "GYRO", "NOTCH", "NAV_LANDING", "FW_ALTITUDE", "AGL", "FLOW_RAW", "SBUS", "FPORT", "ALWAYS"]
+    values: ["NONE", "GYRO", "NOTCH", "NAV_LANDING", "FW_ALTITUDE", "AGL", "FLOW_RAW", "SBUS", "FPORT", "ALWAYS", "STAGE2", "WIND_ESTIMATOR"]
   - name: async_mode
     values: ["NONE", "GYRO", "ALL"]
   - name: aux_operator
@@ -93,6 +91,9 @@ tables:
   - name: platform_type
     values: ["MULTIROTOR", "AIRPLANE", "HELICOPTER", "TRICOPTER", "ROVER", "BOAT"]
     enum: flyingPlatformType_e
+  - name: tz_automatic_dst
+    values: ["OFF", "EU", "USA"]
+    enum: tz_automatic_dst_e
 
 groups:
   - name: PG_GYRO_CONFIG
@@ -135,6 +136,11 @@ groups:
         condition: USE_GYRO_NOTCH_2
         min: 1
         max: 500 
+      - name: gyro_stage2_lowpass_hz
+        field: gyro_stage2_lowpass_hz
+        condition: USE_GYRO_BIQUAD_RC_FIR2
+        min: 0
+        max: 500
       - name: gyro_to_use
         condition: USE_DUAL_GYRO
         min: 0
@@ -228,6 +234,10 @@ groups:
       - name: opflow_scale
         min: 0
         max: 10000
+      - name: align_opflow
+        field: opflow_align
+        type: uint8_t
+        table: alignment
 
   - name: PG_COMPASS_CONFIG
     type: compassConfig_t
@@ -483,15 +493,7 @@ groups:
         field: yawDeciDegrees
         min: -1800
         max: 3600
-
-  - name: PG_GIMBAL_CONFIG
-    type: gimbalConfig_t
-    headers: ["io/gimbal.h"]
-    members:
-      - name: gimbal_mode
-        field: mode
-        table: gimbal_mode
-
+        
   - name: PG_BATTERY_CONFIG
     type: batteryConfig_t
     headers: ["sensors/battery.h"]
@@ -501,6 +503,11 @@ groups:
         condition: USE_ADC
         min: VBAT_SCALE_MIN
         max: VBAT_SCALE_MAX
+      - name: vbat_cell_detect_voltage
+        field: voltage.cellDetect
+        condition: USE_ADC
+        min: 100
+        max: 500
       - name: vbat_max_cell_voltage
         field: voltage.cellMax
         condition: USE_ADC
@@ -1081,7 +1088,10 @@ groups:
         type: bool
       - name: inav_reset_altitude
         field: reset_altitude_type
-        table: reset_altitude
+        table: reset_type
+      - name: inav_reset_home
+        field: reset_home_type
+        table: reset_type
       - name: inav_max_surface_altitude
         field: max_surface_altitude
         min: 0
@@ -1217,6 +1227,9 @@ groups:
       - name: nav_rth_abort_threshold
         field: general.rth_abort_threshold
         max: 65000
+      - name: nav_max_terrain_follow_alt
+        field: general.max_terrain_follow_altitude
+        max: 1000
       - name: nav_rth_altitude
         field: general.rth_altitude
         max: 65000
@@ -1441,9 +1454,17 @@ groups:
       - name: osd_time_alarm
         field: time_alarm
         min: 0
-        max: 60
+        max: 600
       - name: osd_alt_alarm
         field: alt_alarm
+        min: 0
+        max: 10000
+      - name: osd_dist_alarm
+        field: dist_alarm
+        min: 0
+        max: 50000
+      - name: osd_neg_alt_alarm
+        field: neg_alt_alarm
         min: 0
         max: 10000
 
@@ -1469,6 +1490,10 @@ groups:
         field: main_voltage_decimals
         min: 1
         max: 2
+      - name: osd_attitude_angle_decimals
+        field: attitude_angle_decimals
+        min: 0
+        max: 1
 
   - name: PG_SYSTEM_CONFIG
     type: systemConfig_t
@@ -1537,6 +1562,9 @@ groups:
       - name: tz_offset
         min: -1440
         max: 1440
+      - name: tz_automatic_dst
+        type: uint8_t
+        table: tz_automatic_dst
 
   - name: PG_DISPLAY_CONFIG
     type: displayConfig_t

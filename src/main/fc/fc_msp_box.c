@@ -35,6 +35,8 @@
 #include "sensors/diagnostics.h"
 #include "sensors/sensors.h"
 
+#include "navigation/navigation.h"
+
 #include "telemetry/telemetry.h"
 
 #define BOX_SUFFIX ';'
@@ -74,7 +76,7 @@ static const box_t boxes[CHECKBOX_ITEM_COUNT + 1] = {
     { BOXCAMERA3, "CAMERA CONTROL 3", 41 },
     { BOXOSDALT1, "OSD ALT 1", 42 },
     { BOXOSDALT2, "OSD ALT 2", 43 },
-    { BOXOSDALT3, "OSD ALT 3", 43 },
+    { BOXOSDALT3, "OSD ALT 3", 44 },
     { CHECKBOX_ITEM_COUNT, NULL, 0xFF }
 };
 
@@ -156,10 +158,7 @@ void initActiveBoxIds(void)
     if (sensors(SENSOR_ACC)) {
         activeBoxIds[activeBoxIdCount++] = BOXANGLE;
         activeBoxIds[activeBoxIdCount++] = BOXHORIZON;
-
-#ifdef USE_FLM_TURN_ASSIST
         activeBoxIds[activeBoxIdCount++] = BOXTURNASSIST;
-#endif
     }
 
     if (!feature(FEATURE_AIRMODE)) {
@@ -173,8 +172,8 @@ void initActiveBoxIds(void)
         activeBoxIds[activeBoxIdCount++] = BOXHEADADJ;
     }
 
-    if (feature(FEATURE_SERVO_TILT))
-        activeBoxIds[activeBoxIdCount++] = BOXCAMSTAB;
+    //Camstab mode is enabled always
+    activeBoxIds[activeBoxIdCount++] = BOXCAMSTAB;
 
 #ifdef USE_GPS
     if (sensors(SENSOR_BARO) || (STATE(FIXED_WING) && feature(FEATURE_GPS))) {
@@ -286,13 +285,10 @@ void packBoxModeFlags(boxBitmask_t * mspBoxModeFlags)
     CHECK_ACTIVE_BOX(IS_ENABLED(FLIGHT_MODE(NAV_WP_MODE)),          BOXNAVWP);
     CHECK_ACTIVE_BOX(IS_ENABLED(IS_RC_MODE_ACTIVE(BOXAIRMODE)),     BOXAIRMODE);
     CHECK_ACTIVE_BOX(IS_ENABLED(IS_RC_MODE_ACTIVE(BOXGCSNAV)),      BOXGCSNAV);
-    CHECK_ACTIVE_BOX(IS_ENABLED(IS_RC_MODE_ACTIVE(BOXSURFACE)),     BOXSURFACE);
 #ifdef USE_FLM_FLAPERON
     CHECK_ACTIVE_BOX(IS_ENABLED(FLIGHT_MODE(FLAPERON)),             BOXFLAPERON);
 #endif
-#ifdef USE_FLM_TURN_ASSIST
     CHECK_ACTIVE_BOX(IS_ENABLED(FLIGHT_MODE(TURN_ASSISTANT)),       BOXTURNASSIST);
-#endif
     CHECK_ACTIVE_BOX(IS_ENABLED(FLIGHT_MODE(NAV_LAUNCH_MODE)),      BOXNAVLAUNCH);
     CHECK_ACTIVE_BOX(IS_ENABLED(FLIGHT_MODE(AUTO_TUNE)),            BOXAUTOTUNE);
     CHECK_ACTIVE_BOX(IS_ENABLED(IS_RC_MODE_ACTIVE(BOXAUTOTRIM)),    BOXAUTOTRIM);
@@ -304,6 +300,7 @@ void packBoxModeFlags(boxBitmask_t * mspBoxModeFlags)
     CHECK_ACTIVE_BOX(IS_ENABLED(IS_RC_MODE_ACTIVE(BOXOSDALT1)),     BOXOSDALT1);
     CHECK_ACTIVE_BOX(IS_ENABLED(IS_RC_MODE_ACTIVE(BOXOSDALT2)),     BOXOSDALT2);
     CHECK_ACTIVE_BOX(IS_ENABLED(IS_RC_MODE_ACTIVE(BOXOSDALT3)),     BOXOSDALT3);
+    CHECK_ACTIVE_BOX(IS_ENABLED(navigationTerrainFollowingEnabled()),   BOXSURFACE);
 
     memset(mspBoxModeFlags, 0, sizeof(boxBitmask_t));
     for (uint32_t i = 0; i < activeBoxIdCount; i++) {

@@ -75,6 +75,14 @@ typedef enum {
     OSD_BATTERY_REMAINING_PERCENT,
     OSD_EFFICIENCY_WH_PER_KM,
     OSD_TRIP_DIST,
+    OSD_ATTITUDE_PITCH,
+    OSD_ATTITUDE_ROLL,
+    OSD_MAP_NORTH,
+    OSD_MAP_TAKEOFF,
+    OSD_RADAR,
+    OSD_DEBUG, // Number 46. Intentionally absent from configurator and CMS. Set it from CLI.
+    OSD_WIND_SPEED_HORIZONTAL,
+    OSD_WIND_SPEED_VERTICAL,
     OSD_REMAINING_FLIGHT_TIME_BEFORE_RTH,
     OSD_ITEM_COUNT // MUST BE LAST
 } osd_items_e;
@@ -118,6 +126,7 @@ typedef struct osdConfig_s {
 
     // Preferences
     uint8_t main_voltage_decimals;
+    uint8_t attitude_angle_decimals;
     uint8_t ahi_reverse_roll;
     uint8_t crosshairs_style; // from osd_crosshairs_style_e
     uint8_t left_sidebar_scroll; // from osd_sidebar_scroll_e

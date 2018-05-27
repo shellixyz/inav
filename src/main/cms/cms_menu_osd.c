@@ -35,8 +35,7 @@
 
 #include "io/osd.h"
 
-#define OSD_ITEM_ENTRY(label, item_id)      ((OSD_Entry){ label, OME_Submenu, (void *)item_id, &cmsx_menuOsdElementActions, 0 })
-#define OSD_ITEM_GET_ID(entry)              ((int)entry->func)
+#define OSD_ITEM_ENTRY(label, item_id)      ((OSD_Entry){ label, OME_Submenu, {.itemId  = item_id}, &cmsx_menuOsdElementActions, 0 })
 
 static int osdCurrentLayout = -1;
 static int osdCurrentItem = -1;
@@ -126,7 +125,7 @@ static CMS_Menu cmsx_menuOsdElementActions = {
 
 static long osdElemActionsOnEnter(const OSD_Entry *from)
 {
-    osdCurrentItem = OSD_ITEM_GET_ID(from);
+    osdCurrentItem = from->itemId;
     uint16_t pos = osdConfig()->item_pos[osdCurrentLayout][osdCurrentItem];
     osdCurrentElementColumn = OSD_X(pos);
     osdCurrentElementRow = OSD_Y(pos);
@@ -192,17 +191,30 @@ static const OSD_Entry menuOsdElemsEntries[] =
 #if defined(USE_PITOT)
     OSD_ELEMENT_ENTRY("AIR SPEED", OSD_AIR_SPEED),
 #endif
+#if defined(USE_GPS)
+    OSD_ELEMENT_ENTRY("MAP NORTH", OSD_MAP_NORTH),
+    OSD_ELEMENT_ENTRY("MAP TAKE OFF", OSD_MAP_TAKEOFF),
+    OSD_ELEMENT_ENTRY("RADAR", OSD_RADAR),
+#endif
     OSD_ELEMENT_ENTRY("ROLL PIDS", OSD_ROLL_PIDS),
     OSD_ELEMENT_ENTRY("PITCH PIDS", OSD_PITCH_PIDS),
     OSD_ELEMENT_ENTRY("YAW PIDS", OSD_YAW_PIDS),
+
+    OSD_ELEMENT_ENTRY("ATTI PITCH", OSD_ATTITUDE_PITCH),
+    OSD_ELEMENT_ENTRY("ATTI ROLL", OSD_ATTITUDE_ROLL),
+
+    OSD_ELEMENT_ENTRY("WIND HOR", OSD_WIND_SPEED_HORIZONTAL),
+    OSD_ELEMENT_ENTRY("WIND VERT", OSD_WIND_SPEED_VERTICAL),
 
     OSD_BACK_ENTRY,
     OSD_END_ENTRY,
 };
 
 #if defined(VTX_COMMON) && defined(USE_GPS) && defined(USE_BARO) && defined(USE_PITOT)
-// All CMS OSD elements should be enabled in this case
-_Static_assert(ARRAYLEN(menuOsdElemsEntries) - 3 == OSD_ITEM_COUNT, "missing OSD elements in CMS");
+// All CMS OSD elements should be enabled in this case. The menu has 3 extra
+// elements (label, back and end), but there's an OSD element that we intentionally
+// don't show here (OSD_DEBUG).
+_Static_assert(ARRAYLEN(menuOsdElemsEntries) - 3 + 1 == OSD_ITEM_COUNT, "missing OSD elements in CMS");
 #endif
 
 const CMS_Menu menuOsdElements = {

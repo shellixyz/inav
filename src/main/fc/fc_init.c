@@ -96,7 +96,6 @@
 #include "io/displayport_msp.h"
 #include "io/displayport_max7456.h"
 #include "io/flashfs.h"
-#include "io/gimbal.h"
 #include "io/gps.h"
 #include "io/ledstrip.h"
 #include "io/pwmdriver_i2c.h"
@@ -309,7 +308,6 @@ void init(void)
     pwm_params.useSerialRx = (rxConfig()->receiverType == RX_TYPE_SERIAL);
 
     pwm_params.useServoOutputs = isMixerUsingServos();
-    pwm_params.useChannelForwarding = feature(FEATURE_CHANNEL_FORWARDING);
     pwm_params.servoCenterPulse = servoConfig()->servoCenterPulse;
     pwm_params.servoPwmRate = servoConfig()->servoPwmRate;
 
@@ -344,7 +342,6 @@ void init(void)
     */
     if (feature(FEATURE_PWM_SERVO_DRIVER)) {
         pwm_params.useServoOutputs = false;
-        pwm_params.useChannelForwarding = false;
     }
 #endif
 
@@ -670,10 +667,6 @@ void init(void)
 #endif
 
 #endif // VTX_CONTROL
-
-    // start all timers
-    // TODO - not implemented yet
-    timerStart();
 
     // Now that everything has powered up the voltage and cell count be determined.
     if (feature(FEATURE_VBAT | FEATURE_CURRENT_METER))

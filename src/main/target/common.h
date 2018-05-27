@@ -40,10 +40,11 @@
 #define USE_GPS
 #define USE_GPS_PROTO_UBLOX
 #define USE_NAV
-#define USE_FLM_TURN_ASSIST     // This is mandatory for fixed-wing navigation
 #define USE_TELEMETRY
 #define USE_TELEMETRY_LTM
 #define USE_TELEMETRY_FRSKY
+
+#define USE_GYRO_BIQUAD_RC_FIR2
 
 #if defined(STM_FAST_TARGET)
 #define SCHEDULER_DELAY_LIMIT           10
@@ -109,6 +110,11 @@
 #define VTX_CONTROL
 #define VTX_SMARTAUDIO
 #define VTX_TRAMP
+
+//Enable DST calculations
+#define RTC_AUTOMATIC_DST
+// Wind estimator
+#define USE_WIND_ESTIMATOR
 
 #else // FLASH_SIZE < 128
 #define CLI_MINIMAL_VERBOSITY

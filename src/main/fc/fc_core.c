@@ -58,7 +58,6 @@
 
 #include "io/beeper.h"
 #include "io/dashboard.h"
-#include "io/gimbal.h"
 #include "io/gps.h"
 #include "io/serial.h"
 #include "io/statusindicator.h"
@@ -534,7 +533,6 @@ void processRx(timeUs_t currentTimeUs)
         DISABLE_FLIGHT_MODE(FLAPERON);
     }
 
-#ifdef USE_FLM_TURN_ASSIST
     /* Turn assistant mode */
     if (IS_RC_MODE_ACTIVE(BOXTURNASSIST)) {
         if (!FLIGHT_MODE(TURN_ASSISTANT)) {
@@ -543,7 +541,6 @@ void processRx(timeUs_t currentTimeUs)
     } else {
         DISABLE_FLIGHT_MODE(TURN_ASSISTANT);
     }
-#endif
 
     if (sensors(SENSOR_ACC)) {
         if (IS_RC_MODE_ACTIVE(BOXHEADINGHOLD)) {
@@ -805,11 +802,6 @@ void taskMainPidLoop(timeUs_t currentTimeUs)
     if (isMixerUsingServos()) {
         servoMixer(dT);
         processServoAutotrim();
-    }
-
-    // Servo tilt is not part of servo mixer, but uses servos
-    if (feature(FEATURE_SERVO_TILT)) {
-        processServoTilt();
     }
 
     //Servos should be filtered or written only when mixer is using servos or special feaures are enabled

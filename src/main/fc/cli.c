@@ -83,7 +83,6 @@ extern uint8_t __config_end;
 #include "io/asyncfatfs/asyncfatfs.h"
 #include "io/beeper.h"
 #include "io/flashfs.h"
-#include "io/gimbal.h"
 #include "io/gps.h"
 #include "io/ledstrip.h"
 #include "io/osd.h"
@@ -141,10 +140,10 @@ static const char* const emptyName = "-";
 // sync this with features_e
 static const char * const featureNames[] = {
     "RX_PPM", "VBAT", "TX_PROF_SEL", "", "MOTOR_STOP",
-    "SERVO_TILT", "SOFTSERIAL", "GPS", "",
+    "", "SOFTSERIAL", "GPS", "",
     "", "TELEMETRY", "CURRENT_METER", "3D", "RX_PARALLEL_PWM",
     "RX_MSP", "RSSI_ADC", "LED_STRIP", "DASHBOARD", "",
-    "BLACKBOX", "CHANNEL_FORWARDING", "TRANSPONDER", "AIRMODE",
+    "BLACKBOX", "", "TRANSPONDER", "AIRMODE",
     "SUPEREXPO", "VTX", "RX_SPI", "", "PWM_SERVO_DRIVER", "PWM_OUTPUT_ENABLE",
     "OSD", "FW_LAUNCH", "TRACE" , NULL
 };
@@ -1248,7 +1247,7 @@ static void cliModeColor(char *cmdline)
 static void printServo(uint8_t dumpMask, const servoParam_t *servoParam, const servoParam_t *defaultServoParam)
 {
     // print out servo settings
-    const char *format = "servo %u %d %d %d %d %d ";
+    const char *format = "servo %u %d %d %d %d ";
     for (uint32_t i = 0; i < MAX_SUPPORTED_SERVOS; i++) {
         const servoParam_t *servoConf = &servoParam[i];
         bool equalsDefault = false;
@@ -1257,15 +1256,13 @@ static void printServo(uint8_t dumpMask, const servoParam_t *servoParam, const s
             equalsDefault = servoConf->min == servoConfDefault->min
                 && servoConf->max == servoConfDefault->max
                 && servoConf->middle == servoConfDefault->middle
-                && servoConf->rate == servoConfDefault->rate
-                && servoConf->forwardFromChannel == servoConfDefault->forwardFromChannel;
+                && servoConf->rate == servoConfDefault->rate;
             cliDefaultPrintLinef(dumpMask, equalsDefault, format,
                 i,
                 servoConfDefault->min,
                 servoConfDefault->max,
                 servoConfDefault->middle,
-                servoConfDefault->rate,
-                servoConfDefault->forwardFromChannel
+                servoConfDefault->rate
             );
         }
         cliDumpPrintLinef(dumpMask, equalsDefault, format,
@@ -1273,8 +1270,7 @@ static void printServo(uint8_t dumpMask, const servoParam_t *servoParam, const s
             servoConf->min,
             servoConf->max,
             servoConf->middle,
-            servoConf->rate,
-            servoConf->forwardFromChannel
+            servoConf->rate
         );
     }
 
@@ -1300,7 +1296,7 @@ static void printServo(uint8_t dumpMask, const servoParam_t *servoParam, const s
 
 static void cliServo(char *cmdline)
 {
-    enum { SERVO_ARGUMENT_COUNT = 6 };
+    enum { SERVO_ARGUMENT_COUNT = 5 };
     int16_t arguments[SERVO_ARGUMENT_COUNT];
 
     servoParam_t *servo;
@@ -1338,7 +1334,7 @@ static void cliServo(char *cmdline)
             }
         }
 
-        enum {INDEX = 0, MIN, MAX, MIDDLE, RATE, FORWARD};
+        enum {INDEX = 0, MIN, MAX, MIDDLE, RATE};
 
         i = arguments[INDEX];
 
@@ -1355,8 +1351,7 @@ static void cliServo(char *cmdline)
             arguments[MAX] < PWM_PULSE_MIN || arguments[MAX] > PWM_PULSE_MAX ||
             arguments[MIDDLE] < arguments[MIN] || arguments[MIDDLE] > arguments[MAX] ||
             arguments[MIN] > arguments[MAX] || arguments[MAX] < arguments[MIN] ||
-            arguments[RATE] < -125 || arguments[RATE] > 125 ||
-            arguments[FORWARD] >= MAX_SUPPORTED_RC_CHANNEL_COUNT
+            arguments[RATE] < -125 || arguments[RATE] > 125
         ) {
             cliShowParseError();
             return;
@@ -1366,7 +1361,6 @@ static void cliServo(char *cmdline)
         servo->max = arguments[MAX];
         servo->middle = arguments[MIDDLE];
         servo->rate = arguments[RATE];
-        servo->forwardFromChannel = arguments[FORWARD];
     }
 }
 
@@ -2523,6 +2517,20 @@ static void cliVersion(char *cmdline)
     );
 }
 
+static void cliMemory(char *cmdline)
+{
+    UNUSED(cmdline);
+    cliPrintLinef("Dynamic memory usage:");
+    for (unsigned i = 0; i < OWNER_TOTAL_COUNT; i++) {
+        const char * owner = ownerNames[i];
+        const uint32_t memUsed = memGetUsedBytesByOwner(i);
+
+        if (memUsed) {
+            cliPrintLinef("%s : %d bytes", owner, memUsed);
+        }
+    }
+}
+
 #if !defined(SKIP_TASK_STATISTICS) && !defined(SKIP_CLI_RESOURCES)
 static void cliResource(char *cmdline)
 {
@@ -2779,6 +2787,7 @@ const clicmd_t cmdTable[] = {
     CLI_COMMAND_DEF("led", "configure leds", NULL, cliLed),
 #endif
     CLI_COMMAND_DEF("map", "configure rc channel order", "[<map>]", cliMap),
+    CLI_COMMAND_DEF("memory", "view memory usage", NULL, cliMemory),
     CLI_COMMAND_DEF("mmix", "custom motor mixer", NULL, cliMotorMix),
     CLI_COMMAND_DEF("motor",  "get/set motor", "<index> [<value>]", cliMotor),
     CLI_COMMAND_DEF("name", "name of craft", NULL, cliName),
@@ -2945,6 +2954,10 @@ void cliProcess(void)
 
 void cliEnter(serialPort_t *serialPort)
 {
+    if (cliMode) {
+        return;
+    }
+
     cliMode = 1;
     cliPort = serialPort;
     setPrintfSerialPort(cliPort);

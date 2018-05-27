@@ -70,7 +70,8 @@
 #include "io/asyncfatfs/asyncfatfs.h"
 #include "io/flashfs.h"
 #include "io/gps.h"
-#include "io/gimbal.h"
+#include "io/opflow.h"
+#include "io/rangefinder.h"
 #include "io/ledstrip.h"
 #include "io/osd.h"
 #include "io/serial.h"
@@ -426,10 +427,8 @@ static bool mspFcProcessOutCommand(uint16_t cmdMSP, sbuf_t *dst, mspPostProcessF
 
     case MSP_RAW_IMU:
         {
-            // Hack scale due to choice of units for sensor data in multiwii
-            const uint8_t scale = (acc.dev.acc_1G > 1024) ? 8 : 1;
             for (int i = 0; i < 3; i++) {
-                sbufWriteU16(dst, (int16_t)lrintf(acc.accADCf[i] * acc.dev.acc_1G / scale));
+                sbufWriteU16(dst, (int16_t)lrintf(acc.accADCf[i] * 512));
             }
             for (int i = 0; i < 3; i++) {
                 sbufWriteU16(dst, gyroRateDps(i));
@@ -451,7 +450,7 @@ static bool mspFcProcessOutCommand(uint16_t cmdMSP, sbuf_t *dst, mspPostProcessF
             sbufWriteU8(dst, servoParams(i)->rate);
             sbufWriteU8(dst, 0);
             sbufWriteU8(dst, 0);
-            sbufWriteU8(dst, servoParams(i)->forwardFromChannel);
+            sbufWriteU8(dst, 255); // used to be forwardFromChannel, not used anymore, send 0xff for compatibility reasons
             sbufWriteU32(dst, servoParams(i)->reversedSources);
         }
         break;
@@ -700,6 +699,7 @@ static bool mspFcProcessOutCommand(uint16_t cmdMSP, sbuf_t *dst, mspPostProcessF
         sbufWriteU16(dst, compassConfig()->mag_declination / 10);
 
         sbufWriteU16(dst, batteryConfig()->voltage.scale);
+        sbufWriteU16(dst, batteryConfig()->voltage.cellDetect);
         sbufWriteU16(dst, batteryConfig()->voltage.cellMin);
         sbufWriteU16(dst, batteryConfig()->voltage.cellMax);
         sbufWriteU16(dst, batteryConfig()->voltage.cellWarning);
@@ -712,6 +712,7 @@ static bool mspFcProcessOutCommand(uint16_t cmdMSP, sbuf_t *dst, mspPostProcessF
 
     case MSP2_INAV_BATTERY_CONFIG:
         sbufWriteU16(dst, batteryConfig()->voltage.scale);
+        sbufWriteU16(dst, batteryConfig()->voltage.cellDetect);
         sbufWriteU16(dst, batteryConfig()->voltage.cellMin);
         sbufWriteU16(dst, batteryConfig()->voltage.cellMax);
         sbufWriteU16(dst, batteryConfig()->voltage.cellWarning);
@@ -999,6 +1000,11 @@ static bool mspFcProcessOutCommand(uint16_t cmdMSP, sbuf_t *dst, mspPostProcessF
         sbufWriteU8(dst, gyroConfig()->gyro_align);
         sbufWriteU8(dst, accelerometerConfig()->acc_align);
         sbufWriteU8(dst, compassConfig()->mag_align);
+#ifdef USE_OPTICAL_FLOW
+        sbufWriteU8(dst, opticalFlowConfig()->opflow_align);
+#else
+        sbufWriteU8(dst, 0);
+#endif
         break;
 
     case MSP_ADVANCED_CONFIG:
@@ -1037,6 +1043,20 @@ static bool mspFcProcessOutCommand(uint16_t cmdMSP, sbuf_t *dst, mspPostProcessF
 #else
         sbufWriteU16(dst, 0); //BF: masterConfig.gyro_soft_notch_hz_2
         sbufWriteU16(dst, 1); //BF: masterConfig.gyro_soft_notch_cutoff_2
+#endif
+
+#ifdef USE_ACC_NOTCH
+        sbufWriteU16(dst, accelerometerConfig()->acc_notch_hz); 
+        sbufWriteU16(dst, accelerometerConfig()->acc_notch_cutoff);
+#else
+        sbufWriteU16(dst, 0);
+        sbufWriteU16(dst, 1);
+#endif
+
+#ifdef USE_GYRO_BIQUAD_RC_FIR2
+        sbufWriteU16(dst, gyroConfig()->gyro_stage2_lowpass_hz); 
+#else 
+        sbufWriteU16(dst, 0); 
 #endif
         break;
 
@@ -1340,8 +1360,9 @@ static bool mspFcProcessOutCommand(uint16_t cmdMSP, sbuf_t *dst, mspPostProcessF
 #endif
 
     case MSP2_INAV_OUTPUT_MAPPING:
-        for (uint8_t i = 0; i < USABLE_TIMER_CHANNEL_COUNT; ++i)
-            sbufWriteU8(dst, timerHardware[i].usageFlags);
+        for (uint8_t i = 0; i < timerHardwareCount; ++i)
+            if (!(timerHardware[i].usageFlags & (TIM_USE_PPM | TIM_USE_PWM)))
+                sbufWriteU8(dst, timerHardware[i].usageFlags);
         break;
 
     default:
@@ -1613,7 +1634,7 @@ static mspResult_e mspFcProcessInCommand(uint16_t cmdMSP, sbuf_t *src)
         break;
 
     case MSP2_INAV_SET_MISC:
-        if (dataSize == 37) {
+        if (dataSize == 39) {
             rxConfigMutable()->midrc = constrain(sbufReadU16(src), MIDRC_MIN, MIDRC_MAX);
 
             motorConfigMutable()->minthrottle = constrain(sbufReadU16(src), PWM_RANGE_MIN, PWM_RANGE_MAX);
@@ -1643,6 +1664,7 @@ static mspResult_e mspFcProcessInCommand(uint16_t cmdMSP, sbuf_t *src)
 #endif
 
             batteryConfigMutable()->voltage.scale = sbufReadU16(src);
+            batteryConfigMutable()->voltage.cellDetect = sbufReadU16(src);
             batteryConfigMutable()->voltage.cellMin = sbufReadU16(src);
             batteryConfigMutable()->voltage.cellMax = sbufReadU16(src);
             batteryConfigMutable()->voltage.cellWarning = sbufReadU16(src);
@@ -1660,8 +1682,9 @@ static mspResult_e mspFcProcessInCommand(uint16_t cmdMSP, sbuf_t *src)
         break;
 
     case MSP2_INAV_SET_BATTERY_CONFIG:
-        if (dataSize == 25) {
+        if (dataSize == 27) {
             batteryConfigMutable()->voltage.scale = sbufReadU16(src);
+            batteryConfigMutable()->voltage.cellDetect = sbufReadU16(src);
             batteryConfigMutable()->voltage.cellMin = sbufReadU16(src);
             batteryConfigMutable()->voltage.cellMax = sbufReadU16(src);
             batteryConfigMutable()->voltage.cellWarning = sbufReadU16(src);
@@ -1707,7 +1730,7 @@ static mspResult_e mspFcProcessInCommand(uint16_t cmdMSP, sbuf_t *src)
             servoParamsMutable(tmp_u8)->rate = sbufReadU8(src);
             sbufReadU8(src);
             sbufReadU8(src);
-            servoParamsMutable(tmp_u8)->forwardFromChannel = sbufReadU8(src);
+            sbufReadU8(src); // used to be forwardFromChannel, ignored
             servoParamsMutable(tmp_u8)->reversedSources = sbufReadU32(src);
             servoComputeScalingFactors(tmp_u8);
         }
@@ -1762,11 +1785,16 @@ static mspResult_e mspFcProcessInCommand(uint16_t cmdMSP, sbuf_t *src)
         break;
 
     case MSP_SET_SENSOR_ALIGNMENT:
-        if (dataSize >= 3) {
+        if (dataSize >= 4) {
             gyroConfigMutable()->gyro_align = sbufReadU8(src);
             accelerometerConfigMutable()->acc_align = sbufReadU8(src);
 #ifdef USE_MAG
             compassConfigMutable()->mag_align = sbufReadU8(src);
+#else
+            sbufReadU8(src);
+#endif
+#ifdef USE_OPTICAL_FLOW
+            opticalFlowConfigMutable()->opflow_align = sbufReadU8(src);
 #else
             sbufReadU8(src);
 #endif
@@ -1813,7 +1841,22 @@ static mspResult_e mspFcProcessInCommand(uint16_t cmdMSP, sbuf_t *src)
                 gyroConfigMutable()->gyro_soft_notch_cutoff_2 = constrain(sbufReadU16(src), 1, 500);
             } else
                 return MSP_RESULT_ERROR;
-#endif
+#endif 
+
+#ifdef USE_ACC_NOTCH
+            if (dataSize >= 21) {
+                accelerometerConfigMutable()->acc_notch_hz = constrain(sbufReadU16(src), 0, 255);
+                accelerometerConfigMutable()->acc_notch_cutoff = constrain(sbufReadU16(src), 1, 255);
+            } else
+                return MSP_RESULT_ERROR;
+#endif 
+
+#ifdef USE_GYRO_BIQUAD_RC_FIR2
+            if (dataSize >= 22) {
+                gyroConfigMutable()->gyro_stage2_lowpass_hz = constrain(sbufReadU16(src), 0, 500);
+            } else
+                return MSP_RESULT_ERROR;
+#endif 
         } else
             return MSP_RESULT_ERROR;
         break;
@@ -2604,6 +2647,28 @@ static bool mspSetSettingCommand(sbuf_t *dst, sbuf_t *src)
 
     return true;
 }
+
+static mspResult_e mspProcessSensorCommand(uint16_t cmdMSP, sbuf_t *src)
+{
+    UNUSED(src);
+
+    switch (cmdMSP) {
+#if defined(USE_RANGEFINDER_MSP)
+        case MSP2_SENSOR_RANGEFINDER:
+            mspRangefinderReceiveNewData(sbufPtr(src));
+            break;
+#endif
+
+#if defined(USE_OPFLOW_MSP)
+        case MSP2_SENSOR_OPTIC_FLOW:
+            mspOpflowReceiveNewData(sbufPtr(src));
+            break;
+#endif
+    }
+
+    return MSP_RESULT_NO_REPLY;
+}
+
 /*
  * Returns MSP_RESULT_ACK, MSP_RESULT_ERROR or MSP_RESULT_NO_REPLY
  */
@@ -2616,7 +2681,9 @@ mspResult_e mspFcProcessCommand(mspPacket_t *cmd, mspPacket_t *reply, mspPostPro
     // initialize reply by default
     reply->cmd = cmd->cmd;
 
-    if (mspFcProcessOutCommand(cmdMSP, dst, mspPostProcessFn)) {
+    if (MSP2_IS_SENSOR_MESSAGE(cmdMSP)) {
+        ret = mspProcessSensorCommand(cmdMSP, src);
+    } else if (mspFcProcessOutCommand(cmdMSP, dst, mspPostProcessFn)) {
         ret = MSP_RESULT_ACK;
 #ifdef USE_SERIAL_4WAY_BLHELI_INTERFACE
     } else if (cmdMSP == MSP_SET_4WAY_IF) {

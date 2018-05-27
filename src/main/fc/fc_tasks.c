@@ -45,6 +45,7 @@
 #include "flight/imu.h"
 #include "flight/mixer.h"
 #include "flight/pid.h"
+#include "flight/wind_estimator.h"
 
 #include "navigation/navigation.h"
 
@@ -89,8 +90,9 @@ void taskHandleSerial(timeUs_t currentTimeUs)
     // in cli mode, all serial stuff goes to here. enter cli mode by sending #
     if (cliMode) {
         cliProcess();
-        return;
     }
+
+    // Allow MSP processing even if in CLI mode
     mspSerialProcess(ARMING_FLAG(ARMED) ? MSP_SKIP_NON_MSP_DATA : MSP_EVALUATE_NON_MSP_DATA, mspFcProcessCommand);
 }
 
@@ -123,7 +125,11 @@ void taskProcessGPS(timeUs_t currentTimeUs)
     // hardware, wrong baud rates, init GPS if needed, etc. Don't use SENSOR_GPS here as gpsThread() can and will
     // change this based on available hardware
     if (feature(FEATURE_GPS)) {
-        gpsThread();
+        if (gpsUpdate()) {
+#ifdef USE_WIND_ESTIMATOR
+            updateWindEstimator(currentTimeUs);
+#endif
+        }
     }
 
     if (sensors(SENSOR_GPS)) {

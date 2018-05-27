@@ -14,18 +14,22 @@
  * You should have received a copy of the GNU General Public License
  * along with Cleanflight.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 #pragma once
 
-typedef enum yupif4HardwareRevision_t {
-    UNKNOWN = 0,
-    YUPIF4_RACE1,       // Race V1
-    YUPIF4_RACE2,       // Race V2
-    YUPIF4_RACE3,       // Race V3
-    YUPIF4_MINI,        // Mini
-    YUPIF4_NAV          // Navigation
-} yupif4HardwareRevision_e;
+#if defined(USE_WIND_ESTIMATOR)
+#if !defined(USE_GPS)
+#error Wind Estimator requires GPS support
+#endif
+#endif
 
-extern uint8_t hardwareRevision;
+#include "common/time.h"
 
-void detectHardwareRevision(void);
-void updateHardwareRevision(void);
+bool isEstimatedWindSpeedValid(void);
+// wind velocity vectors in cm / sec relative to the earth frame
+float getEstimatedWindSpeed(int axis);
+// Returns the horizontal wind velocity as a magnitude in cm/s and,
+// optionally, its heading in EF in 0.01deg ([0, 360*100)).
+float getEstimatedHorizontalWindSpeed(uint16_t *angle);
+
+void updateWindEstimator(timeUs_t currentTimeUs);
