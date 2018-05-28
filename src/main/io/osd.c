@@ -1873,7 +1873,7 @@ static bool osdDrawSingleElement(uint8_t item)
             int32_t value = 0;
             timeUs_t currentTimeUs = micros();
             timeDelta_t efficiencyTimeDelta = cmpTimeUs(currentTimeUs, efficiencyUpdated);
-            if (STATE(GPS_FIX) && gpsSol.groundSpeed > 0) {
+            if (STATE(GPS_FIX) && gpsSol.numSat >= 6 && gpsSol.groundSpeed >= 200) {
                 if (efficiencyTimeDelta >= EFFICIENCY_UPDATE_INTERVAL) {
                     value = pt1FilterApply4(&eFilterState, ((float)getAmperage() / gpsSol.groundSpeed) / 0.0036f,
                         1, efficiencyTimeDelta * 1e-6f);
@@ -1904,7 +1904,7 @@ static bool osdDrawSingleElement(uint8_t item)
             int32_t value = 0;
             timeUs_t currentTimeUs = micros();
             timeDelta_t efficiencyTimeDelta = cmpTimeUs(currentTimeUs, efficiencyUpdated);
-            if (STATE(GPS_FIX) && gpsSol.groundSpeed > 0) {
+            if (STATE(GPS_FIX) && gpsSol.numSat >= 6 && gpsSol.groundSpeed >= 200) {
                 if (efficiencyTimeDelta >= EFFICIENCY_UPDATE_INTERVAL) {
                     value = pt1FilterApply4(&eFilterState, ((float)getPower() / gpsSol.groundSpeed) / 0.0036f,
                         1, efficiencyTimeDelta * 1e-6f);
