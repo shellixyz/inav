@@ -907,13 +907,13 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_2D_INITIALIZE(na
 
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_2D_ADJUSTING(navigationFSMState_t previousState)
 {   
-    const navigationFSMStateFlags_t prevFlags = navGetStateFlags(previousState);
+    UNUSED(previousState);
+    //const navigationFSMStateFlags_t prevFlags = navGetStateFlags(previousState);
     DEBUG_SET(DEBUG_CRUISE, 0, 3);
     //user is rolling wait it stops to roll with angle mode and store the current yaw during roll.
     if(posControl.flags.isAdjustingPosition){
         resetPositionController();  //user is rolling bypass the controller and go the ANGLE.
         posControl.cruise.cruiseYaw=posControl.actualState.yaw; //store current heading
-        posControl.cruise.changePosition=true;
         return NAV_FSM_EVENT_NONE;  //reprocess the state
     }
 
@@ -922,7 +922,6 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_2D_ADJUSTING(nav
 
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_2D_IN_PROGRESS(navigationFSMState_t previousState)
 {   
-    UNUSED(previousState);
 
     const timeMs_t currentYawChangeTime = millis();
     static timeMs_t lastYawChangeTime = 0;
@@ -933,7 +932,6 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_2D_IN_PROGRESS(n
 
     if(posControl.flags.isAdjustingPosition)
     {
-        posControl.cruise.changePosition=true;
         return NAV_FSM_EVENT_SWITCH_TO_CRUISE_2D_ADJ; //switch to roll adjstment state. return back to normal in progress state when user stop correcting
     }
 
@@ -952,9 +950,8 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_2D_IN_PROGRESS(n
     DEBUG_SET(DEBUG_CRUISE, 0, 2);
     DEBUG_SET(DEBUG_CRUISE, 1, 0);
 
-    if(posControl.cruise.changePosition || posControl.flags.isAdjustingHeading || calculateDistanceToDestination(&posControl.cruise.cruiseTargetPos) < 7000) //70m
+    if((previousState & NAV_STATE_CRUISE_2D_ADJUSTING) || posControl.flags.isAdjustingHeading || calculateDistanceToDestination(&posControl.cruise.cruiseTargetPos) < 7000) //70m
     { 
-        posControl.cruise.changePosition=false; //TO BE REMOVED
         calculateNewCruiseTarget(&posControl.cruise.cruiseTargetPos, posControl.cruise.cruiseYaw, 50000); //500m apart
         setDesiredPosition(&posControl.cruise.cruiseTargetPos, posControl.cruise.cruiseYaw, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_HEADING);
         DEBUG_SET(DEBUG_CRUISE, 1, 1);
