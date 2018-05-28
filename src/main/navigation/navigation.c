@@ -361,13 +361,14 @@ static const navigationFSMStateDescriptor_t navFSM[NAV_STATE_COUNT] = {
 
     [NAV_STATE_CRUISE_2D_ADJUSTING] = {
         .onEntry = navOnEnteringState_NAV_STATE_CRUISE_2D_ADJUSTING,
-        .timeoutMs = 0,
-        .stateFlags =  NAV_REQUIRE_ANGLE | NAV_REQUIRE_ANGLE | NAV_RC_POS,
+        .timeoutMs = 10,
+        .stateFlags =  NAV_REQUIRE_ANGLE | NAV_RC_POS,
         .mapToFlightModes = NAV_CRUISE_MODE,
         .mwState = MW_NAV_STATE_NONE, ///////FIX ME
         .mwError = MW_NAV_ERROR_NONE,
         .onEvent = {
             [NAV_FSM_EVENT_SUCCESS]                     = NAV_STATE_CRUISE_2D_IN_PROGRESS,
+            [NAV_FSM_EVENT_TIMEOUT]                     = NAV_STATE_CRUISE_2D_ADJUSTING,
             [NAV_FSM_EVENT_ERROR]                       = NAV_STATE_IDLE,
             [NAV_FSM_EVENT_SWITCH_TO_IDLE]              = NAV_STATE_IDLE,
         }
@@ -392,7 +393,7 @@ static const navigationFSMStateDescriptor_t navFSM[NAV_STATE_COUNT] = {
             [NAV_FSM_EVENT_SWITCH_TO_RTH]               = NAV_STATE_RTH_INITIALIZE,
             [NAV_FSM_EVENT_SWITCH_TO_WAYPOINT]          = NAV_STATE_WAYPOINT_INITIALIZE,
             [NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING] = NAV_STATE_EMERGENCY_LANDING_INITIALIZE,
-            [NAV_FSM_EVENT_SWITCH_TO_CRUISE_2D_ADJ]     = NAV_STATE_CRUISE_2D_ADJUSTING
+            [NAV_FSM_EVENT_SWITCH_TO_CRUISE_2D_ADJ]     = NAV_STATE_CRUISE_2D_ADJUSTING,
         }
     },
         /** CRUISE_3D mode ************************************************/
@@ -934,23 +935,22 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_2D_INITIALIZE(na
 }
 
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_2D_ADJUSTING(navigationFSMState_t previousState)
-{   
-    const navigationFSMStateFlags_t prevFlags = navGetStateFlags(previousState);
+{  
+    UNUSED(previousState);
+    //const navigationFSMStateFlags_t prevFlags = navGetStateFlags(previousState);
     DEBUG_SET(DEBUG_CRUISE, 0, 3);
     //user is rolling wait it stops to roll with angle mode and store the current yaw during roll.
     if(posControl.flags.isAdjustingPosition){
         resetPositionController();  //user is rolling bypass the controller and go the ANGLE.
         posControl.cruise.cruiseYaw=posControl.actualState.yaw; //store current heading
-        posControl.cruise.changePosition=true;
         return NAV_FSM_EVENT_NONE;  //reprocess the state
     }
-
+    
     return NAV_FSM_EVENT_SUCCESS; //go to NAV_STATE_CRUISE_2D_IN_PROGRESS
 }
 
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_2D_IN_PROGRESS(navigationFSMState_t previousState)
 {   
-    UNUSED(previousState);
 
     const timeMs_t currentYawChangeTime = millis();
     static timeMs_t lastYawChangeTime = 0;
@@ -961,7 +961,6 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_2D_IN_PROGRESS(n
 
     if(posControl.flags.isAdjustingPosition)
     {
-        posControl.cruise.changePosition=true;
         return NAV_FSM_EVENT_SWITCH_TO_CRUISE_2D_ADJ; //switch to roll adjstment state. return back to normal in progress state when user stop correcting
     }
 
@@ -977,23 +976,28 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_2D_IN_PROGRESS(n
         lastYawChangeTime=currentYawChangeTime;
     }
     
-    DEBUG_SET(DEBUG_CRUISE, 0, 2);
-    DEBUG_SET(DEBUG_CRUISE, 1, 0);
+    DEBUG_SET(DEBUG_CRUISE, 0, 2); //in progress state
+    DEBUG_SET(DEBUG_CRUISE, 1, 0); //no ajusting
+    
+    if((previousState == NAV_STATE_CRUISE_2D_ADJUSTING) || posControl.flags.isAdjustingHeading){
+      
+      calculateFarAwayTarget(&posControl.cruise.cruiseTargetPos, posControl.cruise.cruiseYaw, 50000); //calculate a 500m far away target when user changed direction
+       DEBUG_SET(DEBUG_CRUISE, 1, 1); //adj
+    }
 
-    if(posControl.cruise.changePosition || posControl.flags.isAdjustingHeading || calculateDistanceToDestination(&posControl.cruise.cruiseTargetPos) < 7000) //70m
-    { 
-        posControl.cruise.changePosition=false; //TO BE REMOVED
+    else if(calculateDistanceToDestination(&posControl.cruise.cruiseTargetPos) < 10000) //100m
+    {   
         calculateNewCruiseTarget(&posControl.cruise.cruiseTargetPos, posControl.cruise.cruiseYaw, 50000); //500m apart
         setDesiredPosition(&posControl.cruise.cruiseTargetPos, posControl.cruise.cruiseYaw, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_HEADING);
-        DEBUG_SET(DEBUG_CRUISE, 1, 1);
+        DEBUG_SET(DEBUG_CRUISE, 1, 2); //renew
     }
-      
+        
     return NAV_FSM_EVENT_NONE;  
 }
 
 ////STUBS
-static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_3D_INITIALIZE(navigationFSMState_t previousState){return NAV_FSM_EVENT_NONE;  }
-static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_3D_IN_PROGRESS(navigationFSMState_t previousState){return NAV_FSM_EVENT_NONE;  }
+static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_3D_INITIALIZE(navigationFSMState_t previousState){UNUSED(previousState); return NAV_FSM_EVENT_NONE;  }
+static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_3D_IN_PROGRESS(navigationFSMState_t previousState){UNUSED(previousState); return NAV_FSM_EVENT_NONE;  }
 //////////////
 
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_INITIALIZE(navigationFSMState_t previousState)
@@ -1824,6 +1828,27 @@ static void updateHomePositionCompatibility(void)
     GPS_directionToHome = posControl.homeDirection / 100;
 }
 
+float RTHAltitude() {
+        switch (navConfig()->general.flags.rth_alt_control_mode) {
+        case NAV_RTH_NO_ALT:
+            return(posControl.actualState.pos.z);
+            break;
+        case NAV_RTH_EXTRA_ALT: // Maintain current altitude + predefined safety margin
+            return(posControl.actualState.pos.z + navConfig()->general.rth_altitude);
+            break;
+        case NAV_RTH_MAX_ALT:
+            return(MAX(posControl.homeWaypointAbove.pos.z, posControl.actualState.pos.z));
+            break;
+        case NAV_RTH_AT_LEAST_ALT:  // Climb to at least some predefined altitude above home
+            return(MAX(posControl.homePosition.pos.z + navConfig()->general.rth_altitude, posControl.actualState.pos.z));
+            break;
+        case NAV_RTH_CONST_ALT:     // Climb/descend to predefined altitude above home
+        default:
+            return(posControl.homePosition.pos.z + navConfig()->general.rth_altitude);
+            break;
+        }
+}
+
 /*-----------------------------------------------------------
  * Reset home position to current position
  *-----------------------------------------------------------*/
@@ -1831,24 +1856,7 @@ static void updateDesiredRTHAltitude(void)
 {
     if (ARMING_FLAG(ARMED)) {
         if (!(navGetStateFlags(posControl.navState) & NAV_AUTO_RTH)) {
-            switch (navConfig()->general.flags.rth_alt_control_mode) {
-            case NAV_RTH_NO_ALT:
-                posControl.homeWaypointAbove.pos.z = posControl.actualState.pos.z;
-                break;
-            case NAV_RTH_EXTRA_ALT: // Maintain current altitude + predefined safety margin
-                posControl.homeWaypointAbove.pos.z = posControl.actualState.pos.z + navConfig()->general.rth_altitude;
-                break;
-            case NAV_RTH_MAX_ALT:
-                posControl.homeWaypointAbove.pos.z = MAX(posControl.homeWaypointAbove.pos.z, posControl.actualState.pos.z);
-                break;
-            case NAV_RTH_AT_LEAST_ALT:  // Climb to at least some predefined altitude above home
-                posControl.homeWaypointAbove.pos.z = MAX(posControl.homePosition.pos.z + navConfig()->general.rth_altitude, posControl.actualState.pos.z);
-                break;
-            case NAV_RTH_CONST_ALT:     // Climb/descend to predefined altitude above home
-            default:
-                posControl.homeWaypointAbove.pos.z = posControl.homePosition.pos.z + navConfig()->general.rth_altitude;
-                break;
-            }
+            posControl.homeWaypointAbove.pos.z = RTHAltitude();
         }
     }
     else {
@@ -2016,7 +2024,7 @@ void calculateInitialHoldPosition(fpVector3_t * pos)
  * Set active XYZ-target and desired heading
  *-----------------------------------------------------------*/
 void setDesiredPosition(const fpVector3_t * pos, int32_t yaw, navSetWaypointFlags_t useMask)
-{
+{       
     // XY-position
     if ((useMask & NAV_POS_UPDATE_XY) != 0) {
         posControl.desiredState.pos.x = pos->x;
@@ -2050,7 +2058,7 @@ void calculateFarAwayTarget(fpVector3_t * farAwayPos, int32_t yaw, int32_t dista
     farAwayPos->z = posControl.actualState.pos.z;
 }
 void calculateNewCruiseTarget(fpVector3_t * origin, int32_t yaw, int32_t distance)
-{
+{ 
     origin->x = origin->x + distance * cos_approx(CENTIDEGREES_TO_RADIANS(yaw));
     origin->y = origin->y + distance * sin_approx(CENTIDEGREES_TO_RADIANS(yaw));
     origin->z = origin->z;
