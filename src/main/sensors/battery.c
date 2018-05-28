@@ -33,6 +33,14 @@
 #include "fc/fc_core.h"
 #include "fc/runtime_config.h"
 
+#include "flight/imu.h"
+#include "flight/mixer.h"
+#include "flight/wind_estimator.h"
+
+#include "navigation/navigation.h"
+
+#include "build/debug.h"
+
 #include "config/feature.h"
 
 #include "sensors/battery.h"
@@ -370,18 +378,151 @@ int32_t calculateAveragePower() {
 
 #if defined(USE_ADC) && defined(USE_GPS)
 
+/* INPUTS:
+ *   - forwardSpeed (same unit as horizontalWindSpeed)
+ *   - heading degrees
+ *   - horizontalWindSpeed (same unit as forwardSpeed)
+ *   - windHeading degrees
+ * OUTPUT:
+ *   returns degrees
+ */
+float windDriftCompensationAngle(float forwardSpeed, float heading, float horizontalWindSpeed, float windHeading) {
+    return RADIANS_TO_DEGREES(asinf(-horizontalWindSpeed * sinf(DEGREES_TO_RADIANS(windHeading - heading)) / forwardSpeed));
+}
+
+/* INPUTS:
+ *   - forwardSpeed (same unit as horizontalWindSpeed)
+ *   - heading degrees
+ *   - horizontalWindSpeed (same unit as forwardSpeed)
+ *   - windHeading degrees
+ * OUTPUT:
+ *   returns (same unit as forwardSpeed and horizontalWindSpeed)
+ */
+float windDriftCorrectedForwardSpeed(float forwardSpeed, float heading, float horizontalWindSpeed, float windHeading) {
+    return forwardSpeed * cosf(DEGREES_TO_RADIANS(windDriftCompensationAngle(forwardSpeed, heading, horizontalWindSpeed, windHeading)));
+}
+
+/* INPUTS:
+ *   - heading degrees
+ *   - horizontalWindSpeed
+ *   - windHeading degrees
+ * OUTPUT:
+ *   returns same unit as horizontalWindSpeed
+ */
+float forwardWindSpeed(float heading, float horizontalWindSpeed, float windHeading) {
+    return horizontalWindSpeed * cosf(DEGREES_TO_RADIANS(windHeading - heading));
+}
+
+/* INPUTS:
+ *   - forwardSpeed (same unit as horizontalWindSpeed)
+ *   - heading degrees
+ *   - horizontalWindSpeed (same unit as forwardSpeed)
+ *   - windHeading degrees
+ * OUTPUT:
+ *   returns (same unit as forwardSpeed and horizontalWindSpeed)
+ */
+float windCompensatedForwardSpeed(float forwardSpeed, float heading, float horizontalWindSpeed, float windHeading) {
+    return windDriftCorrectedForwardSpeed(forwardSpeed, heading, horizontalWindSpeed, windHeading) + forwardWindSpeed(heading, horizontalWindSpeed, windHeading);
+}
+
+// cruise_power is in deciWatt
+// output is in Watt
+float estimateRTHClimbPower() {
+    uint16_t climbThrottle = MIN(navConfig()->fw.max_throttle, navConfig()->fw.cruise_throttle + navConfig()->fw.max_climb_angle * navConfig()->fw.pitch_to_throttle);
+    float climbThrToCruiseThrRatio = (float)(climbThrottle - motorConfig()->minthrottle) / (navConfig()->fw.cruise_throttle - motorConfig()->minthrottle);
+    return (float)batteryConfig()->cruise.power / 100 * climbThrToCruiseThrRatio;
+}
+
+// climbAltitudeRelative is in m
+// verticalWindSpeed is in m/s
+// cruise_speed is in cm/s
+// max_climb_angle is in degrees
+// output is in seconds
+float estimateRTHClimbTime(float climbAltitudeRelative, float verticalWindSpeed) {
+    // Assuming increase in throttle keeps air speed at cruise speed
+    float estimatedVerticalSpeed = (float)batteryConfig()->cruise.speed / 100 * sinf(DEGREES_TO_RADIANS(navConfig()->fw.max_climb_angle)) + verticalWindSpeed;
+    return climbAltitudeRelative / estimatedVerticalSpeed;
+}
+
+// climbAltitudeRelative is in m
+// horizontalWindSpeed is in m/s
+// windHeading is in degrees
+// verticalWindSpeed is in m/s
+// cruise_speed is in cm/s
+// max_climb_angle is in degrees
+// output is in meters
+float estimateRTHClimbGroundDistance(float climbAltitudeRelative, float horizontalWindSpeed, float windHeading, float verticalWindSpeed) {
+    // Assuming increase in throttle keeps air speed at cruise speed
+    float estimatedHorizontalSpeed = (float)batteryConfig()->cruise.speed / 100 * cosf(DEGREES_TO_RADIANS(navConfig()->fw.max_climb_angle)) + forwardWindSpeed((float)attitude.values.yaw / 10, horizontalWindSpeed, windHeading);
+    return estimateRTHClimbTime(climbAltitudeRelative, verticalWindSpeed) * estimatedHorizontalSpeed;
+}
+
+// climbAltitudeRelative is in m
+// verticalWindSpeed is in m/s
+// output is in Wh
+uint16_t estimateRTHClimbEnergy(float climbAltitudeRelative, float verticalWindSpeed) {
+    return estimateRTHClimbPower() * estimateRTHClimbTime(climbAltitudeRelative, verticalWindSpeed) / 3600;
+}
+
+// returns distance in m
+// *heading is in degrees 
+float estimateRTHDistanceAndHeadingAfterClimb(float climbAltitudeRelative, float horizontalWindSpeed, float windHeading, float verticalWindSpeed, float *heading) {
+    float headingDiff = DEGREES_TO_RADIANS(attitude.values.yaw / 10 - GPS_directionToHome);
+    float triangleAltitude = GPS_distanceToHome * sinf(headingDiff);
+    float triangleAltitudeToReturnStart = estimateRTHClimbGroundDistance(climbAltitudeRelative, horizontalWindSpeed, windHeading, verticalWindSpeed) - GPS_distanceToHome * cosf(headingDiff);
+    *heading = RADIANS_TO_DEGREES(atanf(triangleAltitude / triangleAltitudeToReturnStart));
+    return sqrt(sq(triangleAltitude) + sq(triangleAltitudeToReturnStart));
+}
+
+float RTHClimbAltitude() {
+    /*
+    float targetAltitude;
+    switch (navConfig()->general.flags.rth_alt_control_mode) {
+    case NAV_RTH_NO_ALT:
+        targetAltitude = posControl.actualState.abs.pos.z;
+        break;
+    case NAV_RTH_EXTRA_ALT: // Maintain current altitude + predefined safety margin
+        targetAltitude = posControl.actualState.abs.pos.z + navConfig()->general.rth_altitude;
+        break;
+    case NAV_RTH_MAX_ALT:
+        targetAltitude = MAX(posControl.homeWaypointAbove.pos.z, posControl.actualState.abs.pos.z);
+        break;
+    case NAV_RTH_AT_LEAST_ALT:  // Climb to at least some predefined altitude above home
+        targetAltitude = MAX(posControl.homePosition.pos.z + navConfig()->general.rth_altitude, posControl.actualState.abs.pos.z);
+        break;
+    case NAV_RTH_CONST_ALT:     // Climb/descend to predefined altitude above home
+    default:
+        targetAltitude = posControl.homePosition.pos.z + navConfig()->general.rth_altitude;
+        break;
+    }
+    */
+    return MAX(0, RTHAltitude() - getEstimatedActualPosition(Z));
+}
+
 int32_t remainingFlyTimeBeforeRTH() {
     if (!(feature(FEATURE_VBAT) && feature(FEATURE_CURRENT_METER) && navigationPositionEstimateIsHealthy() && (power != 0) && (batteryConfig()->cruise.power > 0) && (flyTime != 0) &&
-            (batteryConfig()->cruise.speed > 0) && (batteryConfig()->capacity.unit == BAT_CAPACITY_UNIT_MWH) && (batteryConfig()->capacity.value > 0) && batteryFullWhenPluggedIn))
+            (batteryConfig()->cruise.speed > 0) && (batteryConfig()->capacity.unit == BAT_CAPACITY_UNIT_MWH) && (batteryConfig()->capacity.value > 0) && batteryFullWhenPluggedIn) && isEstimatedWindSpeedValid() && isImuHeadingValid())
         return -1;
 
-    int16_t wind_speed = 0; // m/s (unknown for the moment)
+    uint16_t windHeading; // centidegrees
+    float horizontalWindSpeed = getEstimatedHorizontalWindSpeed(&windHeading) / 100; // m/s
+    float windHeadingDegrees = (float)windHeading / 100;
+    float verticalWindSpeed = getEstimatedWindSpeed(Z) / 100;
 
-    if (wind_speed >= batteryConfig()->cruise.speed)
+    float RTH_climb = RTHClimbAltitude();
+    float RTH_heading;
+    float RTH_distance = estimateRTHDistanceAndHeadingAfterClimb(RTH_climb, horizontalWindSpeed, windHeadingDegrees, verticalWindSpeed, &RTH_heading);
+    float RTH_speed = windCompensatedForwardSpeed(batteryConfig()->cruise.speed / 100, DECIDEGREES_TO_DEGREES(attitude.values.yaw), horizontalWindSpeed, windHeadingDegrees);
+    DEBUG_SET(DEBUG_REM_FLIGHT_TIME, 0, RTH_climb * 100)
+    DEBUG_SET(DEBUG_REM_FLIGHT_TIME, 1, RTH_distance * 100)
+    DEBUG_SET(DEBUG_REM_FLIGHT_TIME, 2, RTH_speed * 100)
+    DEBUG_SET(DEBUG_REM_FLIGHT_TIME, 3, horizontalWindSpeed * 100)
+
+    if (RTH_speed < 0)
         return -2; // wind is too strong
 
-    uint16_t time_to_home = GPS_distanceToHome / (batteryConfig()->cruise.speed - wind_speed);
-    uint16_t energy_to_home = batteryConfig()->cruise.power * time_to_home / 3600;
+    uint16_t time_to_home = RTH_distance / RTH_speed;
+    uint16_t energy_to_home = estimateRTHClimbEnergy(RTH_climb, verticalWindSpeed) * 1000 + batteryConfig()->cruise.power * time_to_home / 360;
     uint16_t energy_margin_abs = (batteryConfig()->capacity.value - batteryConfig()->capacity.critical) * batteryConfig()->rth_energy_margin / 100;
     int32_t remaining_energy_before_rth = batteryRemainingCapacity - energy_margin_abs - energy_to_home;
 

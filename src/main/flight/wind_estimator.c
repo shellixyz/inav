@@ -63,7 +63,6 @@ float getEstimatedHorizontalWindSpeed(uint16_t *angle)
 {
     float xWindSpeed = getEstimatedWindSpeed(X);
     float yWindSpeed = getEstimatedWindSpeed(Y);
-    float horizontalWindSpeed = sqrtf(sq(xWindSpeed) + sq(yWindSpeed));
     if (angle) {
         float horizontalWindAngle = atan2_approx(yWindSpeed, xWindSpeed);
         // atan2 returns [-M_PI, M_PI], with 0 indicating the vector points in the X direction

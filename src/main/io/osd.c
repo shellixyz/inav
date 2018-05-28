@@ -1214,18 +1214,22 @@ static bool osdDrawSingleElement(uint8_t item)
     case OSD_REMAINING_FLIGHT_TIME_BEFORE_RTH:
         {
             static timeUs_t updatedTimestamp = 0;
-            static int32_t updatedTimeSeconds = 0;
+            /*static int32_t updatedTimeSeconds = 0;*/
             timeUs_t currentTimeUs = micros();
-            int32_t timeSeconds = remainingFlyTimeBeforeRTH();
+            static int32_t timeSeconds = 0;
+            if (cmpTimeUs(currentTimeUs, updatedTimestamp) >= 1000000) {
+                timeSeconds = remainingFlyTimeBeforeRTH();
+                updatedTimestamp = currentTimeUs;
+            }
             if ((!ARMING_FLAG(ARMED)) || (timeSeconds < 0)) {
                 strcpy(buff, " --:--");
                 updatedTimestamp = 0;
             } else {
-                if ((timeSeconds == 0) || (ABS(timeSeconds - updatedTimeSeconds) >= 30) || (cmpTimeUs(currentTimeUs, updatedTimestamp) >= 5000000)) {
-                    updatedTimeSeconds = timeSeconds;
-                    updatedTimestamp = currentTimeUs;
-                }
-                osdFormatTime(buff, updatedTimeSeconds, SYM_FLY_M, SYM_FLY_H);
+                /*if ((timeSeconds == 0) || (ABS(timeSeconds - updatedTimeSeconds) >= 30) || (cmpTimeUs(currentTimeUs, updatedTimestamp) >= 5000000)) {*/
+                    /*updatedTimeSeconds = timeSeconds;*/
+                    /*updatedTimestamp = currentTimeUs;*/
+                /*}*/
+                osdFormatTime(buff, timeSeconds, SYM_FLY_M, SYM_FLY_H);
                 if (timeSeconds == 0)
                     TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
             }
