@@ -320,13 +320,14 @@ static const navigationFSMStateDescriptor_t navFSM[NAV_STATE_COUNT] = {
 
     [NAV_STATE_CRUISE_2D_ADJUSTING] = {
         .onEntry = navOnEnteringState_NAV_STATE_CRUISE_2D_ADJUSTING,
-        .timeoutMs = 0,
+        .timeoutMs = 10,
         .stateFlags =  NAV_REQUIRE_ANGLE | NAV_RC_POS,
         .mapToFlightModes = NAV_CRUISE_MODE,
         .mwState = MW_NAV_STATE_NONE, ///////FIX ME
         .mwError = MW_NAV_ERROR_NONE,
         .onEvent = {
             [NAV_FSM_EVENT_SUCCESS]                     = NAV_STATE_CRUISE_2D_IN_PROGRESS,
+            [NAV_FSM_EVENT_TIMEOUT]                     = NAV_STATE_CRUISE_2D_ADJUSTING,
             [NAV_FSM_EVENT_ERROR]                       = NAV_STATE_IDLE,
             [NAV_FSM_EVENT_SWITCH_TO_IDLE]              = NAV_STATE_IDLE,
         }
@@ -863,7 +864,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_2D_INITIALIZE(na
 }
 
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_2D_ADJUSTING(navigationFSMState_t previousState)
-{   
+{  
     UNUSED(previousState);
     //const navigationFSMStateFlags_t prevFlags = navGetStateFlags(previousState);
     DEBUG_SET(DEBUG_CRUISE, 0, 3);
@@ -873,7 +874,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_2D_ADJUSTING(nav
         posControl.cruise.cruiseYaw=posControl.actualState.yaw; //store current heading
         return NAV_FSM_EVENT_NONE;  //reprocess the state
     }
-
+    
     return NAV_FSM_EVENT_SUCCESS; //go to NAV_STATE_CRUISE_2D_IN_PROGRESS
 }
 
@@ -906,20 +907,26 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_2D_IN_PROGRESS(n
     
     DEBUG_SET(DEBUG_CRUISE, 0, 2);
     DEBUG_SET(DEBUG_CRUISE, 1, 0);
+    
+    if((previousState == NAV_STATE_CRUISE_2D_ADJUSTING) || posControl.flags.isAdjustingHeading){
+      
+      calculateFarAwayTarget(&posControl.cruise.cruiseTargetPos, posControl.cruise.cruiseYaw, 50000); //calculate a 500m far away target when user changed direction
 
-    if((previousState & NAV_STATE_CRUISE_2D_ADJUSTING) || posControl.flags.isAdjustingHeading || calculateDistanceToDestination(&posControl.cruise.cruiseTargetPos) < 7000) //70m
-    { 
+    }
+
+    else if(calculateDistanceToDestination(&posControl.cruise.cruiseTargetPos) < 10000) //100m
+    {   
         calculateNewCruiseTarget(&posControl.cruise.cruiseTargetPos, posControl.cruise.cruiseYaw, 50000); //500m apart
         setDesiredPosition(&posControl.cruise.cruiseTargetPos, posControl.cruise.cruiseYaw, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_HEADING);
         DEBUG_SET(DEBUG_CRUISE, 1, 1);
     }
-      
+        
     return NAV_FSM_EVENT_NONE;  
 }
 
 ////STUBS
-static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_3D_INITIALIZE(navigationFSMState_t previousState){return NAV_FSM_EVENT_NONE;  }
-static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_3D_IN_PROGRESS(navigationFSMState_t previousState){return NAV_FSM_EVENT_NONE;  }
+static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_3D_INITIALIZE(navigationFSMState_t previousState){UNUSED(previousState); return NAV_FSM_EVENT_NONE;  }
+static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_3D_IN_PROGRESS(navigationFSMState_t previousState){UNUSED(previousState); return NAV_FSM_EVENT_NONE;  }
 //////////////
 
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_INITIALIZE(navigationFSMState_t previousState)
@@ -1961,7 +1968,7 @@ void calculateInitialHoldPosition(fpVector3_t * pos)
  * Set active XYZ-target and desired heading
  *-----------------------------------------------------------*/
 void setDesiredPosition(const fpVector3_t * pos, int32_t yaw, navSetWaypointFlags_t useMask)
-{
+{       
     // XY-position
     if ((useMask & NAV_POS_UPDATE_XY) != 0) {
         posControl.desiredState.pos.x = pos->x;
@@ -1994,7 +2001,7 @@ void calculateFarAwayTarget(fpVector3_t * farAwayPos, int32_t yaw, int32_t dista
     farAwayPos->z = navGetCurrentActualPositionAndVelocity()->pos.z;
 }
 void calculateNewCruiseTarget(fpVector3_t * origin, int32_t yaw, int32_t distance)
-{
+{ 
     origin->x = origin->x + distance * cos_approx(CENTIDEGREES_TO_RADIANS(yaw));
     origin->y = origin->y + distance * sin_approx(CENTIDEGREES_TO_RADIANS(yaw));
     origin->z = origin->z;
