@@ -919,7 +919,7 @@ static void osdDrawMap(int referenceHeading, uint8_t referenceSym, uint8_t cente
 
     switch (osdConfig()->units) {
         case OSD_UNIT_IMPERIAL:
-            scale = 161; // 161m ~= 0.1miles
+            scale = 16; // 16m ~= 0.01miles
             scaleToUnit = 100 / 1609.3440f; // scale to 0.01mi for osdFormatCentiNumber()
             scaleUnitDivisor = 0;
             symUnscaled = SYM_MI;
@@ -929,7 +929,7 @@ static void osdDrawMap(int referenceHeading, uint8_t referenceSym, uint8_t cente
         case OSD_UNIT_UK:
             FALLTHROUGH;
         case OSD_UNIT_METRIC:
-            scale = 100; // 100m as initial scale
+            scale = 10; // 10m as initial scale
             scaleToUnit = 100; // scale to cm for osdFormatCentiNumber()
             scaleUnitDivisor = 1000; // Convert to km when scale gets bigger than 999m
             symUnscaled = SYM_M;
@@ -960,6 +960,13 @@ static void osdDrawMap(int referenceHeading, uint8_t referenceSym, uint8_t cente
             int poiY = midY + roundf(pointsY / charHeight);
             if (poiY < minY || poiY > maxY) {
                 continue;
+            }
+
+            if (poiX == midX && poiY == midY && centerSym != SYM_BLANK) {
+                // We're over the map center symbol, so we would be drawing
+                // over it even if we increased the scale. No reason to run
+                // this loop 50 times.
+                break;
             }
 
             uint8_t c;
@@ -1941,11 +1948,9 @@ static bool osdDrawSingleElement(uint8_t item)
             bool valid = isEstimatedWindSpeedValid();
             float horizontalWindSpeed;
             if (valid) {
-                float xWindSpeed = getEstimatedWindSpeed(X);
-                float yWindSpeed = getEstimatedWindSpeed(Y);
-                horizontalWindSpeed = sqrtf(sq(xWindSpeed) + sq(yWindSpeed));
-                float horizontalWindAngle = atan2_approx(yWindSpeed, xWindSpeed);
-                int16_t windDirection = osdGetHeadingAngle(RADIANS_TO_DEGREES(horizontalWindAngle) - DECIDEGREES_TO_DEGREES(attitude.values.yaw));
+                uint16_t angle;
+                horizontalWindSpeed = getEstimatedHorizontalWindSpeed(&angle);
+                int16_t windDirection = osdGetHeadingAngle((int)angle - DECIDEGREES_TO_DEGREES(attitude.values.yaw));
                 buff[1] = SYM_DIRECTION + (windDirection * 2 / 90);
             } else {
                 horizontalWindSpeed = 0;
