@@ -412,28 +412,40 @@ int16_t applyFixedWingMinSpeedController(timeUs_t currentTimeUs)
 
 void applyFixedWingPitchRollThrottleController(navigationFSMStateFlags_t navStateFlags, timeUs_t currentTimeUs)
 {
-    int16_t pitchCorrection = 0;        // >0 climb, <0 dive
-    int16_t rollCorrection = 0;         // >0 right, <0 left
-    int16_t throttleCorrection = 0;     // raw throttle
+    /*int16_t pitchCorrection = 0;        // >0 climb, <0 dive*/
+    /*int16_t rollCorrection = 0;         // >0 right, <0 left*/
+    /*int16_t throttleCorrection = 0;     // raw throttle*/
 
     int16_t minThrottleCorrection = navConfig()->fw.min_throttle - navConfig()->fw.cruise_throttle;
     int16_t maxThrottleCorrection = navConfig()->fw.max_throttle - navConfig()->fw.cruise_throttle;
 
     // Mix Pitch/Roll/Throttle
+    /*if (isRollAdjustmentValid && (navStateFlags & NAV_CTL_POS)) {*/
+        /*rollCorrection += posControl.rcAdjustment[ROLL];*/
+    /*}*/
+
+    // Limit and apply
+    /*if (isPitchAdjustmentValid && (navStateFlags & NAV_CTL_ALT)) {*/
+        // PITCH correction is measured according to altitude: <0 - dive/lose altitude, >0 - climb/gain altitude
+        // PITCH angle is measured in opposite direction ( >0 - dive, <0 - climb)
+        /*int16_t pitchCorrection = constrain(posControl.rcAdjustment[PITCH], -DEGREES_TO_DECIDEGREES(navConfig()->fw.max_dive_angle), DEGREES_TO_DECIDEGREES(navConfig()->fw.max_climb_angle));*/
+        /*rcCommand[PITCH] = -pidAngleToRcCommand(pitchCorrection, pidProfile()->max_angle_inclination[FD_PITCH]);*/
+    /*}*/
+
     if (isRollAdjustmentValid && (navStateFlags & NAV_CTL_POS)) {
-        rollCorrection += posControl.rcAdjustment[ROLL];
+        int16_t rollCorrection = constrain(posControl.rcAdjustment[ROLL], -DEGREES_TO_DECIDEGREES(navConfig()->fw.max_bank_angle), DEGREES_TO_DECIDEGREES(navConfig()->fw.max_bank_angle));
+        rcCommand[ROLL] = pidAngleToRcCommand(rollCorrection, pidProfile()->max_angle_inclination[FD_ROLL]);
     }
 
     if (isPitchAdjustmentValid && (navStateFlags & NAV_CTL_ALT)) {
-        pitchCorrection += posControl.rcAdjustment[PITCH];
-        throttleCorrection += DECIDEGREES_TO_DEGREES(pitchCorrection) * navConfig()->fw.pitch_to_throttle;
+        /*pitchCorrection += posControl.rcAdjustment[PITCH];*/
+        int16_t pitchCorrection = constrain(posControl.rcAdjustment[PITCH], -DEGREES_TO_DECIDEGREES(navConfig()->fw.max_dive_angle), DEGREES_TO_DECIDEGREES(navConfig()->fw.max_climb_angle));
+        rcCommand[PITCH] = -pidAngleToRcCommand(pitchCorrection, pidProfile()->max_angle_inclination[FD_PITCH]);
+        int16_t throttleCorrection = DECIDEGREES_TO_DEGREES(pitchCorrection) * navConfig()->fw.pitch_to_throttle;
 
 #ifdef NAV_FIXED_WING_LANDING
         if (navStateFlags & NAV_CTL_LAND) {
-            /*
-             * During LAND we do not allow to raise THROTTLE when nose is up
-             * to reduce speed
-             */
+            // During LAND we do not allow to raise THROTTLE when nose is up to reduce speed
             throttleCorrection = constrain(throttleCorrection, minThrottleCorrection, 0);
         } else {
 #endif
@@ -441,28 +453,13 @@ void applyFixedWingPitchRollThrottleController(navigationFSMStateFlags_t navStat
 #ifdef NAV_FIXED_WING_LANDING
         }
 #endif
-    }
 
-    // Speed controller - only apply in POS mode when NOT NAV_CTL_LAND
-    if ((navStateFlags & NAV_CTL_POS) && !(navStateFlags & NAV_CTL_LAND)) {
-        throttleCorrection += applyFixedWingMinSpeedController(currentTimeUs);
-        throttleCorrection = constrain(throttleCorrection, minThrottleCorrection, maxThrottleCorrection);
-    }
+        // Speed controller - only apply in POS mode when NOT NAV_CTL_LAND
+        if ((navStateFlags & NAV_CTL_POS) && !(navStateFlags & NAV_CTL_LAND)) {
+            throttleCorrection += applyFixedWingMinSpeedController(currentTimeUs);
+            throttleCorrection = constrain(throttleCorrection, minThrottleCorrection, maxThrottleCorrection);
+        }
 
-    // Limit and apply
-    if (isPitchAdjustmentValid && (navStateFlags & NAV_CTL_ALT)) {
-        // PITCH correction is measured according to altitude: <0 - dive/lose altitude, >0 - climb/gain altitude
-        // PITCH angle is measured in opposite direction ( >0 - dive, <0 - climb)
-        pitchCorrection = constrain(pitchCorrection, -DEGREES_TO_DECIDEGREES(navConfig()->fw.max_dive_angle), DEGREES_TO_DECIDEGREES(navConfig()->fw.max_climb_angle));
-        rcCommand[PITCH] = -pidAngleToRcCommand(pitchCorrection, pidProfile()->max_angle_inclination[FD_PITCH]);
-    }
-
-    if (isRollAdjustmentValid && (navStateFlags & NAV_CTL_POS)) {
-        rollCorrection = constrain(rollCorrection, -DEGREES_TO_DECIDEGREES(navConfig()->fw.max_bank_angle), DEGREES_TO_DECIDEGREES(navConfig()->fw.max_bank_angle));
-        rcCommand[ROLL] = pidAngleToRcCommand(rollCorrection, pidProfile()->max_angle_inclination[FD_ROLL]);
-    }
-
-    if ((navStateFlags & NAV_CTL_ALT) || (navStateFlags & NAV_CTL_POS)) {
         uint16_t correctedThrottleValue = constrain(navConfig()->fw.cruise_throttle + throttleCorrection, navConfig()->fw.min_throttle, navConfig()->fw.max_throttle);
         rcCommand[THROTTLE] = constrain(correctedThrottleValue, motorConfig()->minthrottle, motorConfig()->maxthrottle);
     }
