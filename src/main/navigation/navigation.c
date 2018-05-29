@@ -933,7 +933,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_2D_IN_PROGRESS(n
     DEBUG_SET(DEBUG_CRUISE, 1, 0); //no ajusting
     
     if((previousState == NAV_STATE_CRUISE_2D_ADJUSTING) || posControl.flags.isAdjustingHeading){
-      
+      resetPositionController();  //user is rolling bypass the controller and go the ANGLE.
       calculateFarAwayTarget(&posControl.cruise.cruiseTargetPos, posControl.cruise.cruiseYaw, 50000); //calculate a 500m far away target when user changed direction
        DEBUG_SET(DEBUG_CRUISE, 1, 1); //adj
     }
@@ -944,7 +944,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_2D_IN_PROGRESS(n
         setDesiredPosition(&posControl.cruise.cruiseTargetPos, posControl.cruise.cruiseYaw, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_HEADING);
         DEBUG_SET(DEBUG_CRUISE, 1, 2); //renew
     }
-        
+    DEBUG_SET(DEBUG_CRUISE, 3, posControl.actualState.yaw/100); //log yaw    
     return NAV_FSM_EVENT_NONE;  
 }
 
