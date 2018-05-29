@@ -295,6 +295,8 @@ void resetWaypointList(void);
 bool loadNonVolatileWaypointList(void);
 bool saveNonVolatileWaypointList(void);
 
+float RTHAltitude();
+
 /* Geodetic functions */
 typedef enum {
     GEO_ALT_ABSOLUTE,
