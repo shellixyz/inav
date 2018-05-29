@@ -187,6 +187,10 @@ void applyFixedWingAltitudeAndThrottleController(timeUs_t currentTimeUs)
  *-----------------------------------------------------------*/
 bool adjustFixedWingHeadingFromRCInput(void)
 {
+    if (ABS(rcCommand[YAW]) > rcControlsConfig()->pos_hold_deadband) {
+        return true;
+    }
+    
     return false;
 }
 
@@ -223,7 +227,7 @@ static void calculateVirtualPositionTarget_FW(float trackingPeriod)
     #define TAN_15DEG    0.26795f
     bool needToCalculateCircularLoiter = isApproachingLastWaypoint()
                                             && (distanceToActualTarget <= (navConfig()->fw.loiter_radius / TAN_15DEG))
-                                            && (distanceToActualTarget > 50.0f);
+                                            && (distanceToActualTarget > 50.0f) && !FLIGHT_MODE(NAV_CRUISE_MODE);
 
     // Calculate virtual position for straight movement
     if (needToCalculateCircularLoiter) {
@@ -467,7 +471,7 @@ void applyFixedWingPitchRollThrottleController(navigationFSMStateFlags_t navStat
         rcCommand[ROLL] = pidAngleToRcCommand(rollCorrection, pidProfile()->max_angle_inclination[FD_ROLL]);
     }
 
-    if ((navStateFlags & NAV_CTL_ALT) || (navStateFlags & NAV_CTL_POS)) {
+    if ((navStateFlags & NAV_CTL_ALT) || (navStateFlags & NAV_CTL_THR_FW)) {
         uint16_t correctedThrottleValue = constrain(navConfig()->fw.cruise_throttle + throttleCorrection, navConfig()->fw.min_throttle, navConfig()->fw.max_throttle);
 
         // Manual throttle increase
