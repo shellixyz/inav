@@ -1256,22 +1256,18 @@ static bool osdDrawSingleElement(uint8_t item)
     case OSD_REMAINING_FLIGHT_TIME_BEFORE_RTH:
         {
             static timeUs_t updatedTimestamp = 0;
-            /*static int32_t updatedTimeSeconds = 0;*/
+            static int32_t updatedTimeSeconds = 0;
             timeUs_t currentTimeUs = micros();
-            static int32_t timeSeconds = 0;
-            if (cmpTimeUs(currentTimeUs, updatedTimestamp) >= 1000000) {
-                timeSeconds = remainingFlyTimeBeforeRTH();
-                updatedTimestamp = currentTimeUs;
-            }
+            int32_t timeSeconds = remainingFlyTimeBeforeRTH();
             if ((!ARMING_FLAG(ARMED)) || (timeSeconds < 0)) {
                 strcpy(buff, " --:--");
                 updatedTimestamp = 0;
             } else {
-                /*if ((timeSeconds == 0) || (ABS(timeSeconds - updatedTimeSeconds) >= 30) || (cmpTimeUs(currentTimeUs, updatedTimestamp) >= 5000000)) {*/
-                    /*updatedTimeSeconds = timeSeconds;*/
-                    /*updatedTimestamp = currentTimeUs;*/
-                /*}*/
-                osdFormatTime(buff, timeSeconds, SYM_FLY_M, SYM_FLY_H);
+                if ((timeSeconds == 0) || (ABS(timeSeconds - updatedTimeSeconds) >= 30) || (cmpTimeUs(currentTimeUs, updatedTimestamp) >= 5000000)) {
+                    updatedTimeSeconds = timeSeconds;
+                    updatedTimestamp = currentTimeUs;
+                }
+                osdFormatTime(buff, updatedTimeSeconds, SYM_FLY_M, SYM_FLY_H);
                 if (timeSeconds == 0)
                     TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
             }
@@ -1945,9 +1941,11 @@ static bool osdDrawSingleElement(uint8_t item)
             bool valid = isEstimatedWindSpeedValid();
             float horizontalWindSpeed;
             if (valid) {
-                uint16_t angle;
-                horizontalWindSpeed = getEstimatedHorizontalWindSpeed(&angle);
-                int16_t windDirection = osdGetHeadingAngle((int)angle - DECIDEGREES_TO_DEGREES(attitude.values.yaw));
+                float xWindSpeed = getEstimatedWindSpeed(X);
+                float yWindSpeed = getEstimatedWindSpeed(Y);
+                horizontalWindSpeed = sqrtf(sq(xWindSpeed) + sq(yWindSpeed));
+                float horizontalWindAngle = atan2_approx(yWindSpeed, xWindSpeed);
+                int16_t windDirection = osdGetHeadingAngle(RADIANS_TO_DEGREES(horizontalWindAngle) - DECIDEGREES_TO_DEGREES(attitude.values.yaw));
                 buff[1] = SYM_DIRECTION + (windDirection * 2 / 90);
             } else {
                 horizontalWindSpeed = 0;
