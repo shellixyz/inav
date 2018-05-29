@@ -611,10 +611,6 @@ groups:
       - name: fw_roll2pitch_comp
         min: 0
         max: 100
-      - name: min_throttle_down_angle
-        field: minThrottleDownAngle
-        min: 0
-        max: 450
       - name: flaperon_pitch_comp_angle
         min: -450
         max: 450
