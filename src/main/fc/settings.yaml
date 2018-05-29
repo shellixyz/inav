@@ -611,12 +611,12 @@ groups:
       - name: fw_roll2pitch_comp
         min: 0
         max: 100
-      - name: min_throttle_down_angle
-        field: minThrottleDownAngle
-        min: 0
-        max: 450
       - name: flaperon_pitch_comp_angle
         min: -450
+        max: 450
+      - name: fw_min_throttle_down_pitch
+        field: fwMinThrottleDownPitchAngle
+        min: 0
         max: 450
 
   - name: PG_MOTOR_3D_CONFIG
@@ -1262,6 +1262,9 @@ groups:
       - name: nav_rth_abort_threshold
         field: general.rth_abort_threshold
         max: 65000
+      - name: nav_max_terrain_follow_alt
+        field: general.max_terrain_follow_altitude
+        max: 1000
       - name: nav_rth_altitude
         field: general.rth_altitude
         max: 65000

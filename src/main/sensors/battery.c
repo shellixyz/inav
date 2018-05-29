@@ -39,6 +39,8 @@
 
 #include "navigation/navigation.h"
 
+#include "build/debug.h"
+
 #include "config/feature.h"
 
 #include "sensors/battery.h"
@@ -50,8 +52,6 @@
 #include "io/beeper.h"
 
 #include "navigation/navigation.h"
-
-#include "build/debug.h"
 
 
 #define ADCVREF 3300                                    // in mV (3300 = 3.3V)
@@ -546,29 +546,9 @@ float estimateRTHDistanceAndHeadingAfterClimb(float climbAltitudeRelative, float
     return sqrt(sq(triangleAltitude) + sq(triangleAltitudeToReturnStart));
 }
 
+// returns height climb during RTH in meters
 float RTHClimbAltitude() {
-    /*
-    float targetAltitude;
-    switch (navConfig()->general.flags.rth_alt_control_mode) {
-    case NAV_RTH_NO_ALT:
-        targetAltitude = posControl.actualState.abs.pos.z;
-        break;
-    case NAV_RTH_EXTRA_ALT: // Maintain current altitude + predefined safety margin
-        targetAltitude = posControl.actualState.abs.pos.z + navConfig()->general.rth_altitude;
-        break;
-    case NAV_RTH_MAX_ALT:
-        targetAltitude = MAX(posControl.homeWaypointAbove.pos.z, posControl.actualState.abs.pos.z);
-        break;
-    case NAV_RTH_AT_LEAST_ALT:  // Climb to at least some predefined altitude above home
-        targetAltitude = MAX(posControl.homePosition.pos.z + navConfig()->general.rth_altitude, posControl.actualState.abs.pos.z);
-        break;
-    case NAV_RTH_CONST_ALT:     // Climb/descend to predefined altitude above home
-    default:
-        targetAltitude = posControl.homePosition.pos.z + navConfig()->general.rth_altitude;
-        break;
-    }
-    */
-    return MAX(0, RTHAltitude() - getEstimatedActualPosition(Z));
+    return MAX(0, RTHAltitude() - getEstimatedActualPosition(Z)) / 100;
 }
 
 int32_t remainingFlyTimeBeforeRTH() {

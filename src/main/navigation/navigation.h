@@ -136,6 +136,7 @@ typedef struct navConfig_s {
         uint16_t rth_altitude;                  // altitude to maintain when RTH is active (depends on rth_alt_control_mode) (cm)
         uint16_t min_rth_distance;              // 0 Disables. Minimal distance for RTH in cm, otherwise it will just autoland
         uint16_t rth_abort_threshold;           // Initiate emergency landing if during RTH we get this much [cm] away from home
+        uint16_t max_terrain_follow_altitude;   // Max altitude to be used in SURFACE TRACKING mode
     } general;
 
     struct {
@@ -240,7 +241,6 @@ typedef enum {
     MW_NAV_ERROR_WAIT_FOR_RTH_ALT,    //Waiting to reach RTH Altitude
     MW_NAV_ERROR_GPS_FIX_LOST,        //Gps fix lost, aborting mission
     MW_NAV_ERROR_DISARMED,            //NAV engine disabled due disarm
-    
     MW_NAV_ERROR_LANDING              //Landing
 } navSystemStatus_Error_e;
 
@@ -279,6 +279,7 @@ int8_t navigationGetHeadingControlState(void);
 bool navigationBlockArming(void);
 bool navigationPositionEstimateIsHealthy(void);
 bool navIsCalibrationComplete(void);
+bool navigationTerrainFollowingEnabled(void);
 
 /* Access to estimated position and velocity */
 float getEstimatedActualVelocity(int axis);
@@ -342,7 +343,6 @@ extern int16_t navActualVelocity[3];
 extern int16_t navDesiredVelocity[3];
 extern int16_t navTargetPosition[3];
 extern int32_t navLatestActualPosition[3];
-extern int16_t navTargetSurface;
 extern int16_t navActualSurface;
 extern uint16_t navFlags;
 extern uint16_t navEPH;
