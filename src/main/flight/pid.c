@@ -715,15 +715,18 @@ static void pidTurnAssistant(pidState_t *pidState)
 
     // Add in roll and pitch
     pidState[ROLL].rateTarget = constrainf(pidState[ROLL].rateTarget + targetRates.x, -currentControlRateProfile->stabilized.rates[ROLL] * 10.0f, currentControlRateProfile->stabilized.rates[ROLL] * 10.0f);
-    pidState[PITCH].rateTarget = constrainf(pidState[PITCH].rateTarget + targetRates.y, -currentControlRateProfile->stabilized.rates[PITCH] * 10.0f, currentControlRateProfile->stabilized.rates[PITCH] * 10.0f);
+    float pitchRateTarget = constrainf(pidState[PITCH].rateTarget + targetRates.y, -currentControlRateProfile->stabilized.rates[PITCH] * 10.0f, currentControlRateProfile->stabilized.rates[PITCH] * 10.0f);
 
     // Replace YAW on quads - add it in on airplanes
     if (STATE(FIXED_WING)) {
         pidState[YAW].rateTarget = constrainf(pidState[YAW].rateTarget + targetRates.z * pidProfile()->fixedWingCoordinatedYawGain, -currentControlRateProfile->stabilized.rates[YAW] * 10.0f, currentControlRateProfile->stabilized.rates[YAW] * 10.0f);
+        rcCommand[THROTTLE] = constrain(rcCommand[THROTTLE] + MAX(0, -pitchRateTarget) * mixerConfig()->fw_turn_assist_pitch2thr, motorConfig()->minthrottle, motorConfig()->maxthrottle);
     }
     else {
         pidState[YAW].rateTarget = constrainf(targetRates.z, -currentControlRateProfile->stabilized.rates[YAW] * 10.0f, currentControlRateProfile->stabilized.rates[YAW] * 10.0f);
     }
+
+    pidState[PITCH].rateTarget = pitchRateTarget;
 }
 
 void pidController(void)
