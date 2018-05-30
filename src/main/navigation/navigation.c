@@ -313,7 +313,7 @@ static const navigationFSMStateDescriptor_t navFSM[NAV_STATE_COUNT] = {
     [NAV_STATE_CRUISE_2D_INITIALIZE] = {
         .onEntry = navOnEnteringState_NAV_STATE_CRUISE_2D_INITIALIZE,
         .timeoutMs = 0,
-        .stateFlags = NAV_REQUIRE_ANGLE | NAV_RC_POS | NAV_RC_YAW | NAV_CTL_THR_FW,
+        .stateFlags = NAV_REQUIRE_ANGLE,
         .mapToFlightModes = NAV_CRUISE_MODE,
         .mwState = MW_NAV_STATE_NONE, ///////FIX ME
         .mwError = MW_NAV_ERROR_NONE,
@@ -929,10 +929,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_2D_IN_PROGRESS(n
 
     #define MAX_CRUISE_CENTIDPS 2000.0f
 
-    if(posControl.flags.isAdjustingPosition)
-    {
-        return NAV_FSM_EVENT_SWITCH_TO_CRUISE_2D_ADJ; //switch to roll adjstment state. return back to normal in progress state when user stop correcting
-    }
+    if(posControl.flags.isAdjustingPosition) return NAV_FSM_EVENT_SWITCH_TO_CRUISE_2D_ADJ; // switch to roll adjustment state
 
     //user is yawing. change target while yawing.
     if(posControl.flags.isAdjustingHeading)
