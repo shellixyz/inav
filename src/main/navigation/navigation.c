@@ -313,7 +313,7 @@ static const navigationFSMStateDescriptor_t navFSM[NAV_STATE_COUNT] = {
     [NAV_STATE_CRUISE_2D_INITIALIZE] = {
         .onEntry = navOnEnteringState_NAV_STATE_CRUISE_2D_INITIALIZE,
         .timeoutMs = 0,
-        .stateFlags = NAV_CTL_POS | NAV_REQUIRE_ANGLE,
+        .stateFlags = NAV_REQUIRE_ANGLE | NAV_RC_POS | NAV_RC_YAW | NAV_CTL_THR_FW,
         .mapToFlightModes = NAV_CRUISE_MODE,
         .mwState = MW_NAV_STATE_NONE, ///////FIX ME
         .mwError = MW_NAV_ERROR_NONE,
@@ -884,7 +884,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_POSHOLD_3D_IN_PROGRESS(
 /////////////////
 
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_2D_INITIALIZE(navigationFSMState_t previousState)
-{   
+{
     const navigationFSMStateFlags_t prevFlags = navGetStateFlags(previousState);
 
     if (!STATE(FIXED_WING)) {return NAV_FSM_EVENT_ERROR;} //only on FW for now
@@ -893,21 +893,19 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_2D_INITIALIZE(na
     if(checkForPositionSensorTimeout()){ return NAV_FSM_EVENT_SWITCH_TO_IDLE; }  //we do not have an healty position. switch to idle and try on next iteration
 
     resetGCSFlags();
-    
+
     if ((prevFlags & NAV_CTL_POS) == 0) {
         resetPositionController();
     }
 
     posControl.cruise.cruiseYaw=posControl.actualState.yaw; //store current heading
-
     calculateFarAwayTarget(&posControl.cruise.cruiseTargetPos, posControl.cruise.cruiseYaw, 25000); //calculate a 250m far away target
-    setDesiredPosition(&posControl.cruise.cruiseTargetPos, posControl.cruise.cruiseYaw, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_HEADING);
 
     return NAV_FSM_EVENT_SUCCESS; //go to NAV_STATE_CRUISE_2D_IN_PROGRESS
 }
 
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_2D_ADJUSTING(navigationFSMState_t previousState)
-{  
+{
     UNUSED(previousState);
     //const navigationFSMStateFlags_t prevFlags = navGetStateFlags(previousState);
     DEBUG_SET(DEBUG_CRUISE, 0, 3);
@@ -917,12 +915,12 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_2D_ADJUSTING(nav
         posControl.cruise.cruiseYaw=posControl.actualState.yaw; //store current heading
         return NAV_FSM_EVENT_NONE;  //reprocess the state
     }
-    
+
     return NAV_FSM_EVENT_SUCCESS; //go to NAV_STATE_CRUISE_2D_IN_PROGRESS
 }
 
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_2D_IN_PROGRESS(navigationFSMState_t previousState)
-{   
+{
 
     const timeMs_t currentYawChangeTime = millis();
     static timeMs_t lastYawChangeTime = 0;
@@ -937,8 +935,8 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_2D_IN_PROGRESS(n
     }
 
     //user is yawing. change target while yawing.
-    if(posControl.flags.isAdjustingHeading) 
-    { 
+    if(posControl.flags.isAdjustingHeading)
+    {
         float rateTarget= scaleRangef((float)rcCommand[YAW], -500.0f, 500.0f, -MAX_CRUISE_CENTIDPS,MAX_CRUISE_CENTIDPS); //centidegs
         float centidegsPerIteration= rateTarget/(1000.0f/(float)(currentYawChangeTime - lastYawChangeTime));
         posControl.cruise.cruiseYaw-=centidegsPerIteration;
@@ -947,17 +945,14 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_2D_IN_PROGRESS(n
 
         lastYawChangeTime=currentYawChangeTime;
     }
-    
+
     DEBUG_SET(DEBUG_CRUISE, 0, 2); //in progress state
     DEBUG_SET(DEBUG_CRUISE, 1, 0); //no ajusting
-    
-    if((previousState == NAV_STATE_CRUISE_2D_ADJUSTING) || posControl.flags.isAdjustingHeading){
+
+    if ((previousState == NAV_STATE_CRUISE_2D_INITIALIZE) || (previousState == NAV_STATE_CRUISE_2D_ADJUSTING) || posControl.flags.isAdjustingHeading) {
        calculateFarAwayTarget(&posControl.cruise.cruiseTargetPos, posControl.cruise.cruiseYaw, 50000); //calculate a 500m far away target when user changed direction
        DEBUG_SET(DEBUG_CRUISE, 1, 1); //adj
-    }
-
-    else if(calculateDistanceToDestination(&posControl.cruise.cruiseTargetPos) < 10000) //100m
-    {   
+    } else if (calculateDistanceToDestination(&posControl.cruise.cruiseTargetPos) < 10000) { //100m
         calculateNewCruiseTarget(&posControl.cruise.cruiseTargetPos, posControl.cruise.cruiseYaw, 50000); //500m apart
         DEBUG_SET(DEBUG_CRUISE, 1, 2); //renew
     }
@@ -966,7 +961,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_2D_IN_PROGRESS(n
 
     DEBUG_SET(DEBUG_CRUISE, 3, posControl.cruise.cruiseYaw/100); //log yaw 
 
-    return NAV_FSM_EVENT_NONE;  
+    return NAV_FSM_EVENT_NONE;
 }
 
 ////STUBS
