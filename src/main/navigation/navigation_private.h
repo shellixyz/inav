@@ -266,7 +266,6 @@ typedef enum {
     NAV_STATE_CRUISE_2D_IN_PROGRESS,           // 30
     NAV_STATE_CRUISE_3D_INITIALIZE,            // 31
     NAV_STATE_CRUISE_3D_IN_PROGRESS,           // 32
-    NAV_STATE_CRUISE_ADJUSTING,                // 33
 
     NAV_STATE_COUNT,
 } navigationFSMState_t;
@@ -319,6 +318,7 @@ typedef struct {
 typedef struct {
     fpVector3_t                 cruiseTargetPos;
     int32_t                     cruiseYaw;
+    bool                        adjustingRoll;
 } navCruise_t;
 
 typedef struct {
