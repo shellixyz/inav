@@ -263,12 +263,10 @@ typedef enum {
     NAV_STATE_LAUNCH_IN_PROGRESS,
 
     NAV_STATE_CRUISE_2D_INITIALIZE,            // 29
-    NAV_STATE_CRUISE_2D_ADJUSTING,              // 30
-    NAV_STATE_CRUISE_2D_IN_PROGRESS,           // 31
-    
-    NAV_STATE_CRUISE_3D_INITIALIZE,            // 32
-    NAV_STATE_CRUISE_3D_ADJUSTING,              // 33
-    NAV_STATE_CRUISE_3D_IN_PROGRESS,           // 34
+    NAV_STATE_CRUISE_2D_IN_PROGRESS,           // 30
+    NAV_STATE_CRUISE_3D_INITIALIZE,            // 31
+    NAV_STATE_CRUISE_3D_IN_PROGRESS,           // 32
+    NAV_STATE_CRUISE_ADJUSTING,                // 33
 
     NAV_STATE_COUNT,
 } navigationFSMState_t;
