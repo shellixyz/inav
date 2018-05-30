@@ -520,7 +520,7 @@ bool vtxTrampInit(void)
 #if defined(VTX_COMMON)
     vtxCommonRegisterDevice(&vtxTramp);
 #endif
-    
+
     return true;
 }
 

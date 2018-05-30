@@ -380,7 +380,7 @@ static const navigationFSMStateDescriptor_t navFSM[NAV_STATE_COUNT] = {
         .onEvent = {
 
             //FIX WHOLE OF THIS:
-            
+
             [NAV_FSM_EVENT_TIMEOUT]                     = NAV_STATE_CRUISE_3D_IN_PROGRESS,    // re-process the state
             [NAV_FSM_EVENT_SWITCH_TO_IDLE]              = NAV_STATE_IDLE,
             [NAV_FSM_EVENT_SWITCH_TO_ALTHOLD]           = NAV_STATE_ALTHOLD_INITIALIZE,
@@ -561,7 +561,7 @@ static const navigationFSMStateDescriptor_t navFSM[NAV_STATE_COUNT] = {
             [NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING] = NAV_STATE_EMERGENCY_LANDING_INITIALIZE,
             [NAV_FSM_EVENT_SWITCH_TO_CRUISE_2D]         = NAV_STATE_CRUISE_2D_INITIALIZE,
             [NAV_FSM_EVENT_SWITCH_TO_CRUISE_3D]         = NAV_STATE_CRUISE_3D_INITIALIZE,
-            
+
         }
     },
 
@@ -916,7 +916,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_2D_IN_PROGRESS(n
 
     setDesiredPosition(&posControl.cruise.cruiseTargetPos, posControl.cruise.cruiseYaw, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_HEADING);
 
-    DEBUG_SET(DEBUG_CRUISE, 3, posControl.cruise.cruiseYaw/100); //log yaw 
+    DEBUG_SET(DEBUG_CRUISE, 3, posControl.cruise.cruiseYaw/100); //log yaw
 
     return NAV_FSM_EVENT_NONE;
 }
@@ -1374,10 +1374,10 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_LAUNCH_WAIT(navigationF
         return NAV_FSM_EVENT_SUCCESS;   // NAV_STATE_LAUNCH_MOTOR_DELAY
     }
 
-    //allow to leave NAV_LAUNCH_MODE if it has being enabled as feature by moving sticks with low throttle. 
+    //allow to leave NAV_LAUNCH_MODE if it has being enabled as feature by moving sticks with low throttle.
     if(feature(FEATURE_FW_LAUNCH)){
         throttleStatus_e throttleStatus = calculateThrottleStatus();
-        if ((throttleStatus == THROTTLE_LOW) && (areSticksDeflectedMoreThanPosHoldDeadband())){ 
+        if ((throttleStatus == THROTTLE_LOW) && (areSticksDeflectedMoreThanPosHoldDeadband())){
             return NAV_FSM_EVENT_SWITCH_TO_IDLE;
         }
     }
@@ -1965,7 +1965,7 @@ void calculateInitialHoldPosition(fpVector3_t * pos)
  * Set active XYZ-target and desired heading
  *-----------------------------------------------------------*/
 void setDesiredPosition(const fpVector3_t * pos, int32_t yaw, navSetWaypointFlags_t useMask)
-{       
+{
     // XY-position
     if ((useMask & NAV_POS_UPDATE_XY) != 0) {
         posControl.desiredState.pos.x = pos->x;
@@ -1998,7 +1998,7 @@ void calculateFarAwayTarget(fpVector3_t * farAwayPos, int32_t yaw, int32_t dista
     farAwayPos->z = navGetCurrentActualPositionAndVelocity()->pos.z;
 }
 void calculateNewCruiseTarget(fpVector3_t * origin, int32_t yaw, int32_t distance)
-{ 
+{
     origin->x = origin->x + distance * cos_approx(CENTIDEGREES_TO_RADIANS(yaw));
     origin->y = origin->y + distance * sin_approx(CENTIDEGREES_TO_RADIANS(yaw));
     origin->z = origin->z;
@@ -2569,8 +2569,8 @@ static navigationFSMEvent_t selectNavEventFromBoxModeInput(void)
                 return NAV_FSM_EVENT_SWITCH_TO_POSHOLD_3D;
         }
 
-            
-        //PH has priority over CRUISE 
+
+        //PH has priority over CRUISE
 /*
         //CRUISE 3D has priority on AH
         if (IS_RC_MODE_ACTIVE(BOXNAVCRUISE) && IS_RC_MODE_ACTIVE(BOXNAVALTHOLD)) {
@@ -2582,10 +2582,10 @@ static navigationFSMEvent_t selectNavEventFromBoxModeInput(void)
 */
         if (IS_RC_MODE_ACTIVE(BOXNAVCRUISE)) {
             if (FLIGHT_MODE(NAV_CRUISE_MODE) || (canActivatePosHold) )
-                return NAV_FSM_EVENT_SWITCH_TO_CRUISE_2D;    
+                return NAV_FSM_EVENT_SWITCH_TO_CRUISE_2D;
         }
-        
-        
+
+
 
         if (IS_RC_MODE_ACTIVE(BOXNAVALTHOLD)) {
             if ((FLIGHT_MODE(NAV_ALTHOLD_MODE)) || (canActivateAltHold))
@@ -2731,7 +2731,7 @@ void updateFlightBehaviorModifiers(void)
  *  Update rate: RX (data driven or 50Hz)
  */
 void updateWaypointsAndNavigationMode(void)
-{   
+{
     /* Initiate home position update */
     updateHomePosition();
 
@@ -2749,7 +2749,7 @@ void updateWaypointsAndNavigationMode(void)
 
     // Process pilot's RC input to adjust behaviour
     processNavigationRCAdjustments();
-    
+
     // Map navMode back to enabled flight modes
     switchNavigationFlightModes();
 

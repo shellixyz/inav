@@ -1239,7 +1239,7 @@ static bool osdDrawSingleElement(uint8_t item)
                 } else {
                     p = " PH ";
                 }
-            } 
+            }
             else if (FLIGHT_MODE(NAV_ALTHOLD_MODE) && navigationRequiresAngleMode()) {
                 // If navigationRequiresAngleMode() returns false when ALTHOLD is active,
                 // it means it can be combined with ANGLE, HORIZON, ACRO, etc...
@@ -1249,7 +1249,7 @@ static bool osdDrawSingleElement(uint8_t item)
             else if (FLIGHT_MODE(NAV_CRUISE_MODE) && FLIGHT_MODE(NAV_ALTHOLD_MODE))
                 p = "3CRS";
             else if (FLIGHT_MODE(NAV_CRUISE_MODE))
-                p = "CRS "; 
+                p = "CRS ";
             else if (FLIGHT_MODE(NAV_WP_MODE))
                 p = " WP ";
             else if (FLIGHT_MODE(ANGLE_MODE))

@@ -181,11 +181,11 @@ void applyFixedWingAltitudeAndThrottleController(timeUs_t currentTimeUs)
  * Adjusts desired heading from pilot's input
  *-----------------------------------------------------------*/
 bool adjustFixedWingHeadingFromRCInput(void)
-{   
+{
     if (ABS(rcCommand[YAW]) > rcControlsConfig()->pos_hold_deadband) {
         return true;
     }
-    
+
     return false;
 }
 

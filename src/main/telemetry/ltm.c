@@ -452,7 +452,7 @@ void checkLtmTelemetryState(void)
         if (newTelemetryEnabledValue){
             configureLtmScheduler();
             configureLtmTelemetryPort();
-            
+
     }
         else
             freeLtmTelemetryPort();

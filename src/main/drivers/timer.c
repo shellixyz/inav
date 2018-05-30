@@ -58,7 +58,7 @@ uint8_t lookupTimerIndex(const TIM_TypeDef *tim)
             return i;
         }
     }
-    
+
     // make sure final index is out of range
     return ~1;
 }
@@ -188,7 +188,7 @@ void timerInit(void)
     /* enable the timer peripherals */
     for (int i = 0; i < timerHardwareCount; i++) {
         unsigned timer = lookupTimerIndex(timerHardware[i].tim);
-        
+
         RCC_ClockCmd(timerDefinitions[timer].rcc, ENABLE);
     }
 }

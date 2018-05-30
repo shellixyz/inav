@@ -54,7 +54,7 @@ static inline fpVector3_t * rotationMatrixRotateVector(fpVector3_t * result, con
 }
 
 static inline float vectorNormSquared(const fpVector3_t * v)
-{ 
+{
     return sq(v->x) + sq(v->y) + sq(v->z);
 }
 

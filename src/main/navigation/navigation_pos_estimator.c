@@ -616,7 +616,7 @@ static float updateEPE(const float oldEPE, const float dt, const float newEPE, c
     return oldEPE + (newEPE - oldEPE) * w * dt;
 }
 
-static bool navIsHeadingUsable(void) 
+static bool navIsHeadingUsable(void)
 {
     // If we have GPS - we need true IMU north (valid heading)
     return isImuHeadingValid();
