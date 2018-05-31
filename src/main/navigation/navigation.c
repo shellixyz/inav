@@ -935,9 +935,10 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_2D_IN_PROGRESS(n
 
     //user is yawing. change target while yawing.
     if (posControl.flags.isAdjustingHeading)
-    {
+    {   timeMs_t timeDifference =currentYawChangeTime - lastYawChangeTime;
+        if (timeDifference>100) timeDifference=0; //if adjustment was called long time ago, reset the time difference.
         float rateTarget = scaleRangef((float)rcCommand[YAW], -500.0f, 500.0f, -MAX_CRUISE_CENTIDPS,MAX_CRUISE_CENTIDPS); //centidegs
-        float centidegsPerIteration = rateTarget/(1000.0f/(float)(currentYawChangeTime - lastYawChangeTime));
+        float centidegsPerIteration = rateTarget/(1000.0f/timeDifference);
         posControl.cruise.cruiseYaw -= centidegsPerIteration;
         posControl.cruise.cruiseYaw = wrap_36000(posControl.cruise.cruiseYaw);
         DEBUG_SET(DEBUG_CRUISE, 2,posControl.cruise.cruiseYaw/100);
@@ -1031,9 +1032,10 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_3D_IN_PROGRESS(n
 
     //user is yawing. change target while yawing.
     if (posControl.flags.isAdjustingHeading)
-    {
+    {   timeMs_t timeDifference =currentYawChangeTime - lastYawChangeTime;
+        if (timeDifference>100) timeDifference=0; //if adjustment was called long time ago, reset the time difference.
         float rateTarget = scaleRangef((float)rcCommand[YAW], -500.0f, 500.0f, -MAX_CRUISE_CENTIDPS,MAX_CRUISE_CENTIDPS); //centidegs
-        float centidegsPerIteration = rateTarget/(1000.0f/(float)(currentYawChangeTime - lastYawChangeTime));
+        float centidegsPerIteration = rateTarget/(1000.0f/timeDifference);
         posControl.cruise.cruiseYaw -= centidegsPerIteration;
         posControl.cruise.cruiseYaw = wrap_36000(posControl.cruise.cruiseYaw);
         DEBUG_SET(DEBUG_CRUISE, 2,posControl.cruise.cruiseYaw/100);
