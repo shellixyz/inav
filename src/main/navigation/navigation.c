@@ -887,7 +887,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_2D_INITIALIZE(na
 
     if (!STATE(FIXED_WING)) {return NAV_FSM_EVENT_ERROR;} //only on FW for now
 
-    DEBUG_SET(DEBUG_CRUISE, 0, 1);
+    DEBUG_SET(DEBUG_CRUISE, 0, 1); 
     if(checkForPositionSensorTimeout()){ return NAV_FSM_EVENT_SWITCH_TO_IDLE; }  //we do not have an healty position. switch to idle and try on next iteration
 
     resetGCSFlags();
@@ -907,7 +907,8 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_2D_IN_PROGRESS(n
     static timeMs_t lastYawChangeTime = 0;
 
     if (checkForPositionSensorTimeout()){ return NAV_FSM_EVENT_SWITCH_TO_IDLE; }  //in case of invalid position, re init.
-
+    DEBUG_SET(DEBUG_CRUISE, 0, 2); 
+    DEBUG_SET(DEBUG_CRUISE, 2, 0);
     #define MAX_CRUISE_CENTIDPS 2000.0f
 
     if (posControl.flags.isAdjustingPosition){
@@ -921,26 +922,19 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_2D_IN_PROGRESS(n
         float rateTarget = scaleRangef((float)rcCommand[YAW], -500.0f, 500.0f, -MAX_CRUISE_CENTIDPS,MAX_CRUISE_CENTIDPS); //centidegs
         float centidegsPerIteration = rateTarget/(1000.0f/timeDifference);
         posControl.cruise.cruiseYaw -= centidegsPerIteration;
-        posControl.cruise.cruiseYaw = wrap_36000(posControl.cruise.cruiseYaw);
-        DEBUG_SET(DEBUG_CRUISE, 2,posControl.cruise.cruiseYaw/100);
-
+        DEBUG_SET(DEBUG_CRUISE, 1, CENTIDEGREES_TO_DEGREES(posControl.cruise.cruiseYaw)); 
         lastYawChangeTime = currentYawChangeTime;
     }
 
-    DEBUG_SET(DEBUG_CRUISE, 0, 2); //in progress state
-    DEBUG_SET(DEBUG_CRUISE, 1, 0); //no ajusting
-
     if ((previousState == NAV_STATE_CRUISE_2D_INITIALIZE) || (previousState == NAV_STATE_CRUISE_2D_ADJUSTING)  || posControl.flags.isAdjustingHeading) {
-       calculateFarAwayTarget(&posControl.cruise.cruiseTargetPos, posControl.cruise.cruiseYaw, 50000); //calculate a 500m far away target when user changed direction
-       DEBUG_SET(DEBUG_CRUISE, 1, 1); //adj
+        calculateFarAwayTarget(&posControl.cruise.cruiseTargetPos, posControl.cruise.cruiseYaw, 50000); //calculate a 500m far away target when user changed direction
+        DEBUG_SET(DEBUG_CRUISE, 2, 1);
     } else if (calculateDistanceToDestination(&posControl.cruise.cruiseTargetPos) < 10000) { //100m
         calculateNewCruiseTarget(&posControl.cruise.cruiseTargetPos, posControl.cruise.cruiseYaw, 50000); //500m apart
-        DEBUG_SET(DEBUG_CRUISE, 1, 2); //renew
+        DEBUG_SET(DEBUG_CRUISE, 2, 2);
     }
 
     setDesiredPosition(&posControl.cruise.cruiseTargetPos, posControl.cruise.cruiseYaw, NAV_POS_UPDATE_XY);
-
-    DEBUG_SET(DEBUG_CRUISE, 3, CENTIDEGREES_TO_DEGREES(posControl.cruise.cruiseYaw)); // log yaw
 
     return NAV_FSM_EVENT_NONE;
 }
@@ -948,8 +942,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_2D_IN_PROGRESS(n
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_2D_ADJUSTING(navigationFSMState_t previousState)
 {
     UNUSED(previousState);
-
-    DEBUG_SET(DEBUG_CRUISE, 0, 3);
+    DEBUG_SET(DEBUG_CRUISE, 0, 3); 
     //user is rolling wait it stops to roll with angle mode and store the current yaw during roll.
     if(posControl.flags.isAdjustingPosition) {
         resetPositionController();  //user is rolling bypass the controller and go the ANGLE.
@@ -964,9 +957,9 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_3D_INITIALIZE(na
 {
     if (!STATE(FIXED_WING)) {return NAV_FSM_EVENT_ERROR;} //only on FW for now
 
-    DEBUG_SET(DEBUG_CRUISE, 0, 1);
+    
     if(checkForPositionSensorTimeout()){ return NAV_FSM_EVENT_SWITCH_TO_IDLE; }  //we do not have an healty position. switch to idle and try on next iteration
-
+    DEBUG_SET(DEBUG_CRUISE, 0, 4);
     const navigationFSMStateFlags_t prevFlags = navGetStateFlags(previousState);
     const bool terrainFollowingToggled = (posControl.flags.isTerrainFollowEnabled != navTerrainFollowingRequested());
 
@@ -1004,7 +997,8 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_3D_IN_PROGRESS(n
     static timeMs_t lastYawChangeTime = 0;
 
     if(checkForPositionSensorTimeout()){ return NAV_FSM_EVENT_SWITCH_TO_IDLE; }  //in case of invalid position, re init.
-
+    DEBUG_SET(DEBUG_CRUISE, 0, 5);
+    DEBUG_SET(DEBUG_CRUISE, 2, 0);
     #define MAX_CRUISE_CENTIDPS 2000.0f
 
     if (posControl.flags.isAdjustingPosition){
@@ -1019,25 +1013,19 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_3D_IN_PROGRESS(n
         float centidegsPerIteration = rateTarget/(1000.0f/timeDifference);
         posControl.cruise.cruiseYaw -= centidegsPerIteration;
         posControl.cruise.cruiseYaw = wrap_36000(posControl.cruise.cruiseYaw);
-        DEBUG_SET(DEBUG_CRUISE, 2,posControl.cruise.cruiseYaw/100);
-
+        DEBUG_SET(DEBUG_CRUISE, 1, CENTIDEGREES_TO_DEGREES(posControl.cruise.cruiseYaw));
         lastYawChangeTime = currentYawChangeTime;
     }
 
-    DEBUG_SET(DEBUG_CRUISE, 0, 2); //in progress state
-    DEBUG_SET(DEBUG_CRUISE, 1, 0); //no ajusting
-
     if ((previousState == NAV_STATE_CRUISE_3D_INITIALIZE) || (previousState == NAV_STATE_CRUISE_3D_ADJUSTING) || posControl.flags.isAdjustingHeading) {
-       calculateFarAwayTarget(&posControl.cruise.cruiseTargetPos, posControl.cruise.cruiseYaw, 50000); //calculate a 500m far away target when user changed direction
-       DEBUG_SET(DEBUG_CRUISE, 1, 1); //adj
+        calculateFarAwayTarget(&posControl.cruise.cruiseTargetPos, posControl.cruise.cruiseYaw, 50000); //calculate a 500m far away target when user changed direction
+        DEBUG_SET(DEBUG_CRUISE, 2, 1);
     } else if (calculateDistanceToDestination(&posControl.cruise.cruiseTargetPos) < 10000) { //100m
         calculateNewCruiseTarget(&posControl.cruise.cruiseTargetPos, posControl.cruise.cruiseYaw, 50000); //500m apart
-        DEBUG_SET(DEBUG_CRUISE, 1, 2); //renew
+        DEBUG_SET(DEBUG_CRUISE, 2, 2);
     }
 
     setDesiredPosition(&posControl.cruise.cruiseTargetPos, posControl.cruise.cruiseYaw, NAV_POS_UPDATE_XY);
-
-    DEBUG_SET(DEBUG_CRUISE, 3, CENTIDEGREES_TO_DEGREES(posControl.cruise.cruiseYaw)); // log yaw
 
     return NAV_FSM_EVENT_NONE;
 }
@@ -1045,8 +1033,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_3D_IN_PROGRESS(n
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_3D_ADJUSTING(navigationFSMState_t previousState)
 {
     UNUSED(previousState);
-
-    DEBUG_SET(DEBUG_CRUISE, 0, 3);
+    DEBUG_SET(DEBUG_CRUISE, 0, 6);
     // user is rolling wait it stops to roll with angle mode and store the current yaw during roll.
     if (posControl.flags.isAdjustingPosition) {
         resetPositionController();  //user is rolling bypass the controller and go the ANGLE.
