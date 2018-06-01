@@ -76,7 +76,8 @@ PG_RESET_TEMPLATE(mixerConfig_t, mixerConfig,
     .hasFlaps = false,
     .appliedMixerPreset = -1, //This flag is not available in CLI and used by Configurator only
     .fw_flapperons_throw_diff = 0,
-    .fw_elevator_throw_diff = 0
+    .fw_elevator_throw_diff = 0,
+    .flaperon_pitch_comp_angle = 0
 );
 
 #ifdef BRUSHED_MOTORS
