@@ -34,6 +34,8 @@ extern int16_t              GPS_directionToHome;       // direction to home poin
 /* Navigation system updates */
 void onNewGPSData(void);
 
+#define MAX_CRUISE_CENTIDPS 2000.0f
+
 #if defined(USE_NAV)
 #if defined(USE_BLACKBOX)
 #define NAV_BLACKBOX
