@@ -144,7 +144,7 @@ int32_t calculateRemainingEnergyBeforeRTH() {
     const float RTH_altitude_change = (RTHAltitude() - getEstimatedActualPosition(Z)) / 100;
     float RTH_heading; // degrees
     const float RTH_distance = estimateRTHDistanceAndHeadingAfterAltitudeChange(RTH_altitude_change, horizontalWindSpeed, windHeadingDegrees, verticalWindSpeed, &RTH_heading);
-    const float RTH_speed = windCompensatedForwardSpeed(batteryConfig()->cruise.speed / 100, DECIDEGREES_TO_DEGREES(attitude.values.yaw), horizontalWindSpeed, windHeadingDegrees);
+    const float RTH_speed = windCompensatedForwardSpeed((float)batteryConfig()->cruise.speed / 100, DECIDEGREES_TO_DEGREES(attitude.values.yaw), horizontalWindSpeed, windHeadingDegrees);
 
     DEBUG_SET(DEBUG_REM_FLIGHT_TIME, 0, lrintf(RTH_altitude_change * 100));
     DEBUG_SET(DEBUG_REM_FLIGHT_TIME, 1, lrintf(RTH_distance * 100));
