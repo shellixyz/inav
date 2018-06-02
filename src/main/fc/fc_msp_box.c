@@ -78,7 +78,7 @@ static const box_t boxes[CHECKBOX_ITEM_COUNT + 1] = {
     { BOXOSDALT1, "OSD ALT 1", 42 },
     { BOXOSDALT2, "OSD ALT 2", 43 },
     { BOXOSDALT3, "OSD ALT 3", 44 },
-    { BOXVIDEOPWR, "VIDEO PWR", 44 },
+    { BOXVIDEOPWR, "VIDEO PWR", 45 },
     { CHECKBOX_ITEM_COUNT, NULL, 0xFF }
 };
 
