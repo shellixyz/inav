@@ -87,6 +87,9 @@ typedef struct motorConfig_s {
     uint8_t  motorPwmProtocol;
     uint16_t motorAccelTimeMs;              // Time limit for motor to accelerate from 0 to 100% throttle [ms]
     uint16_t motorDecelTimeMs;              // Time limit for motor to decelerate from 0 to 100% throttle [ms]
+    bool     throttleVBatCompensation;
+    bool     throttleVBatScaling;
+    uint16_t throttleFullBatLimit;
 } motorConfig_t;
 
 PG_DECLARE(motorConfig_t, motorConfig);

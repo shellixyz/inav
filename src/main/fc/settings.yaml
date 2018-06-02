@@ -67,7 +67,7 @@ tables:
   - name: i2c_speed
     values: ["400KHZ", "800KHZ", "100KHZ", "200KHZ"]
   - name: debug_modes
-    values: ["NONE", "GYRO", "NOTCH", "NAV_LANDING", "FW_ALTITUDE", "AGL", "FLOW_RAW", "SBUS", "FPORT", "ALWAYS", "STAGE2", "WIND_ESTIMATOR"]
+    values: ["NONE", "GYRO", "NOTCH", "NAV_LANDING", "FW_ALTITUDE", "AGL", "FLOW_RAW", "SBUS", "FPORT", "ALWAYS", "STAGE2", "WIND_ESTIMATOR", "SAG_COMP_VOLTAGE"]
   - name: async_mode
     values: ["NONE", "GYRO", "ALL"]
   - name: aux_operator
@@ -436,6 +436,16 @@ groups:
       - name: motor_pwm_protocol
         field: motorPwmProtocol
         table: motor_pwm_protocol
+      - name: throttle_vbat_compensation
+        field: throttleVBatCompensation
+        type: bool
+      - name: throttle_vbat_scaling
+        field: throttleVBatScaling
+        type: bool
+      - name: throttle_full_bat_limit
+        field: throttleFullBatLimit
+        min: PWM_RANGE_MIN
+        max: PWM_RANGE_MAX
 
   - name: PG_FAILSAFE_CONFIG
     type: failsafeConfig_t
@@ -568,6 +578,12 @@ groups:
         field: current.type
         table: current_sensor
         type: uint8_t
+      - name: vbat_impedance_filtering
+        field: impedanceFiltering
+        type: bool
+      - name: vbat_sag_comp_filtering
+        field: sagCompVBatFiltering
+        type: bool
 
   - name: PG_MIXER_CONFIG
     type: mixerConfig_t
