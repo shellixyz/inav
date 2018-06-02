@@ -1323,6 +1323,8 @@ static bool osdDrawSingleElement(uint8_t item)
             strcpy(buff + 2, "---");
         } else {
             osdFormatDistanceSymbol(buff + 1, distanceMeters * 100);
+            if (distanceMeters == 0)
+                TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
         }
         break;
 
