@@ -73,7 +73,7 @@ typedef struct batteryConfig_s {
     bool sagCompVBatFiltering;
 
     struct {
-        uint8_t speed;          // m/s
+        uint16_t speed;         // cm/s
         uint32_t power;         // cW
     } cruise;
 

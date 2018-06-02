@@ -587,7 +587,7 @@ groups:
       - name: cruise_speed
         field: cruise.speed
         min: 0
-        max: 255
+        max: 65535
       - name: cruise_power
         field: cruise.power
         min: 0
