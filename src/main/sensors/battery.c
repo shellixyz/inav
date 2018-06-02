@@ -30,7 +30,12 @@
 #include "drivers/time.h"
 
 #include "fc/config.h"
+#include "fc/fc_core.h"
 #include "fc/runtime_config.h"
+#include "fc/stats.h"
+
+#include "flight/imu.h"
+#include "flight/mixer.h"
 
 #include "config/feature.h"
 
@@ -43,6 +48,8 @@
 #include "io/beeper.h"
 
 #include "build/debug.h"
+
+#include "navigation/navigation.h"
 
 
 #define ADCVREF 3300                                    // in mV (3300 = 3.3V)
@@ -102,8 +109,17 @@ PG_RESET_TEMPLATE(batteryConfig_t, batteryConfig,
         .unit = BAT_CAPACITY_UNIT_MAH,
     },
 
+
     .impedanceFiltering = false,
-    .sagCompVBatFiltering = false
+    .sagCompVBatFiltering = false,
+
+    .cruise = {
+        .speed = 0,
+        .power = 0
+    },
+
+    .idle_power = 0,
+    .rth_energy_margin = 5
 
 );
 
@@ -433,3 +449,14 @@ uint8_t calculateBatteryPercentage(void)
     } else
         return constrain((vbat - batteryCriticalVoltage) * 100L / (batteryFullVoltage - batteryCriticalVoltage), 0, 100);
 }
+
+// returns cW (0.01W)
+int32_t calculateAveragePower() {
+    return (int64_t)mWhDrawn * 360 / getFlightTime();
+}
+
+// returns mWh / meter
+int32_t calculateAverageEfficiency() {
+    return getFlyingEnergy() * 100 / getTotalTravelDistance();
+}
+

@@ -72,6 +72,14 @@ typedef struct batteryConfig_s {
     bool impedanceFiltering;
     bool sagCompVBatFiltering;
 
+    struct {
+        uint8_t speed;          // m/s
+        uint32_t power;         // cW
+    } cruise;
+
+    uint16_t idle_power;        // cW
+    uint8_t rth_energy_margin;  // %
+
 } batteryConfig_t;
 
 PG_DECLARE(batteryConfig_t, batteryConfig);
@@ -112,3 +120,5 @@ void powerMeterUpdate(int32_t lastUpdateAt);
 
 uint8_t calculateBatteryPercentage(void);
 float calculateThrottleCompensationFactor(void);
+int32_t calculateAveragePower();
+int32_t calculateAverageEfficiency();

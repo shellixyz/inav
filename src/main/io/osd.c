@@ -69,9 +69,11 @@
 #include "fc/rc_controls.h"
 #include "fc/rc_modes.h"
 #include "fc/runtime_config.h"
+#include "fc/fc_tasks.h"
 
 #include "flight/imu.h"
 #include "flight/pid.h"
+#include "flight/rth_estimator.h"
 #include "flight/wind_estimator.h"
 
 #include "navigation/navigation.h"
@@ -119,7 +121,6 @@
     x; \
 })
 
-static timeUs_t flyTime = 0;
 static unsigned currentLayout = 0;
 static int layoutOverride = -1;
 
@@ -463,7 +464,7 @@ static inline void osdFormatOnTime(char *buff)
 
 static inline void osdFormatFlyTime(char *buff, textAttributes_t *attr)
 {
-    uint32_t seconds = flyTime / 1000000;
+    uint32_t seconds = getFlightTime();
     osdFormatTime(buff, seconds, SYM_FLY_M, SYM_FLY_H);
     if (attr && osdConfig()->time_alarm > 0) {
        if (seconds / 60 >= osdConfig()->time_alarm && ARMING_FLAG(ARMED)) {
@@ -1285,6 +1286,45 @@ static bool osdDrawSingleElement(uint8_t item)
             }
             break;
         }
+
+    case OSD_REMAINING_FLIGHT_TIME_BEFORE_RTH:
+        {
+            static timeUs_t updatedTimestamp = 0;
+            /*static int32_t updatedTimeSeconds = 0;*/
+            timeUs_t currentTimeUs = micros();
+            static int32_t timeSeconds = -1;
+            if (cmpTimeUs(currentTimeUs, updatedTimestamp) >= 1000000) {
+                timeSeconds = calculateRemainingFlightTimeBeforeRTH();
+                updatedTimestamp = currentTimeUs;
+            }
+            if ((!ARMING_FLAG(ARMED)) || (timeSeconds < 0)) {
+                buff[0] = SYM_FLY_M;
+                strcpy(buff + 1, "--:--");
+                updatedTimestamp = 0;
+            } else {
+                osdFormatTime(buff, timeSeconds, SYM_FLY_M, SYM_FLY_H);
+                if (timeSeconds == 0)
+                    TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
+            }
+        }
+        break;
+
+    case OSD_REMAINING_DISTANCE_BEFORE_RTH:;
+        static timeUs_t updatedTimestamp = 0;
+        timeUs_t currentTimeUs = micros();
+        static int32_t distanceMeters = -1;
+        if (cmpTimeUs(currentTimeUs, updatedTimestamp) >= 1000000) {
+            distanceMeters = calculateRemainingDistanceBeforeRTH();
+            updatedTimestamp = currentTimeUs;
+        }
+        buff[0] = SYM_TRIP_DIST;
+        if ((!ARMING_FLAG(ARMED)) || (distanceMeters < 0)) {
+            buff[1] = SYM_DIST_M;
+            strcpy(buff + 2, "---");
+        } else {
+            osdFormatDistanceSymbol(buff + 1, distanceMeters * 100);
+        }
+        break;
 
     case OSD_FLYMODE:
         {
@@ -2117,6 +2157,8 @@ void pgResetFn_osdConfig(osdConfig_t *osdConfig)
     osdConfig->item_pos[0][OSD_FLYTIME] = OSD_POS(23, 9);
     osdConfig->item_pos[0][OSD_ONTIME_FLYTIME] = OSD_POS(23, 11) | OSD_VISIBLE_FLAG;
     osdConfig->item_pos[0][OSD_RTC_TIME] = OSD_POS(23, 12);
+    osdConfig->item_pos[0][OSD_REMAINING_FLIGHT_TIME_BEFORE_RTH] = OSD_POS(23, 7);
+    osdConfig->item_pos[0][OSD_REMAINING_DISTANCE_BEFORE_RTH] = OSD_POS(23, 6);
 
     osdConfig->item_pos[0][OSD_GPS_SATS] = OSD_POS(0, 11) | OSD_VISIBLE_FLAG;
     osdConfig->item_pos[0][OSD_GPS_HDOP] = OSD_POS(0, 10);
@@ -2383,7 +2425,7 @@ static void osdShowStats(void)
     }
 
     displayWrite(osdDisplayPort, statNameX, top, "FLY TIME         :");
-    uint32_t flySeconds = flyTime / 1000000;
+    uint16_t flySeconds = getFlightTime();
     uint16_t flyMinutes = flySeconds / 60;
     flySeconds %= 60;
     uint16_t flyHours = flyMinutes / 60;
@@ -2428,8 +2470,6 @@ static void osdShowArmed(void)
 
 static void osdRefresh(timeUs_t currentTimeUs)
 {
-    static timeUs_t lastTimeUs = 0;
-
     if (IS_RC_MODE_ACTIVE(BOXOSD) && (!cmsInMenu)) {
       displayClearScreen(osdDisplayPort);
       armState = ARMING_FLAG(ARMED);
@@ -2449,13 +2489,6 @@ static void osdRefresh(timeUs_t currentTimeUs)
 
         armState = ARMING_FLAG(ARMED);
     }
-
-    if (ARMING_FLAG(ARMED)) {
-        timeUs_t deltaT = currentTimeUs - lastTimeUs;
-        flyTime += deltaT;
-    }
-
-    lastTimeUs = currentTimeUs;
 
     if (resumeRefreshAt) {
         // If we already reached he time for the next refresh,

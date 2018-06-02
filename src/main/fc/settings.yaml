@@ -67,7 +67,7 @@ tables:
   - name: i2c_speed
     values: ["400KHZ", "800KHZ", "100KHZ", "200KHZ"]
   - name: debug_modes
-    values: ["NONE", "GYRO", "NOTCH", "NAV_LANDING", "FW_ALTITUDE", "AGL", "FLOW_RAW", "SBUS", "FPORT", "ALWAYS", "STAGE2", "WIND_ESTIMATOR", "SAG_COMP_VOLTAGE"]
+    values: ["NONE", "GYRO", "NOTCH", "NAV_LANDING", "FW_ALTITUDE", "AGL", "FLOW_RAW", "SBUS", "FPORT", "ALWAYS", "STAGE2", "WIND_ESTIMATOR", "SAG_COMP_VOLTAGE", "REM_FLIGHT_TIME"]
   - name: async_mode
     values: ["NONE", "GYRO", "ALL"]
   - name: aux_operator
@@ -584,6 +584,21 @@ groups:
       - name: vbat_sag_comp_filtering
         field: sagCompVBatFiltering
         type: bool
+      - name: cruise_speed
+        field: cruise.speed
+        min: 0
+        max: 255
+      - name: cruise_power
+        field: cruise.power
+        min: 0
+        max: 4294967295
+      - name: idle_power
+        field: idle_power
+        min: 0
+        max: 65535
+      - name: rth_energy_margin
+        min: 0
+        max: 100
 
   - name: PG_MIXER_CONFIG
     type: mixerConfig_t

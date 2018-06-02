@@ -294,6 +294,8 @@ void resetWaypointList(void);
 bool loadNonVolatileWaypointList(void);
 bool saveNonVolatileWaypointList(void);
 
+float RTHAltitude();
+
 /* Geodetic functions */
 typedef enum {
     GEO_ALT_ABSOLUTE,
@@ -325,6 +327,9 @@ bool navigationIsFlyingAutonomousMode(void);
 bool navigationRTHAllowsLanding(void);
 
 bool isNavLaunchEnabled(void);
+bool isFixedWingLaunchDetected(void);
+
+float calculateAverageSpeed();
 
 /* Returns the heading recorded when home position was acquired.
  * Note that the navigation system uses deg*100 as unit and angles

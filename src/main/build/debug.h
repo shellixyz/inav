@@ -16,6 +16,8 @@
  */
 
 #include <stddef.h>
+#include <stdint.h>
+#include <stdbool.h>
 
 #define DEBUG16_VALUE_COUNT 4
 extern int16_t debug[DEBUG16_VALUE_COUNT];
@@ -60,6 +62,7 @@ typedef enum {
     DEBUG_STAGE2,
     DEBUG_WIND_ESTIMATOR,
     DEBUG_SAG_COMP_VOLTAGE,
+    DEBUG_REM_FLIGHT_TIME,
     DEBUG_COUNT
 } debugType_e;
 
