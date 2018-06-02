@@ -80,7 +80,8 @@ PG_RESET_TEMPLATE(mixerConfig_t, mixerConfig,
     .flaperon_pitch_comp_angle = 0,
     .fw_pitch_to_throttle = 0,
     .fw_roll2pitch_comp = 0,
-    .fwMinThrottleDownPitchAngle = 0
+    .fwMinThrottleDownPitchAngle = 0,
+    .fw_turn_assist_pitch2thr = 0
 );
 
 #ifdef BRUSHED_MOTORS
