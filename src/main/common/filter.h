@@ -17,6 +17,8 @@
 
 #pragma once
 
+#define PT1_FILTER_INITIALIZER { .state = 0, .RC = 0, .dT = 0 }
+
 typedef struct rateLimitFilter_s {
     float state;
 } rateLimitFilter_t;

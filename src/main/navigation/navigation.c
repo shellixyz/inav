@@ -810,11 +810,11 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_ALTHOLD_INITIALIZE(navi
     resetGCSFlags();
 
     // If surface tracking mode changed value - reset altitude controller
-    if ((prevFlags & NAV_CTL_ALT) == 0 || terrainFollowingToggled) {
+    if ((!(prevFlags & NAV_CTL_ALT)) || terrainFollowingToggled) {
         resetAltitudeController(navTerrainFollowingRequested());
     }
 
-    if (((prevFlags & NAV_CTL_ALT) == 0) || ((prevFlags & NAV_AUTO_RTH) != 0) || ((prevFlags & NAV_AUTO_WP) != 0) || terrainFollowingToggled) {
+    if ((!(prevFlags & NAV_CTL_ALT)) || (prevFlags & NAV_AUTO_RTH) || (prevFlags & NAV_AUTO_WP) || terrainFollowingToggled) {
         setupAltitudeController();
         setDesiredPosition(&navGetCurrentActualPositionAndVelocity()->pos, posControl.actualState.yaw, NAV_POS_UPDATE_Z);  // This will reset surface offset
     }

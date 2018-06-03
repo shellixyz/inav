@@ -62,6 +62,9 @@ static bool isPitchAdjustmentValid = false;
 static bool isRollAdjustmentValid = false;
 static float throttleSpeedAdjustment = 0;
 static bool isAutoThrottleManuallyIncreased = false;
+/*static bool velzFilterReset = true;*/
+static pt1Filter_t velzFilterState = PT1_FILTER_INITIALIZER;
+
 
 
 /*-----------------------------------------------------------
@@ -78,6 +81,8 @@ void resetFixedWingAltitudeController(void)
     posControl.rcAdjustment[PITCH] = 0;
     isPitchAdjustmentValid = false;
     throttleSpeedAdjustment = 0;
+    /*velzFilterReset = true;*/
+    pt1FilterReset(&velzFilterState, 0);
 }
 
 bool adjustFixedWingAltitudeFromRCInput(void)
@@ -102,8 +107,6 @@ bool adjustFixedWingAltitudeFromRCInput(void)
 // Position to velocity controller for Z axis
 static void updateAltitudeVelocityAndPitchController_FW(timeDelta_t deltaMicros)
 {
-    static pt1Filter_t velzFilterState;
-
     // On a fixed wing we might not have a reliable climb rate source (if no BARO available), so we can't apply PID controller to
     // velocity error. We use PID controller on altitude error and calculate desired pitch angle
 
@@ -132,7 +135,11 @@ static void updateAltitudeVelocityAndPitchController_FW(timeDelta_t deltaMicros)
 
     // PID controller to translate energy balance error [J] into pitch angle [decideg]
     float targetPitchAngle = navPidApply3(&posControl.pids.fw_alt, demSEB, estSEB, US2S(deltaMicros), minDiveDeciDeg, maxClimbDeciDeg, 0, pitchGainInv);
-    targetPitchAngle = pt1FilterApply4(&velzFilterState, targetPitchAngle, NAV_FW_PITCH_CUTOFF_FREQENCY_HZ, US2S(deltaMicros));
+    /*if (velzFilterReset) {*/
+        /*pt1FilterReset(&velzFilterState, targetPitchAngle);*/
+        /*velzFilterReset = false;*/
+    /*} else*/
+        targetPitchAngle = pt1FilterApply4(&velzFilterState, targetPitchAngle, NAV_FW_PITCH_CUTOFF_FREQENCY_HZ, US2S(deltaMicros));
 
     // Reconstrain pitch angle ( >0 - climb, <0 - dive)
     targetPitchAngle = constrainf(targetPitchAngle, minDiveDeciDeg, maxClimbDeciDeg);
