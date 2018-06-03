@@ -554,6 +554,9 @@ void applyFixedWingNavigationController(navigationFSMStateFlags_t navStateFlags,
 #ifdef NAV_FW_LIMIT_MIN_FLY_VELOCITY
         // Don't apply anything if ground speed is too low (<3m/s)
         if (posControl.actualState.velXY > 300) {
+#else
+        if (true) {
+#endif
             if (navStateFlags & NAV_CTL_ALT) {
                 if (getMotorStatus() == MOTOR_STOPPED_USER) {
                     // Motor has been stopped by user. Update target altitude and bypass navigation pitch/throttle control
@@ -565,24 +568,11 @@ void applyFixedWingNavigationController(navigationFSMStateFlags_t navStateFlags,
 
             if (navStateFlags & NAV_CTL_POS)
                 applyFixedWingPositionController(currentTimeUs);
-        }
-        else {
+
+        } else {
             posControl.rcAdjustment[PITCH] = 0;
             posControl.rcAdjustment[ROLL] = 0;
         }
-#else
-        if (navStateFlags & NAV_CTL_ALT) {
-            if (getMotorStatus() == MOTOR_STOPPED_USER) {
-                // Motor has been stopped by user. Update target altitude and bypass navigation pitch/throttle control
-                setDesiredPosition(&navGetCurrentActualPositionAndVelocity()->pos, posControl.actualState.yaw, NAV_POS_UPDATE_Z);
-                isPitchAdjustmentValid = false;
-            } else
-                applyFixedWingAltitudeAndThrottleController(currentTimeUs);
-        }
-
-        if (navStateFlags & NAV_CTL_POS)
-            applyFixedWingPositionController(currentTimeUs);
-#endif
 
         //if (navStateFlags & NAV_CTL_YAW)
         if ((navStateFlags & NAV_CTL_ALT) || (navStateFlags & NAV_CTL_POS))
