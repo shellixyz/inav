@@ -639,6 +639,10 @@ groups:
       - name: fw_turn_assist_pitch2thr
         min: 0
         max: 100
+      - name: fw_min_throttle_down_pitch
+        field: fwMinThrottleDownPitchAngle
+        min: 0
+        max: FW_MIN_THROTTLE_DOWN_PITCH_ANGLE_MAX
 
   - name: PG_MOTOR_3D_CONFIG
     type: flight3DConfig_t

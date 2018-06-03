@@ -28,6 +28,8 @@
 #define YAW_JUMP_PREVENTION_LIMIT_LOW 80
 #define YAW_JUMP_PREVENTION_LIMIT_HIGH 500
 
+#define FW_MIN_THROTTLE_DOWN_PITCH_ANGLE_MAX 450
+
 typedef enum {
     PLATFORM_MULTIROTOR     = 0,
     PLATFORM_AIRPLANE       = 1,
@@ -65,6 +67,7 @@ typedef struct mixerConfig_s {
     uint8_t fw_pitch_to_throttle;
     uint8_t fw_roll2pitch_comp;
     uint16_t fw_turn_assist_pitch2thr;
+    uint16_t fwMinThrottleDownPitchAngle;
 } mixerConfig_t;
 
 PG_DECLARE(mixerConfig_t, mixerConfig);
