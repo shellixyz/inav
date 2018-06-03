@@ -101,6 +101,7 @@ typedef enum {
     OSD_MANUAL_YAW_RATE,
     OSD_NAV_FW_CRUISE_THR,
     OSD_NAV_FW_PITCH2THR,
+    OSD_FW_MIN_THROTTLE_DOWN_PITCH_ANGLE,
     OSD_DEBUG, // Number 46. Intentionally absent from configurator and CMS. Set it from CLI.
     OSD_WIND_SPEED_HORIZONTAL,
     OSD_WIND_SPEED_VERTICAL,

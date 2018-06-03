@@ -72,6 +72,7 @@
 #include "fc/fc_tasks.h"
 
 #include "flight/imu.h"
+#include "flight/mixer.h"
 #include "flight/pid.h"
 #include "flight/rth_estimator.h"
 #include "flight/wind_estimator.h"
@@ -1791,6 +1792,10 @@ static bool osdDrawSingleElement(uint8_t item)
 
     case OSD_NAV_FW_PITCH2THR:
         osdDisplayAdjustableDecimalValue(elemPosX, elemPosY, "P2T", 0, navConfig()->fw.pitch_to_throttle, 3, 0, ADJUSTMENT_NAV_FW_PITCH2THR);
+        return true;
+
+    case OSD_FW_MIN_THROTTLE_DOWN_PITCH_ANGLE:
+        osdDisplayAdjustableDecimalValue(elemPosX, elemPosY, "0TP", 0, (float)mixerConfig()->fwMinThrottleDownPitchAngle / 10, 4, 0, ADJUSTMENT_FW_MIN_THROTTLE_DOWN_PITCH_ANGLE);
         return true;
 
     case OSD_POWER:

@@ -41,6 +41,7 @@
 
 #include "navigation/navigation.h"
 
+#include "flight/mixer.h"
 #include "flight/pid.h"
 
 #include "io/beeper.h"
@@ -248,6 +249,10 @@ static const adjustmentConfig_t defaultAdjustmentConfigs[ADJUSTMENT_FUNCTION_COU
         .adjustmentFunction = ADJUSTMENT_VEL_Z_D,
         .mode = ADJUSTMENT_MODE_STEP,
         .data = { .stepConfig = { .step = 1 }}
+    }, {
+        .adjustmentFunction = ADJUSTMENT_FW_MIN_THROTTLE_DOWN_PITCH_ANGLE,
+        .mode = ADJUSTMENT_MODE_STEP,
+        .data = { .stepConfig = { .step = 5 }}
 #ifdef USE_INFLIGHT_PROFILE_ADJUSTMENT
     }, {
         .adjustmentFunction = ADJUSTMENT_PROFILE,
@@ -557,6 +562,11 @@ static void applyStepAdjustment(controlRateConfig_t *controlRateConfig, uint8_t 
             newValue = constrain((int)pidBank()->pid[PID_VEL_Z].D + delta, 0, 200);
             pidBankMutable()->pid[PID_VEL_Z].D = newValue;
             blackboxLogInflightAdjustmentEvent(ADJUSTMENT_VEL_Z_D, newValue);
+            break;
+        case ADJUSTMENT_FW_MIN_THROTTLE_DOWN_PITCH_ANGLE:
+            newValue = constrain((int)mixerConfig()->fwMinThrottleDownPitchAngle + delta, 0, FW_MIN_THROTTLE_DOWN_PITCH_ANGLE_MAX);
+            mixerConfigMutable()->fwMinThrottleDownPitchAngle = newValue;
+            blackboxLogInflightAdjustmentEvent(ADJUSTMENT_FW_MIN_THROTTLE_DOWN_PITCH_ANGLE, newValue);
             break;
         default:
             break;
