@@ -2488,6 +2488,12 @@ static void osdRefresh(timeUs_t currentTimeUs)
       return;
     }
 
+    if (IS_RC_MODE_ACTIVE(BOXOSD) && (!cmsInMenu)) {
+      displayClearScreen(osdDisplayPort);
+      armState = ARMING_FLAG(ARMED);
+      return;
+    }
+
     // detect arm/disarm
     if (armState != ARMING_FLAG(ARMED)) {
         if (ARMING_FLAG(ARMED)) {
