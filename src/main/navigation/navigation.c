@@ -41,7 +41,6 @@
 #include "fc/runtime_config.h"
 
 #include "flight/imu.h"
-#include "flight/mixer.h"
 #include "flight/pid.h"
 
 #include "io/beeper.h"
@@ -243,14 +242,14 @@ static const navigationFSMStateDescriptor_t navFSM[NAV_STATE_COUNT] = {
     [NAV_STATE_ALTHOLD_INITIALIZE] = {
         .persistentId = NAV_PERSISTENT_ID_ALTHOLD_INITIALIZE,
         .onEntry = navOnEnteringState_NAV_STATE_ALTHOLD_INITIALIZE,
-        .timeoutMs = 10,
-        .stateFlags = NAV_REQUIRE_ANGLE_FW | NAV_REQUIRE_THRTILT,
+        .timeoutMs = 0,
+        .stateFlags = NAV_CTL_ALT | NAV_REQUIRE_ANGLE_FW | NAV_REQUIRE_THRTILT,
         .mapToFlightModes = NAV_ALTHOLD_MODE,
         .mwState = MW_NAV_STATE_NONE,
         .mwError = MW_NAV_ERROR_NONE,
         .onEvent = {
             [NAV_FSM_EVENT_SUCCESS]                     = NAV_STATE_ALTHOLD_IN_PROGRESS,
-            [NAV_FSM_EVENT_TIMEOUT]                     = NAV_STATE_ALTHOLD_INITIALIZE, // re-process the state
+            [NAV_FSM_EVENT_ERROR]                       = NAV_STATE_IDLE,
             [NAV_FSM_EVENT_SWITCH_TO_IDLE]              = NAV_STATE_IDLE,
         }
     },
@@ -266,7 +265,6 @@ static const navigationFSMStateDescriptor_t navFSM[NAV_STATE_COUNT] = {
         .onEvent = {
             [NAV_FSM_EVENT_TIMEOUT]                     = NAV_STATE_ALTHOLD_IN_PROGRESS,    // re-process the state
             [NAV_FSM_EVENT_SWITCH_TO_IDLE]              = NAV_STATE_IDLE,
-            [NAV_FSM_EVENT_SWITCH_TO_ALTHOLD]           = NAV_STATE_ALTHOLD_INITIALIZE,
             [NAV_FSM_EVENT_SWITCH_TO_POSHOLD_3D]        = NAV_STATE_POSHOLD_3D_INITIALIZE,
             [NAV_FSM_EVENT_SWITCH_TO_RTH]               = NAV_STATE_RTH_INITIALIZE,
             [NAV_FSM_EVENT_SWITCH_TO_WAYPOINT]          = NAV_STATE_WAYPOINT_INITIALIZE,
@@ -808,7 +806,6 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_ALTHOLD_INITIALIZE(navi
 {
     const navigationFSMStateFlags_t prevFlags = navGetStateFlags(previousState);
     const bool terrainFollowingToggled = (posControl.flags.isTerrainFollowEnabled != navTerrainFollowingRequested());
-    const motorStatus_e motorStatus = getMotorStatus();
 
     resetGCSFlags();
 
@@ -817,14 +814,12 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_ALTHOLD_INITIALIZE(navi
         resetAltitudeController(navTerrainFollowingRequested());
     }
 
-    if ((motorStatus == MOTOR_STOPPED_USER) || ((prevFlags & NAV_CTL_ALT) == 0) || ((prevFlags & NAV_AUTO_RTH) != 0) || ((prevFlags & NAV_AUTO_WP) != 0) || terrainFollowingToggled) {
+    if (((prevFlags & NAV_CTL_ALT) == 0) || ((prevFlags & NAV_AUTO_RTH) != 0) || ((prevFlags & NAV_AUTO_WP) != 0) || terrainFollowingToggled) {
         setupAltitudeController();
         setDesiredPosition(&navGetCurrentActualPositionAndVelocity()->pos, posControl.actualState.yaw, NAV_POS_UPDATE_Z);  // This will reset surface offset
     }
 
-    if (motorStatus != MOTOR_STOPPED_USER) return NAV_FSM_EVENT_SUCCESS; // user asked to restart the motor, resume ALTHOLD
-
-    return NAV_FSM_EVENT_NONE;
+    return NAV_FSM_EVENT_SUCCESS;
 }
 
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_ALTHOLD_IN_PROGRESS(navigationFSMState_t previousState)
@@ -836,8 +831,6 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_ALTHOLD_IN_PROGRESS(nav
         setDesiredPosition(&navGetCurrentActualPositionAndVelocity()->pos, posControl.actualState.yaw, NAV_POS_UPDATE_Z);
         resetGCSFlags();
     }
-
-    if (getMotorStatus() == MOTOR_STOPPED_USER) return NAV_FSM_EVENT_SWITCH_TO_ALTHOLD; // user asked to stop the motor, pause ALTHOLD by going back to init state
 
     return NAV_FSM_EVENT_NONE;
 }

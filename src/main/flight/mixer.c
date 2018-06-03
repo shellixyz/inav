@@ -364,11 +364,17 @@ void mixTable(const float dT)
             }
 
             // Motor stop handling
-            if (getMotorStatus() != MOTOR_RUNNING) {
-                if (feature(FEATURE_MOTOR_STOP)) {
-                    motor[i] = (feature(FEATURE_3D) ? rxConfig()->midrc : motorConfig()->mincommand);
-                } else {
-                    motor[i] = motorConfig()->minthrottle;
+            if (feature(FEATURE_MOTOR_STOP) && ARMING_FLAG(ARMED)) {
+                bool failsafeMotorStop = failsafeRequiresMotorStop();
+                bool navMotorStop = !failsafeIsActive() && STATE(NAV_MOTOR_STOP_OR_IDLE);
+                bool userMotorStop = !navigationIsFlyingAutonomousMode() && !failsafeIsActive() && (rcData[THROTTLE] < rxConfig()->mincheck);
+                if (failsafeMotorStop || navMotorStop || userMotorStop) {
+                    if (feature(FEATURE_3D)) {
+                        motor[i] = rxConfig()->midrc;
+                    }
+                    else {
+                        motor[i] = motorConfig()->mincommand;
+                    }
                 }
             }
         }
@@ -380,15 +386,4 @@ void mixTable(const float dT)
 
     /* Apply motor acceleration/deceleration limit */
     applyMotorRateLimiting(dT);
-}
-
-motorStatus_e getMotorStatus(void)
-{
-    if (failsafeRequiresMotorStop() || (!failsafeIsActive() && STATE(NAV_MOTOR_STOP_OR_IDLE)))
-        return MOTOR_STOPPED_AUTO;
-
-    if (!navigationIsFlyingAutonomousMode() && !failsafeIsActive() && (rcData[THROTTLE] < rxConfig()->mincheck))
-        return MOTOR_STOPPED_USER;
-
-    return MOTOR_RUNNING;
 }
