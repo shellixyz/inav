@@ -311,6 +311,7 @@ static const navigationFSMStateDescriptor_t navFSM[NAV_STATE_COUNT] = {
     },
     /** CRUISE_2D mode ************************************************/
     [NAV_STATE_CRUISE_2D_INITIALIZE] = {
+        .persistentId = NAV_PERSISTENT_ID_CRUISE_2D_INITIALIZE,
         .onEntry = navOnEnteringState_NAV_STATE_CRUISE_2D_INITIALIZE,
         .timeoutMs = 0,
         .stateFlags = NAV_REQUIRE_ANGLE,
@@ -325,6 +326,7 @@ static const navigationFSMStateDescriptor_t navFSM[NAV_STATE_COUNT] = {
     },
 
     [NAV_STATE_CRUISE_2D_IN_PROGRESS] = {
+        .persistentId = NAV_PERSISTENT_ID_CRUISE_2D_IN_PROGRESS,
         .onEntry = navOnEnteringState_NAV_STATE_CRUISE_2D_IN_PROGRESS,
         .timeoutMs = 10,
         .stateFlags = NAV_CTL_POS | NAV_CTL_YAW | NAV_REQUIRE_ANGLE | NAV_RC_POS | NAV_RC_YAW,
@@ -348,6 +350,7 @@ static const navigationFSMStateDescriptor_t navFSM[NAV_STATE_COUNT] = {
     },
 
         [NAV_STATE_CRUISE_2D_ADJUSTING] = {
+        .persistentId = NAV_PERSISTENT_ID_CRUISE_2D_ADJUSTING,
         .onEntry = navOnEnteringState_NAV_STATE_CRUISE_2D_ADJUSTING,
         .timeoutMs = 10,
         .stateFlags =  NAV_REQUIRE_ANGLE | NAV_RC_POS,
@@ -364,6 +367,7 @@ static const navigationFSMStateDescriptor_t navFSM[NAV_STATE_COUNT] = {
 
         /** CRUISE_3D mode ************************************************/
     [NAV_STATE_CRUISE_3D_INITIALIZE] = {
+        .persistentId = NAV_PERSISTENT_ID_CRUISE_3D_INITIALIZE,
         .onEntry = navOnEnteringState_NAV_STATE_CRUISE_3D_INITIALIZE,
         .timeoutMs = 0,
         .stateFlags = NAV_REQUIRE_ANGLE,
@@ -377,6 +381,7 @@ static const navigationFSMStateDescriptor_t navFSM[NAV_STATE_COUNT] = {
         }
     },
     [NAV_STATE_CRUISE_3D_IN_PROGRESS] = {
+        .persistentId = NAV_PERSISTENT_ID_CRUISE_3D_IN_PROGRESS,
         .onEntry = navOnEnteringState_NAV_STATE_CRUISE_3D_IN_PROGRESS,
         .timeoutMs = 10,
         .stateFlags = NAV_CTL_POS | NAV_CTL_YAW | NAV_CTL_ALT | NAV_REQUIRE_ANGLE | NAV_RC_POS | NAV_RC_YAW | NAV_RC_ALT,
@@ -400,6 +405,7 @@ static const navigationFSMStateDescriptor_t navFSM[NAV_STATE_COUNT] = {
     },
 
         [NAV_STATE_CRUISE_3D_ADJUSTING] = {
+        .persistentId = NAV_PERSISTENT_ID_CRUISE_3D_ADJUSTING,
         .onEntry = navOnEnteringState_NAV_STATE_CRUISE_3D_ADJUSTING,
         .timeoutMs = 10,
         .stateFlags =  NAV_CTL_ALT | NAV_REQUIRE_ANGLE | NAV_RC_POS | NAV_RC_ALT,
