@@ -228,6 +228,14 @@ typedef enum {
     NAV_PERSISTENT_ID_LAUNCH_WAIT                               = 26,
     NAV_PERSISTENT_ID_UNUSED_3                                  = 27, // was NAV_STATE_LAUNCH_MOTOR_DELAY
     NAV_PERSISTENT_ID_LAUNCH_IN_PROGRESS                        = 28,
+
+    NAV_PERSISTENT_ID_CRUISE_2D_INITIALIZE                      = 29,
+    NAV_PERSISTENT_ID_CRUISE_2D_IN_PROGRESS                     = 30,            
+    NAV_PERSISTENT_ID_CRUISE_2D_ADJUSTING                       = 31,              
+
+    NAV_PERSISTENT_ID_CRUISE_3D_INITIALIZE                      = 32,
+    NAV_PERSISTENT_ID_CRUISE_3D_IN_PROGRESS                     = 33,
+    NAV_PERSISTENT_ID_CRUISE_3D_ADJUSTING                       = 34,
 } navigationPersistentId_e;
 
 typedef enum {
@@ -266,12 +274,12 @@ typedef enum {
     NAV_STATE_LAUNCH_WAIT,
     NAV_STATE_LAUNCH_IN_PROGRESS,
 
-    NAV_STATE_CRUISE_2D_INITIALIZE,            // 29
-    NAV_STATE_CRUISE_2D_IN_PROGRESS,           // 30
-    NAV_STATE_CRUISE_2D_ADJUSTING,             // 31
-    NAV_STATE_CRUISE_3D_INITIALIZE,            // 32
-    NAV_STATE_CRUISE_3D_IN_PROGRESS,           // 33
-    NAV_STATE_CRUISE_3D_ADJUSTING,             // 34
+    NAV_STATE_CRUISE_2D_INITIALIZE,       
+    NAV_STATE_CRUISE_2D_IN_PROGRESS,
+    NAV_STATE_CRUISE_2D_ADJUSTING,
+    NAV_STATE_CRUISE_3D_INITIALIZE,
+    NAV_STATE_CRUISE_3D_IN_PROGRESS,
+    NAV_STATE_CRUISE_3D_ADJUSTING,
 
     NAV_STATE_COUNT,
 } navigationFSMState_t;
