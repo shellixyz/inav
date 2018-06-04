@@ -36,8 +36,6 @@ extern bool autoThrottleManuallyIncreased;
 /* Navigation system updates */
 void onNewGPSData(void);
 
-#define MAX_CRUISE_CENTIDPS 2000.0f
-
 #if defined(USE_NAV)
 #if defined(USE_BLACKBOX)
 #define NAV_BLACKBOX
@@ -169,6 +167,7 @@ typedef struct navConfig_s {
         uint16_t launch_max_altitude;        // cm, altitude where to consider launch ended
         uint8_t  launch_climb_angle;         // Target climb angle for launch (deg)
         uint8_t  launch_max_angle;           // Max tilt angle (pitch/roll combined) to consider launch successful. Set to 180 to disable completely [deg]
+        uint8_t  cruise_yaw_rate;            // Max yaw rate (dps) when CRUISE MODE is enabled
     } fw;
 } navConfig_t;
 
