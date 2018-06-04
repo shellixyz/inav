@@ -565,8 +565,8 @@ void applyFixedWingNavigationController(navigationFSMStateFlags_t navStateFlags,
             if (navStateFlags & NAV_CTL_ALT) {
                 if (getMotorStatus() == MOTOR_STOPPED_USER) {
                     // Motor has been stopped by user. Update target altitude and bypass navigation pitch/throttle control
+                    resetFixedWingAltitudeController();
                     setDesiredPosition(&navGetCurrentActualPositionAndVelocity()->pos, posControl.actualState.yaw, NAV_POS_UPDATE_Z);
-                    isPitchAdjustmentValid = false;
                 } else
                     applyFixedWingAltitudeAndThrottleController(currentTimeUs);
             }
