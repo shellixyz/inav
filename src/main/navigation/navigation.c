@@ -76,7 +76,7 @@ PG_DECLARE_ARRAY(navWaypoint_t, NAV_MAX_WAYPOINTS, nonVolatileWaypointList);
 PG_REGISTER_ARRAY(navWaypoint_t, NAV_MAX_WAYPOINTS, nonVolatileWaypointList, PG_WAYPOINT_MISSION_STORAGE, 0);
 #endif
 
-PG_REGISTER_WITH_RESET_TEMPLATE(navConfig_t, navConfig, PG_NAV_CONFIG, 2);
+PG_REGISTER_WITH_RESET_TEMPLATE(navConfig_t, navConfig, PG_NAV_CONFIG, 3);
 
 PG_RESET_TEMPLATE(navConfig_t, navConfig,
     .general = {
@@ -144,7 +144,8 @@ PG_RESET_TEMPLATE(navConfig_t, navConfig,
         .launch_timeout = 5000,                // ms, timeout for launch procedure
         .launch_max_altitude = 0,              // cm, altitude where to consider launch ended
         .launch_climb_angle = 18,              // 18 degrees
-        .launch_max_angle = 45,                 // 45 deg
+        .launch_max_angle = 45,                // 45 deg
+        .cruise_yaw_rate  = 20,                // 20dps
     }
 );
 
@@ -944,9 +945,10 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_2D_IN_PROGRESS(n
     if (posControl.flags.isAdjustingHeading)
     {   timeMs_t timeDifference =currentYawChangeTime - lastYawChangeTime;
         if (timeDifference>100) timeDifference=0; //if adjustment was called long time ago, reset the time difference.
-        float rateTarget = scaleRangef((float)rcCommand[YAW], -500.0f, 500.0f, -MAX_CRUISE_CENTIDPS,MAX_CRUISE_CENTIDPS);
+        float rateTarget = scaleRangef((float)rcCommand[YAW], -500.0f, 500.0f, -DEGREES_TO_CENTIDEGREES(navConfig()->fw.cruise_yaw_rate),DEGREES_TO_CENTIDEGREES(navConfig()->fw.cruise_yaw_rate));
         float centidegsPerIteration = rateTarget/(1000.0f/timeDifference);
         posControl.cruise.cruiseYaw -= centidegsPerIteration;
+        posControl.cruise.cruiseYaw = wrap_36000(posControl.cruise.cruiseYaw);
         DEBUG_SET(DEBUG_CRUISE, 1, CENTIDEGREES_TO_DEGREES(posControl.cruise.cruiseYaw)); 
         lastYawChangeTime = currentYawChangeTime;
     }
@@ -1033,7 +1035,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_3D_IN_PROGRESS(n
     if (posControl.flags.isAdjustingHeading)
     {   timeMs_t timeDifference =currentYawChangeTime - lastYawChangeTime;
         if (timeDifference>100) timeDifference=0; //if adjustment was called long time ago, reset the time difference.
-        float rateTarget = scaleRangef((float)rcCommand[YAW], -500.0f, 500.0f, -MAX_CRUISE_CENTIDPS,MAX_CRUISE_CENTIDPS);
+        float rateTarget = scaleRangef((float)rcCommand[YAW], -500.0f, 500.0f, -DEGREES_TO_CENTIDEGREES(navConfig()->fw.cruise_yaw_rate),DEGREES_TO_CENTIDEGREES(navConfig()->fw.cruise_yaw_rate));
         float centidegsPerIteration = rateTarget/(1000.0f/timeDifference);
         posControl.cruise.cruiseYaw -= centidegsPerIteration;
         posControl.cruise.cruiseYaw = wrap_36000(posControl.cruise.cruiseYaw);
