@@ -116,7 +116,10 @@ typedef struct {
     pidControllerParam_t param;
     pt1Filter_t dterm_filter_state;  // last derivative for low-pass filter
     float integrator;       // integrator value
+    float proportional;       // integrator value
+    float derivative;       // integrator value
     float last_input;       // last input for derivative
+    float output_constrained;
 } pidController_t;
 
 typedef struct {

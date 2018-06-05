@@ -1658,6 +1658,10 @@ float navPidApply3(pidController_t *pid, const float setpoint, const float measu
         }
     }
 
+    pid->proportional = newProportional;
+    pid->derivative = newDerivative;
+    pid->output_constrained = outValConstrained;
+
     return outValConstrained;
 }
 
@@ -1669,10 +1673,13 @@ float navPidApply2(pidController_t *pid, const float setpoint, const float measu
 
 void navPidReset(pidController_t *pid)
 {
+    pid->proportional = 0.0f;
     pid->integrator = 0.0f;
+    pid->derivative = 0.0f;
     pid->last_input = 0.0f;
     pid->dterm_filter_state.state = 0.0f;
     pid->dterm_filter_state.RC = 0.0f;
+    pid->output_constrained = 0.0f;
 }
 
 void navPidInit(pidController_t *pid, float _kP, float _kI, float _kD)

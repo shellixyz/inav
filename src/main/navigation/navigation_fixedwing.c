@@ -139,11 +139,16 @@ static void updateAltitudeVelocityAndPitchController_FW(timeDelta_t deltaMicros)
         /*pt1FilterReset(&velzFilterState, targetPitchAngle);*/
         /*velzFilterReset = false;*/
     /*} else*/
-        targetPitchAngle = pt1FilterApply4(&velzFilterState, targetPitchAngle, NAV_FW_PITCH_CUTOFF_FREQENCY_HZ, US2S(deltaMicros));
+    DEBUG_SET(DEBUG_ALTHOLD, 3, lrintf(targetPitchAngle * 100));
+    targetPitchAngle = pt1FilterApply4(&velzFilterState, targetPitchAngle, NAV_FW_PITCH_CUTOFF_FREQENCY_HZ, US2S(deltaMicros));
 
     // Reconstrain pitch angle ( >0 - climb, <0 - dive)
     targetPitchAngle = constrainf(targetPitchAngle, minDiveDeciDeg, maxClimbDeciDeg);
     posControl.rcAdjustment[PITCH] = targetPitchAngle;
+
+    DEBUG_SET(DEBUG_ALTHOLD, 0, posControl.desiredState.pos.z);
+    DEBUG_SET(DEBUG_ALTHOLD, 1, navGetCurrentActualPositionAndVelocity()->pos.z);
+    DEBUG_SET(DEBUG_ALTHOLD, 2, lrintf(targetPitchAngle * 100));
 }
 
 void applyFixedWingAltitudeAndThrottleController(timeUs_t currentTimeUs)
