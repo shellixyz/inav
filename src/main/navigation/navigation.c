@@ -929,11 +929,13 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_2D_IN_PROGRESS(n
         lastYawChangeTime = currentYawChangeTime;
     }
 
+    uint32_t distance = gpsSol.groundSpeed*60; //next WP to be reached in 60s [cm]
+
     if ((previousState == NAV_STATE_CRUISE_2D_INITIALIZE) || (previousState == NAV_STATE_CRUISE_2D_ADJUSTING)  || posControl.flags.isAdjustingHeading) {
-        calculateFarAwayTarget(&posControl.cruise.cruiseTargetPos, posControl.cruise.cruiseYaw, 50000);
+        calculateFarAwayTarget(&posControl.cruise.cruiseTargetPos, posControl.cruise.cruiseYaw, distance);
         DEBUG_SET(DEBUG_CRUISE, 2, 1);
-    } else if (calculateDistanceToDestination(&posControl.cruise.cruiseTargetPos) < 10000) {
-        calculateNewCruiseTarget(&posControl.cruise.cruiseTargetPos, posControl.cruise.cruiseYaw, 50000);
+    } else if (calculateDistanceToDestination(&posControl.cruise.cruiseTargetPos) <= (navConfig()->fw.loiter_radius * 1.10f)) { //10% margin
+        calculateNewCruiseTarget(&posControl.cruise.cruiseTargetPos, posControl.cruise.cruiseYaw, distance);
         DEBUG_SET(DEBUG_CRUISE, 2, 2);
     }
 
@@ -1019,11 +1021,13 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_3D_IN_PROGRESS(n
         lastYawChangeTime = currentYawChangeTime;
     }
 
-    if ((previousState == NAV_STATE_CRUISE_3D_INITIALIZE) || (previousState == NAV_STATE_CRUISE_3D_ADJUSTING) || posControl.flags.isAdjustingHeading) {
-        calculateFarAwayTarget(&posControl.cruise.cruiseTargetPos, posControl.cruise.cruiseYaw, 50000);
+    uint32_t distance = gpsSol.groundSpeed*60; //next WP to be reached in 60s [cm]
+
+    if ((previousState == NAV_STATE_CRUISE_3D_INITIALIZE) || (previousState == NAV_STATE_CRUISE_3D_ADJUSTING)  || posControl.flags.isAdjustingHeading) {
+        calculateFarAwayTarget(&posControl.cruise.cruiseTargetPos, posControl.cruise.cruiseYaw, distance);
         DEBUG_SET(DEBUG_CRUISE, 2, 1);
-    } else if (calculateDistanceToDestination(&posControl.cruise.cruiseTargetPos) < 10000) {
-        calculateNewCruiseTarget(&posControl.cruise.cruiseTargetPos, posControl.cruise.cruiseYaw, 50000);
+    } else if (calculateDistanceToDestination(&posControl.cruise.cruiseTargetPos) <= (navConfig()->fw.loiter_radius * 1.10f)) { //10% margin
+        calculateNewCruiseTarget(&posControl.cruise.cruiseTargetPos, posControl.cruise.cruiseYaw, distance);
         DEBUG_SET(DEBUG_CRUISE, 2, 2);
     }
 
