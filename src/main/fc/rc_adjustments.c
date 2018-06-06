@@ -502,31 +502,37 @@ static void applyStepAdjustment(controlRateConfig_t *controlRateConfig, uint8_t 
             newValue = constrain((int)pidBank()->pid[PID_POS_XY].P + delta, 0, 200);
             pidBankMutable()->pid[PID_POS_XY].P = newValue;
             blackboxLogInflightAdjustmentEvent(ADJUSTMENT_POS_XY_P, newValue);
+            navigationUsePIDs();
             break;
         case ADJUSTMENT_POS_XY_I:
             newValue = constrain((int)pidBank()->pid[PID_POS_XY].I + delta, 0, 200);
             pidBankMutable()->pid[PID_POS_XY].I = newValue;
             blackboxLogInflightAdjustmentEvent(ADJUSTMENT_POS_XY_I, newValue);
+            navigationUsePIDs();
             break;
         case ADJUSTMENT_POS_XY_D:
             newValue = constrain((int)pidBank()->pid[PID_POS_XY].D + delta, 0, 200);
             pidBankMutable()->pid[PID_POS_XY].D = newValue;
             blackboxLogInflightAdjustmentEvent(ADJUSTMENT_POS_XY_D, newValue);
+            navigationUsePIDs();
             break;
         case ADJUSTMENT_POS_Z_P:
             newValue = constrain((int)pidBank()->pid[PID_POS_Z].P + delta, 0, 200);
             pidBankMutable()->pid[PID_POS_Z].P = newValue;
             blackboxLogInflightAdjustmentEvent(ADJUSTMENT_POS_Z_P, newValue);
+            navigationUsePIDs();
             break;
         case ADJUSTMENT_POS_Z_I:
             newValue = constrain((int)pidBank()->pid[PID_POS_Z].I + delta, 0, 200);
             pidBankMutable()->pid[PID_POS_Z].I = newValue;
             blackboxLogInflightAdjustmentEvent(ADJUSTMENT_POS_Z_I, newValue);
+            navigationUsePIDs();
             break;
         case ADJUSTMENT_POS_Z_D:
             newValue = constrain((int)pidBank()->pid[PID_POS_Z].D + delta, 0, 200);
             pidBankMutable()->pid[PID_POS_Z].D = newValue;
             blackboxLogInflightAdjustmentEvent(ADJUSTMENT_POS_Z_D, newValue);
+            navigationUsePIDs();
             break;
         case ADJUSTMENT_HEADING_P:
             newValue = constrain((int)pidBank()->pid[PID_HEADING].P + delta, 0, 200);
@@ -537,31 +543,37 @@ static void applyStepAdjustment(controlRateConfig_t *controlRateConfig, uint8_t 
             newValue = constrain((int)pidBank()->pid[PID_VEL_XY].P + delta, 0, 200);
             pidBankMutable()->pid[PID_VEL_XY].P = newValue;
             blackboxLogInflightAdjustmentEvent(ADJUSTMENT_VEL_XY_P, newValue);
+            navigationUsePIDs();
             break;
         case ADJUSTMENT_VEL_XY_I:
             newValue = constrain((int)pidBank()->pid[PID_VEL_XY].I + delta, 0, 200);
             pidBankMutable()->pid[PID_VEL_XY].I = newValue;
             blackboxLogInflightAdjustmentEvent(ADJUSTMENT_VEL_XY_I, newValue);
+            navigationUsePIDs();
             break;
         case ADJUSTMENT_VEL_XY_D:
             newValue = constrain((int)pidBank()->pid[PID_VEL_XY].D + delta, 0, 200);
             pidBankMutable()->pid[PID_VEL_XY].D = newValue;
             blackboxLogInflightAdjustmentEvent(ADJUSTMENT_VEL_XY_D, newValue);
+            navigationUsePIDs();
             break;
         case ADJUSTMENT_VEL_Z_P:
             newValue = constrain((int)pidBank()->pid[PID_VEL_Z].P + delta, 0, 200);
             pidBankMutable()->pid[PID_VEL_Z].P = newValue;
             blackboxLogInflightAdjustmentEvent(ADJUSTMENT_VEL_Z_P, newValue);
+            navigationUsePIDs();
             break;
         case ADJUSTMENT_VEL_Z_I:
             newValue = constrain((int)pidBank()->pid[PID_VEL_Z].I + delta, 0, 200);
             pidBankMutable()->pid[PID_VEL_Z].I = newValue;
             blackboxLogInflightAdjustmentEvent(ADJUSTMENT_VEL_Z_I, newValue);
+            navigationUsePIDs();
             break;
         case ADJUSTMENT_VEL_Z_D:
             newValue = constrain((int)pidBank()->pid[PID_VEL_Z].D + delta, 0, 200);
             pidBankMutable()->pid[PID_VEL_Z].D = newValue;
             blackboxLogInflightAdjustmentEvent(ADJUSTMENT_VEL_Z_D, newValue);
+            navigationUsePIDs();
             break;
         case ADJUSTMENT_FW_MIN_THROTTLE_DOWN_PITCH_ANGLE:
             newValue = constrain((int)mixerConfig()->fwMinThrottleDownPitchAngle + delta, 0, FW_MIN_THROTTLE_DOWN_PITCH_ANGLE_MAX);
