@@ -3126,6 +3126,7 @@ int32_t navigationGetHomeHeading(void)
 // returns m/s
 float calculateAverageSpeed() {
     return (float)getTotalTravelDistance() / (getFlightTime() * 100);
+}
 
 const navigationPIDControllers_t* getNavigationPIDControllers(void) {
     return &posControl.pids;
