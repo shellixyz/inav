@@ -683,13 +683,12 @@ static const char * navigationStateMessage(void)
         case MW_NAV_STATE_LAND_START:
             return OSD_MESSAGE_STR("STARTING EMERGENCY LANDING");
         case MW_NAV_STATE_LAND_IN_PROGRESS:
-            if (!navigationRTHAllowsLanding()) {
-                if (STATE(FIXED_WING)) {
-                    return OSD_MESSAGE_STR("LOITERING AROUND HOME");
-                }
-                return OSD_MESSAGE_STR("HOVERING");
-            }
             return OSD_MESSAGE_STR("LANDING");
+        case MW_NAV_STATE_HOVER_ABOVE_HOME:
+            if (STATE(FIXED_WING))
+                return OSD_MESSAGE_STR("LOITERING AROUND HOME");
+            else
+                return OSD_MESSAGE_STR("HOVERING");
         case MW_NAV_STATE_LANDED:
             return OSD_MESSAGE_STR("LANDED");
         case MW_NAV_STATE_LAND_SETTLE:
@@ -2482,6 +2481,12 @@ static void osdShowArmed(void)
 
 static void osdRefresh(timeUs_t currentTimeUs)
 {
+    if (IS_RC_MODE_ACTIVE(BOXOSD) && (!cmsInMenu)) {
+      displayClearScreen(osdDisplayPort);
+      armState = ARMING_FLAG(ARMED);
+      return;
+    }
+
     if (IS_RC_MODE_ACTIVE(BOXOSD) && (!cmsInMenu)) {
       displayClearScreen(osdDisplayPort);
       armState = ARMING_FLAG(ARMED);
