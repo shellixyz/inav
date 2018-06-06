@@ -194,9 +194,12 @@ static const blackboxDeltaFieldDefinition_t blackboxMainFields[] = {
     {"axisD",       0, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(PREVIOUS),      .Pencode = ENCODING(SIGNED_VB), CONDITION(NONZERO_PID_D_0)},
     {"axisD",       1, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(PREVIOUS),      .Pencode = ENCODING(SIGNED_VB), CONDITION(NONZERO_PID_D_1)},
     {"axisD",       2, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(PREVIOUS),      .Pencode = ENCODING(SIGNED_VB), CONDITION(NONZERO_PID_D_2)},
-    {"fwAltP",       -1, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(PREVIOUS),      .Pencode = ENCODING(SIGNED_VB), CONDITION(ALWAYS)},
-    {"fwAltI",       -1, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(PREVIOUS),      .Pencode = ENCODING(SIGNED_VB), CONDITION(ALWAYS)},
-    {"fwAltD",       -1, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(PREVIOUS),      .Pencode = ENCODING(SIGNED_VB), CONDITION(ALWAYS)},
+    {"fwAltP",     -1, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(PREVIOUS),      .Pencode = ENCODING(SIGNED_VB), CONDITION(FIXED_WING_NAV)},
+    {"fwAltI",     -1, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(PREVIOUS),      .Pencode = ENCODING(SIGNED_VB), CONDITION(FIXED_WING_NAV)},
+    {"fwAltD",     -1, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(PREVIOUS),      .Pencode = ENCODING(SIGNED_VB), CONDITION(FIXED_WING_NAV)},
+    {"fwNavP",     -1, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(PREVIOUS),      .Pencode = ENCODING(SIGNED_VB), CONDITION(FIXED_WING_NAV)},
+    {"fwNavI",     -1, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(PREVIOUS),      .Pencode = ENCODING(SIGNED_VB), CONDITION(FIXED_WING_NAV)},
+    {"fwNavD",     -1, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(PREVIOUS),      .Pencode = ENCODING(SIGNED_VB), CONDITION(FIXED_WING_NAV)},
     /* rcData are encoded together as a group: */
     {"rcData",      0, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(PREVIOUS),      .Pencode = ENCODING(TAG8_4S16), CONDITION(ALWAYS)},
     {"rcData",      1, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(PREVIOUS),      .Pencode = ENCODING(TAG8_4S16), CONDITION(ALWAYS)},
@@ -342,6 +345,7 @@ typedef struct blackboxMainState_s {
     int32_t axisPID_Setpoint[XYZ_AXIS_COUNT];
 
     int32_t fwAltPID[3];
+    int32_t fwNavPID[3];
 
     int16_t rcData[4];
     int16_t rcCommand[4];
@@ -521,6 +525,13 @@ static bool testBlackboxConditionUncached(FlightLogFieldCondition condition)
         return false;
 #endif
 
+    case FLIGHT_LOG_FIELD_CONDITION_FIXED_WING_NAV:
+#ifdef USE_NAV
+        return STATE(FIXED_WING);
+#else
+        return false;
+#endif
+
     case FLIGHT_LOG_FIELD_CONDITION_RSSI:
         return rxConfig()->rssi_channel > 0 || feature(FEATURE_RSSI_ADC);
 
@@ -607,7 +618,10 @@ static void writeIntraframe(void)
         }
     }
 
-    blackboxWriteSignedVBArray(blackboxCurrent->fwAltPID, 3);
+    if (testBlackboxCondition(CONDITION(FIXED_WING_NAV))) {
+        blackboxWriteSignedVBArray(blackboxCurrent->fwAltPID, 3);
+        blackboxWriteSignedVBArray(blackboxCurrent->fwNavPID, 3);
+    }
 
     // Write raw stick positions
     blackboxWriteSigned16VBArray(blackboxCurrent->rcData, 4);
@@ -781,8 +795,15 @@ static void writeInterframe(void)
         }
     }
 
-    arraySubInt32(deltas, blackboxCurrent->fwAltPID, blackboxLast->fwAltPID, 3);
-    blackboxWriteSignedVBArray(deltas, 3);
+    if (testBlackboxCondition(CONDITION(FIXED_WING_NAV))) {
+
+        arraySubInt32(deltas, blackboxCurrent->fwAltPID, blackboxLast->fwAltPID, 3);
+        blackboxWriteSignedVBArray(deltas, 3);
+
+        arraySubInt32(deltas, blackboxCurrent->fwNavPID, blackboxLast->fwNavPID, 3);
+        blackboxWriteSignedVBArray(deltas, 3);
+
+    }
 
     /*
      * RC tends to stay the same or fairly small for many frames at a time, so use an encoding that
@@ -1147,9 +1168,19 @@ static void loadMainState(timeUs_t currentTimeUs)
 #endif
     }
 
-    blackboxCurrent->fwAltPID[0] = lrintf(posControl.pids.fw_alt.proportional * 100);
-    blackboxCurrent->fwAltPID[1] = lrintf(posControl.pids.fw_alt.integrator * 100);
-    blackboxCurrent->fwAltPID[2] = lrintf(posControl.pids.fw_alt.derivative * 100);
+#ifdef USE_NAV
+    if (STATE(FIXED_WING)) {
+        const navigationPIDControllers_t *nav_pids = getNavigationPIDControllers();
+
+        blackboxCurrent->fwAltPID[0] = lrintf(nav_pids->fw_alt.proportional * 100);
+        blackboxCurrent->fwAltPID[1] = lrintf(nav_pids->fw_alt.integrator * 100);
+        blackboxCurrent->fwAltPID[2] = lrintf(nav_pids->fw_alt.derivative * 100);
+
+        blackboxCurrent->fwNavPID[0] = lrintf(nav_pids->fw_nav.proportional * 100);
+        blackboxCurrent->fwNavPID[1] = lrintf(nav_pids->fw_nav.integrator * 100);
+        blackboxCurrent->fwNavPID[2] = lrintf(nav_pids->fw_nav.derivative * 100);
+    }
+#endif
 
     for (int i = 0; i < 4; i++) {
         blackboxCurrent->rcData[i] = rcData[i];
