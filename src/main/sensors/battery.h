@@ -71,6 +71,8 @@ typedef struct batteryConfig_s {
 
     bool impedanceFiltering;
     bool sagCompVBatFiltering;
+    bool sag_use_raw_values;
+    bool sag_continue;
 
     struct {
         uint16_t speed;         // cm/s

@@ -112,6 +112,8 @@ PG_RESET_TEMPLATE(batteryConfig_t, batteryConfig,
 
     .impedanceFiltering = false,
     .sagCompVBatFiltering = false,
+    .sag_use_raw_values = false,
+    .sag_continue = false,
 
     .cruise = {
         .speed = 0,
@@ -394,7 +396,15 @@ void sagCompensatedVBatUpdate(timeUs_t currentTime)
     static pt1Filter_t powerSupplyImpedanceFilterState;
     static pt1Filter_t sagCompVBatFilterState;
     static pt1Filter_t sagCompVBatFilterState2;
+    uint16_t l_vbat, l_amperage;
 
+    if (batteryConfig()->sag_use_raw_values) {
+        l_amperage = currentSensorToCentiamps(amperageLatestADC);
+        l_vbat = batteryAdcToVoltage(vbatLatestADC);
+    } else {
+        l_amperage = amperage;
+        l_vbat = vbat;
+    }
 
     if (batteryState == BATTERY_NOT_PRESENT) {
 
@@ -409,24 +419,26 @@ void sagCompensatedVBatUpdate(timeUs_t currentTime)
 
     } else {
 
-        if (cmpTimeUs(currentTime, recordTimestamp) > 20000000)
+        if (cmpTimeUs(currentTime, recordTimestamp) > 5000000)
             recordTimestamp = 0;
 
         if (!recordTimestamp) {
-            amperageRecord = amperage;
-            vbatRecord = vbat;
+            amperageRecord = l_amperage;
+            vbatRecord = l_vbat;
             recordTimestamp = currentTime;
         /*} else if (ABS(amperage - amperageRecord) > 100) {*/
-        } else if ((amperage - amperageRecord >= 400) && ((int16_t)vbatRecord - vbat >= 10)) {
+        } else if ((l_amperage - amperageRecord >= 400) && ((int16_t)vbatRecord - l_vbat >= 10)) {
             /*powerSupplyImpedanceRaw = (int32_t)(vbatRecord - vbat) * 1000 / (amperage - amperageRecord);*/
-            uint16_t powerSupplyImpedanceSample = (int32_t)(vbatRecord - vbat) * 1000 / (amperage - amperageRecord);
+            uint16_t powerSupplyImpedanceSample = (int32_t)(vbatRecord - l_vbat) * 1000 / (l_amperage - amperageRecord);
             if (batteryConfig()->impedanceFiltering)
                 powerSupplyImpedance = pt1FilterApply4(&powerSupplyImpedanceFilterState, powerSupplyImpedanceSample, VBATT_LPF_FREQ, cmpTimeUs(currentTime, lastUpdate) * 1e-6f);
             else
                 powerSupplyImpedance = powerSupplyImpedanceSample;
-            amperageRecord = amperage;
-            vbatRecord = vbat;
-            recordTimestamp = currentTime;
+            if (!batteryConfig()->sag_continue) {
+                amperageRecord = l_amperage;
+                vbatRecord = l_vbat;
+                recordTimestamp = currentTime;
+            }
         }
 
         uint16_t sagCompensatedVBatSample = vbat + powerSupplyImpedance * amperage / 1000;

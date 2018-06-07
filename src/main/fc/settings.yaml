@@ -584,6 +584,10 @@ groups:
       - name: vbat_sag_comp_filtering
         field: sagCompVBatFiltering
         type: bool
+      - name: sag_use_raw_values
+        type: bool
+      - name: sag_continue
+        type: bool
       - name: cruise_speed
         field: cruise.speed
         min: 0
