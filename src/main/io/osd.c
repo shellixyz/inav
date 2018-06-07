@@ -942,7 +942,7 @@ static void osdDrawMap(int referenceHeading, uint8_t referenceSym, uint8_t cente
 
     if (STATE(GPS_FIX) && poiDistance > scale) {
 
-        int directionToPoi = osdGetHeadingAngle(poiDirection + referenceHeading);
+        int directionToPoi = osdGetHeadingAngle(poiDirection - referenceHeading);
         float poiAngle = DEGREES_TO_RADIANS(directionToPoi);
         float poiSin = sin_approx(poiAngle);
         float poiCos = cos_approx(poiAngle);
