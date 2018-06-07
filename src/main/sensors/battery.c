@@ -372,8 +372,17 @@ void powerMeterUpdate(int32_t timeDelta)
     static int64_t mWhDrawnRaw = 0;
     uint32_t power_mW = amperage * vbat / 10;
     power = amperage * vbat / 100; // power unit is cW (0.01W resolution)
-    mWhDrawnRaw += (power_mW * timeDelta) / 10000;
+    /*mWhDrawnRaw += (power_mW * timeDelta) / 10000 + sq(amperage) / 10000 * powerSupplyImpedance / 1000 * 100;*/
+    mWhDrawnRaw += (10 * (power_mW * timeDelta) + sq(amperage) * powerSupplyImpedance) / 100000;
     mWhDrawn = mWhDrawnRaw / (3600 * 100);
+}
+
+// calculate true power including heat losses in power supply (battery + wires)
+// power is in cW (0.01W)
+// batteryWarningVoltage is in cV (0.01V)
+int32_t heatLossesCompensatedPower(int32_t power)
+{
+    return power + sq(power * 100 / batteryWarningVoltage) * powerSupplyImpedance / 100000;
 }
 
 void sagCompensatedVBatUpdate(timeUs_t currentTime)

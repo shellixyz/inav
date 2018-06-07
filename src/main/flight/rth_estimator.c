@@ -78,7 +78,7 @@ float estimateRTHAltitudeChangePower(float altitudeChange) {
     uint16_t altitudeChangeThrottle = navConfig()->fw.cruise_throttle - RTHAltitudeChangePitchAngle(altitudeChange) * navConfig()->fw.pitch_to_throttle;
     altitudeChangeThrottle = constrain(altitudeChangeThrottle, navConfig()->fw.min_throttle, navConfig()->fw.max_throttle);
     const float altitudeChangeThrToCruiseThrRatio = (float)(altitudeChangeThrottle - motorConfig()->minthrottle) / (navConfig()->fw.cruise_throttle - motorConfig()->minthrottle);
-    return (float)(batteryConfig()->idle_power + batteryConfig()->cruise.power * altitudeChangeThrToCruiseThrRatio) / 100;
+    return (float)(batteryConfig()->idle_power + heatLossesCompensatedPower(batteryConfig()->cruise.power) * altitudeChangeThrToCruiseThrRatio) / 100;
 }
 
 // altitudeChange is in m
@@ -155,7 +155,7 @@ int32_t calculateRemainingEnergyBeforeRTH() {
         return -2; // wind is too strong
 
     const uint32_t time_to_home = RTH_distance / MAX(RTH_speed, 0.1); // seconds
-    const uint32_t energy_to_home = estimateRTHAltitudeChangeEnergy(RTH_altitude_change, verticalWindSpeed) * 1000 + batteryConfig()->cruise.power * time_to_home / 360; // mWh
+    const uint32_t energy_to_home = estimateRTHAltitudeChangeEnergy(RTH_altitude_change, verticalWindSpeed) * 1000 + heatLossesCompensatedPower(batteryConfig()->cruise.power) * time_to_home / 360; // mWh
     const uint32_t energy_margin_abs = (batteryConfig()->capacity.value - batteryConfig()->capacity.critical) * batteryConfig()->rth_energy_margin / 100; // mWh
     const int32_t remaining_energy_before_rth = getBatteryRemainingCapacity() - energy_margin_abs - energy_to_home; // mWh
 
