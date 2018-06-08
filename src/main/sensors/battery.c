@@ -451,7 +451,7 @@ void sagCompensatedVBatUpdate(timeUs_t currentTime)
     }
 
     sagCompVBatFilterState2.RC = sagCompensatedVBat < sagCompVBatFilterState2.state ? 15 : 1500;
-    uint16_t filteredSagCompVBat = pt1FilterApply3(&sagCompVBatFilterState2, sagCompensatedVBat, cmpTimeUs(currentTime, lastUpdate) * 1e-6f);
+    uint16_t filteredSagCompVBat = lrintf(pt1FilterApply3(&sagCompVBatFilterState2, sagCompensatedVBat, cmpTimeUs(currentTime, lastUpdate) * 1e-6f));
 
     DEBUG_SET(DEBUG_SAG_COMP_VOLTAGE, 0, powerSupplyImpedance);
     DEBUG_SET(DEBUG_SAG_COMP_VOLTAGE, 1, sagCompensatedVBat);
