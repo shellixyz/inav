@@ -372,10 +372,9 @@ void currentMeterUpdate(int32_t timeDelta)
 void powerMeterUpdate(int32_t timeDelta)
 {
     static int64_t mWhDrawnRaw = 0;
-    uint32_t power_mW = amperage * vbat / 10;
+    int32_t power_mW = amperage * vbat / 10 + sq((int64_t)amperage) * powerSupplyImpedance / 10000;
     power = amperage * vbat / 100; // power unit is cW (0.01W resolution)
-    /*mWhDrawnRaw += (power_mW * timeDelta) / 10000 + sq(amperage) / 10000 * powerSupplyImpedance / 1000 * 100;*/
-    mWhDrawnRaw += (10 * (power_mW * timeDelta) + sq(amperage) * powerSupplyImpedance) / 100000;
+    mWhDrawnRaw += (int64_t)power_mW * timeDelta / 10000;
     mWhDrawn = mWhDrawnRaw / (3600 * 100);
 }
 
