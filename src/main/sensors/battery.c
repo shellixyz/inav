@@ -392,9 +392,10 @@ void sagCompensatedVBatUpdate(timeUs_t currentTime)
     static int32_t amperageRecord;
     static uint16_t vbatRecord;
     static timeUs_t lastUpdate = 0;
-    static pt1Filter_t powerSupplyImpedanceFilterState;
-    static pt1Filter_t sagCompVBatFilterState;
-    static pt1Filter_t sagCompVBatFilterState2;
+    static pt1Filter_t powerSupplyImpedanceFilterState = PT1_FILTER_INITIALIZER;
+    static pt1Filter_t sagCompVBatFilterState = PT1_FILTER_INITIALIZER;
+    static pt1Filter_t sagCompVBatFilterState2 = PT1_FILTER_INITIALIZER;
+    static batteryState_e last_battery_state = BATTERY_NOT_PRESENT;
     uint16_t l_vbat, l_amperage;
 
     if (batteryConfig()->sag_use_raw_values) {
@@ -405,17 +406,17 @@ void sagCompensatedVBatUpdate(timeUs_t currentTime)
         l_vbat = vbat;
     }
 
-    if (batteryState == BATTERY_NOT_PRESENT) {
-
-        recordTimestamp = 0;
-        powerSupplyImpedance = 0;
+    if ((batteryState != BATTERY_NOT_PRESENT) && (last_battery_state == BATTERY_NOT_PRESENT)) {
         pt1FilterReset(&powerSupplyImpedanceFilterState, 0);
         pt1FilterReset(&sagCompVBatFilterState, vbat);
-        pt1FilterInitRC(&sagCompVBatFilterState2, 10, 0);
         pt1FilterReset(&sagCompVBatFilterState2, vbat);
-
         sagCompensatedVBat = vbat;
+    }
 
+    if (batteryState == BATTERY_NOT_PRESENT) {
+        recordTimestamp = 0;
+        powerSupplyImpedance = 0;
+        sagCompensatedVBat = 0;
     } else {
 
         if (cmpTimeUs(currentTime, recordTimestamp) > 5000000)
@@ -449,13 +450,17 @@ void sagCompensatedVBatUpdate(timeUs_t currentTime)
         sagCompensatedVBat = MIN(batteryFullVoltage, sagCompensatedVBat);
     }
 
+    sagCompVBatFilterState2.RC = sagCompensatedVBat < sagCompVBatFilterState2.state ? 15 : 1500;
+    uint16_t filteredSagCompVBat = pt1FilterApply3(&sagCompVBatFilterState2, sagCompensatedVBat, cmpTimeUs(currentTime, lastUpdate) * 1e-6f);
+
     DEBUG_SET(DEBUG_SAG_COMP_VOLTAGE, 0, powerSupplyImpedance);
     DEBUG_SET(DEBUG_SAG_COMP_VOLTAGE, 1, sagCompensatedVBat);
-    DEBUG_SET(DEBUG_SAG_COMP_VOLTAGE, 2, pt1FilterApply3(&sagCompVBatFilterState2, sagCompensatedVBat, cmpTimeUs(currentTime, lastUpdate) * 1e-6f));
+    DEBUG_SET(DEBUG_SAG_COMP_VOLTAGE, 2, filteredSagCompVBat);
 
     // TODO: use unfiltered VBAT and amperage ?
     // TODO: filter sagCompensatedVBat
     lastUpdate = currentTime;
+    last_battery_state = batteryState;
 }
 
 uint8_t calculateBatteryPercentage(void)
