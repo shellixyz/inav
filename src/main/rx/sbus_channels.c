@@ -86,9 +86,10 @@ static uint16_t sbusChannelsReadRawRC(const rxRuntimeConfig_t *rxRuntimeConfig, 
 
 void sbusChannelsInit(const rxConfig_t *rxConfig, rxRuntimeConfig_t *rxRuntimeConfig)
 {
+    UNUSED(rxConfig);
     rxRuntimeConfig->rcReadRawFn = sbusChannelsReadRawRC;
     for (int b = 0; b < SBUS_MAX_CHANNEL; b++) {
-        rxRuntimeConfig->channelData[b] = (16 * rxConfig->midrc) / 10 - 1408;
+        rxRuntimeConfig->channelData[b] = (16 * PWM_RANGE_MIDDLE) / 10 - 1408;
     }
 }
 #endif
