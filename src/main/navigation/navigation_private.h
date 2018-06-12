@@ -180,7 +180,7 @@ typedef enum {
     NAV_FSM_EVENT_SWITCH_TO_RTH_LANDING = NAV_FSM_EVENT_STATE_SPECIFIC_1,
     NAV_FSM_EVENT_SWITCH_TO_WAYPOINT_RTH_LAND = NAV_FSM_EVENT_STATE_SPECIFIC_1,
     NAV_FSM_EVENT_SWITCH_TO_WAYPOINT_FINISHED = NAV_FSM_EVENT_STATE_SPECIFIC_2,
-    
+
     NAV_FSM_EVENT_SWITCH_TO_CRUISE_2D,
     NAV_FSM_EVENT_SWITCH_TO_CRUISE_3D,
     NAV_FSM_EVENT_SWITCH_TO_CRUISE_ADJ,
@@ -230,8 +230,8 @@ typedef enum {
     NAV_PERSISTENT_ID_LAUNCH_IN_PROGRESS                        = 28,
 
     NAV_PERSISTENT_ID_CRUISE_2D_INITIALIZE                      = 29,
-    NAV_PERSISTENT_ID_CRUISE_2D_IN_PROGRESS                     = 30,            
-    NAV_PERSISTENT_ID_CRUISE_2D_ADJUSTING                       = 31,              
+    NAV_PERSISTENT_ID_CRUISE_2D_IN_PROGRESS                     = 30,
+    NAV_PERSISTENT_ID_CRUISE_2D_ADJUSTING                       = 31,
 
     NAV_PERSISTENT_ID_CRUISE_3D_INITIALIZE                      = 32,
     NAV_PERSISTENT_ID_CRUISE_3D_IN_PROGRESS                     = 33,
@@ -274,7 +274,7 @@ typedef enum {
     NAV_STATE_LAUNCH_WAIT,
     NAV_STATE_LAUNCH_IN_PROGRESS,
 
-    NAV_STATE_CRUISE_2D_INITIALIZE,       
+    NAV_STATE_CRUISE_2D_INITIALIZE,
     NAV_STATE_CRUISE_2D_IN_PROGRESS,
     NAV_STATE_CRUISE_2D_ADJUSTING,
     NAV_STATE_CRUISE_3D_INITIALIZE,
@@ -363,7 +363,7 @@ typedef struct {
 
     uint32_t                    homeDistance;   // cm
     int32_t                     homeDirection;  // deg*100
-    
+
     /* Cruise */
     navCruise_t                 cruise;
 
