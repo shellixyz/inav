@@ -168,6 +168,17 @@ PG_RESET_TEMPLATE(pidProfile_t, pidProfile,
             }
         },
 
+        .nav_filtering = {
+            .throttle_lpf_hz = 4,
+            .pitch_lpf_hz = 2,
+            .roll_lpf_hz = 10,
+            .pitch_dterm_tau = F_CUT_TO_RC(10),
+            .roll_dterm_tau = F_CUT_TO_RC(10)
+        },
+
+        .nav_roll_iterm_angle_limit = 0,
+        .nav_pitch_iterm_angle_limit = 0,
+
         .acc_soft_lpf_hz = 15,
         .dterm_soft_notch_hz = 0,
         .dterm_soft_notch_cutoff = 1,

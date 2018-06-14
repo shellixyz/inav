@@ -75,9 +75,22 @@ typedef struct pidBank_s {
     pid8_t  pid[PID_ITEM_COUNT];
 } pidBank_t;
 
+typedef struct {
+    uint8_t throttle_lpf_hz;
+    uint8_t pitch_lpf_hz;
+    uint8_t roll_lpf_hz;
+    float pitch_dterm_tau;
+    float roll_dterm_tau;
+} navFilterSettings_t;
+
 typedef struct pidProfile_s {
     pidBank_t bank_fw;
     pidBank_t bank_mc;
+
+    navFilterSettings_t nav_filtering;
+
+    uint16_t nav_roll_iterm_angle_limit;
+    uint16_t nav_pitch_iterm_angle_limit;
 
     uint16_t dterm_soft_notch_hz;           // Dterm Notch frequency
     uint16_t dterm_soft_notch_cutoff;       // Dterm Notch Cutoff frequency

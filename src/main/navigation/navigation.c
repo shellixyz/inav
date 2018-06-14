@@ -1624,7 +1624,7 @@ float navPidApply3(pidController_t *pid, const float setpoint, const float measu
         pid->last_input = measurement;
     }
 
-    newDerivative = pid->param.kD * pt1FilterApply4(&pid->dterm_filter_state, newDerivative, NAV_DTERM_CUT_HZ, dt) * gainScaler;
+    newDerivative = pid->param.kD * pt1FilterApply3(&pid->dterm_filter_state, newDerivative, dt) * gainScaler;
 
     if (pidFlags & PID_ZERO_INTEGRATOR) {
         pid->integrator = 0.0f;
@@ -1641,7 +1641,10 @@ float navPidApply3(pidController_t *pid, const float setpoint, const float measu
 
     /* Update I-term */
     if (!(pidFlags & PID_ZERO_INTEGRATOR)) {
-        const float newIntegrator = pid->integrator + (error * pid->param.kI * gainScaler * dt) + ((outValConstrained - outVal) * pid->param.kT * dt);
+        float newIntegrator = pid->integrator + (error * pid->param.kI * gainScaler * dt) + ((outValConstrained - outVal) * pid->param.kT * dt);
+
+        if (pid->iterm_limit)
+            newIntegrator = constrainf(newIntegrator, -pid->iterm_limit, pid->iterm_limit);
 
         if (pidFlags & PID_SHRINK_INTEGRATOR) {
             // Only allow integrator to shrink
@@ -1672,15 +1675,16 @@ void navPidReset(pidController_t *pid)
     pid->integrator = 0.0f;
     pid->last_input = 0.0f;
     pid->dterm_filter_state.state = 0.0f;
-    pid->dterm_filter_state.RC = 0.0f;
     pid->output_constrained = 0.0f;
 }
 
-void navPidInit(pidController_t *pid, float _kP, float _kI, float _kD)
+void navPidInit(pidController_t *pid, float _kP, float _kI, float _kD, uint16_t iterm_limit, float dterm_filter_rc)
 {
     pid->param.kP = _kP;
     pid->param.kI = _kI;
     pid->param.kD = _kD;
+    pid->dterm_filter_state.RC = dterm_filter_rc;
+    pid->iterm_limit = iterm_limit;
 
     if (_kI > 1e-6f && _kP > 1e-6f) {
         float Ti = _kP / _kI;
@@ -2957,7 +2961,9 @@ void navigationUsePIDs(void)
 
         navPidInit(&posControl.pids.vel[axis], (float)pidProfile()->bank_mc.pid[PID_VEL_XY].P / 20.0f,
                                                (float)pidProfile()->bank_mc.pid[PID_VEL_XY].I / 100.0f,
-                                               (float)pidProfile()->bank_mc.pid[PID_VEL_XY].D / 100.0f);
+                                               (float)pidProfile()->bank_mc.pid[PID_VEL_XY].D / 100.0f,
+                                               0,
+                                               F_CUT_TO_RC(10));
     }
 
     // Initialize altitude hold PID-controllers (pos_z, vel_z, acc_z
@@ -2965,22 +2971,30 @@ void navigationUsePIDs(void)
 
     navPidInit(&posControl.pids.vel[Z], (float)pidProfile()->bank_mc.pid[PID_VEL_Z].P / 66.7f,
                                         (float)pidProfile()->bank_mc.pid[PID_VEL_Z].I / 20.0f,
-                                        (float)pidProfile()->bank_mc.pid[PID_VEL_Z].D / 100.0f);
+                                        (float)pidProfile()->bank_mc.pid[PID_VEL_Z].D / 100.0f,
+                                        0,
+                                        F_CUT_TO_RC(10));
 
     // Initialize surface tracking PID
     navPidInit(&posControl.pids.surface, 2.0f,
                                          0.0f,
-                                         0.0f);
+                                         0.0f,
+                                         0,
+                                         F_CUT_TO_RC(10));
 
     /** Airplane PIDs */
     // Initialize fixed wing PID controllers
     navPidInit(&posControl.pids.fw_nav, (float)pidProfile()->bank_fw.pid[PID_POS_XY].P / 100.0f,
                                         (float)pidProfile()->bank_fw.pid[PID_POS_XY].I / 100.0f,
-                                        (float)pidProfile()->bank_fw.pid[PID_POS_XY].D / 100.0f);
+                                        (float)pidProfile()->bank_fw.pid[PID_POS_XY].D / 100.0f,
+                                        pidProfile()->nav_roll_iterm_angle_limit,
+                                        pidProfile()->nav_filtering.roll_dterm_tau);
 
     navPidInit(&posControl.pids.fw_alt, (float)pidProfile()->bank_fw.pid[PID_POS_Z].P / 10.0f,
                                         (float)pidProfile()->bank_fw.pid[PID_POS_Z].I / 10.0f,
-                                        (float)pidProfile()->bank_fw.pid[PID_POS_Z].D / 10.0f);
+                                        (float)pidProfile()->bank_fw.pid[PID_POS_Z].D / 10.0f,
+                                        pidProfile()->nav_pitch_iterm_angle_limit,
+                                        pidProfile()->nav_filtering.roll_dterm_tau);
 }
 
 void navigationInit(void)
