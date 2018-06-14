@@ -1082,6 +1082,33 @@ groups:
         condition: USE_NAV
         min: 0
         max: 255
+      - name: nav_throttle_lpf_hz
+        field: nav_filtering.throttle_lpf_hz
+        min: 1
+        max: 50
+      - name: nav_pitch_lpf_hz
+        field: nav_filtering.pitch_lpf_hz
+        min: 1
+        max: 50
+      - name: nav_roll_lpf_hz
+        field: nav_filtering.roll_lpf_hz
+        min: 1
+        max: 50
+      - name: nav_roll_dterm_tau
+        field: nav_filtering.roll_dterm_tau
+        min: 1
+        min: 0
+        max: 15
+      - name: nav_pitch_dterm_tau
+        field: nav_filtering.pitch_dterm_tau
+        min: 0
+        max: 15
+      - name: nav_roll_iterm_angle_limit
+        min: 0
+        max: 900
+      - name: nav_pitch_iterm_angle_limit
+        min: 0
+        max: 900
 
   - name: PG_PID_AUTOTUNE_CONFIG
     type: pidAutotuneConfig_t

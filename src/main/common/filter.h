@@ -17,6 +17,10 @@
 
 #pragma once
 
+#include "common/maths.h"
+
+#define F_CUT_TO_RC(f_cut) (1.0f / (2.0f * M_PIf * (f_cut)))
+
 typedef struct rateLimitFilter_s {
     float state;
 } rateLimitFilter_t;
