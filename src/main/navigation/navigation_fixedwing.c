@@ -63,6 +63,10 @@ static bool isRollAdjustmentValid = false;
 static float throttleSpeedAdjustment = 0;
 static bool isAutoThrottleManuallyIncreased = false;
 static int32_t navHeadingError;
+static pt1Filter_t throttleFilter;
+static pt1Filter_t pitchFilter;
+static pt1Filter_t rollFilter;
+static bool pitchFilterReset = true, rollFilterReset = true, throttleFilterReset = true;
 
 
 /*-----------------------------------------------------------
@@ -79,6 +83,10 @@ void resetFixedWingAltitudeController(void)
     posControl.rcAdjustment[PITCH] = 0;
     isPitchAdjustmentValid = false;
     throttleSpeedAdjustment = 0;
+    pt1FilterSetTimeConstant(&throttleFilter, pidProfile()->nav_filtering.throttle_lpf_tau);
+    pt1FilterSetTimeConstant(&pitchFilter, pidProfile()->nav_filtering.pitch_lpf_tau);
+    pt1FilterSetTimeConstant(&rollFilter, pidProfile()->nav_filtering.roll_lpf_tau);
+    pitchFilterReset = rollFilterReset = throttleFilterReset = true;
 }
 
 bool adjustFixedWingAltitudeFromRCInput(void)
@@ -103,7 +111,7 @@ bool adjustFixedWingAltitudeFromRCInput(void)
 // Position to velocity controller for Z axis
 static void updateAltitudeVelocityAndPitchController_FW(timeDelta_t deltaMicros)
 {
-    static pt1Filter_t velzFilterState;
+    /*static pt1Filter_t velzFilterState;*/
 
     // On a fixed wing we might not have a reliable climb rate source (if no BARO available), so we can't apply PID controller to
     // velocity error. We use PID controller on altitude error and calculate desired pitch angle
@@ -133,7 +141,12 @@ static void updateAltitudeVelocityAndPitchController_FW(timeDelta_t deltaMicros)
 
     // PID controller to translate energy balance error [J] into pitch angle [decideg]
     float targetPitchAngle = navPidApply3(&posControl.pids.fw_alt, demSEB, estSEB, US2S(deltaMicros), minDiveDeciDeg, maxClimbDeciDeg, 0, pitchGainInv);
-    targetPitchAngle = pt1FilterApply4(&velzFilterState, targetPitchAngle, NAV_FW_PITCH_CUTOFF_FREQENCY_HZ, US2S(deltaMicros));
+    /*targetPitchAngle = pt1FilterApply4(&velzFilterState, targetPitchAngle, NAV_FW_PITCH_CUTOFF_FREQENCY_HZ, US2S(deltaMicros));*/
+    if (pitchFilterReset) {
+        pt1FilterReset(&pitchFilter, targetPitchAngle);
+        pitchFilterReset = false;
+    } else
+        targetPitchAngle = pt1FilterApply3(&pitchFilter, targetPitchAngle, US2S(deltaMicros));
 
     // Reconstrain pitch angle ( >0 - climb, <0 - dive)
     targetPitchAngle = constrainf(targetPitchAngle, minDiveDeciDeg, maxClimbDeciDeg);
@@ -198,7 +211,7 @@ bool adjustFixedWingHeadingFromRCInput(void)
  * XY-position controller for multicopter aircraft
  *-----------------------------------------------------------*/
 static fpVector3_t virtualDesiredPosition;
-static pt1Filter_t fwPosControllerCorrectionFilterState;
+/*static pt1Filter_t fwPosControllerCorrectionFilterState;*/
 
 void resetFixedWingPositionController(void)
 {
@@ -210,7 +223,7 @@ void resetFixedWingPositionController(void)
     posControl.rcAdjustment[ROLL] = 0;
     isRollAdjustmentValid = false;
 
-    pt1FilterReset(&fwPosControllerCorrectionFilterState, 0.0f);
+    /*pt1FilterReset(&fwPosControllerCorrectionFilterState, 0.0f);*/
 }
 
 static void calculateVirtualPositionTarget_FW(float trackingPeriod)
@@ -317,7 +330,12 @@ static void updatePositionHeadingController_FW(timeUs_t currentTimeUs, timeDelta
                                         pidFlags);
 
     // Apply low-pass filter to prevent rapid correction
-    rollAdjustment = pt1FilterApply4(&fwPosControllerCorrectionFilterState, rollAdjustment, NAV_FW_ROLL_CUTOFF_FREQUENCY_HZ, US2S(deltaMicros));
+    /*rollAdjustment = pt1FilterApply4(&fwPosControllerCorrectionFilterState, rollAdjustment, NAV_FW_ROLL_CUTOFF_FREQUENCY_HZ, US2S(deltaMicros));*/
+    if (rollFilterReset) {
+        pt1FilterReset(&rollFilter, rollAdjustment);
+        rollFilterReset = false;
+    } else
+        rollAdjustment = pt1FilterApply3(&rollFilter, rollAdjustment, US2S(deltaMicros));
 
     // Convert rollAdjustment to decidegrees (rcAdjustment holds decidegrees)
     posControl.rcAdjustment[ROLL] = CENTIDEGREES_TO_DECIDEGREES(rollAdjustment);
@@ -422,6 +440,7 @@ int16_t applyFixedWingMinSpeedController(timeUs_t currentTimeUs)
 
 void applyFixedWingPitchRollThrottleController(navigationFSMStateFlags_t navStateFlags, timeUs_t currentTimeUs)
 {
+    static timeUs_t last_call = 0;
     int16_t minThrottleCorrection = navConfig()->fw.min_throttle - navConfig()->fw.cruise_throttle;
     int16_t maxThrottleCorrection = navConfig()->fw.max_throttle - navConfig()->fw.cruise_throttle;
 
@@ -468,6 +487,14 @@ void applyFixedWingPitchRollThrottleController(navigationFSMStateFlags_t navStat
         }
 
         rcCommand[THROTTLE] = constrain(correctedThrottleValue, motorConfig()->minthrottle, motorConfig()->maxthrottle);
+
+        if (throttleFilterReset) {
+            pt1FilterReset(&throttleFilter, rcCommand[THROTTLE]);
+            throttleFilterReset = false;
+        } else
+            rcCommand[THROTTLE] = pt1FilterApply3(&throttleFilter, rcCommand[THROTTLE], US2S(cmpTimeUs(currentTimeUs, last_call)));
+
+        last_call = currentTimeUs;
     }
 
 #ifdef NAV_FIXED_WING_LANDING
