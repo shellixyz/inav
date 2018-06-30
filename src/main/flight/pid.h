@@ -76,9 +76,9 @@ typedef struct pidBank_s {
 } pidBank_t;
 
 typedef struct {
-    uint8_t throttle_lpf_hz;
-    uint8_t pitch_lpf_hz;
-    uint8_t roll_lpf_hz;
+    float throttle_lpf_tau;
+    float pitch_lpf_tau;
+    float roll_lpf_tau;
     float pitch_dterm_tau;
     float roll_dterm_tau;
 } navFilterSettings_t;

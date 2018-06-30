@@ -169,9 +169,9 @@ PG_RESET_TEMPLATE(pidProfile_t, pidProfile,
         },
 
         .nav_filtering = {
-            .throttle_lpf_hz = 4,
-            .pitch_lpf_hz = 2,
-            .roll_lpf_hz = 10,
+            .throttle_lpf_tau = F_CUT_TO_RC(4),
+            .pitch_lpf_tau = F_CUT_TO_RC(2),
+            .roll_lpf_tau = F_CUT_TO_RC(10),
             .pitch_dterm_tau = F_CUT_TO_RC(10),
             .roll_dterm_tau = F_CUT_TO_RC(10)
         },
