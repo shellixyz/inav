@@ -627,6 +627,16 @@ groups:
         field: fwMinThrottleDownPitchAngle
         min: 0
         max: 450
+      - name: max_thrust
+        min: 1
+        max: 10000
+      - name: weight
+        min: 1
+        max: 10000
+      - name: auto_thr_strategy
+        field: auto_throttle_strategy
+        min: 0
+        max: 2
 
   - name: PG_MOTOR_3D_CONFIG
     type: flight3DConfig_t
