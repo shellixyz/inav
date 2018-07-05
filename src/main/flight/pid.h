@@ -76,6 +76,7 @@ typedef struct pidBank_s {
 } pidBank_t;
 
 typedef struct {
+    uint16_t thr_min_filtering_pitch_err;
     float throttle_lpf_tau;
     float pitch_lpf_tau;
     float roll_lpf_tau;

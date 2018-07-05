@@ -493,6 +493,17 @@ void applyFixedWingPitchRollThrottleController(navigationFSMStateFlags_t navStat
 
         uint16_t correctedThrottleValue = constrain(navConfig()->fw.cruise_throttle + throttleCorrection, navConfig()->fw.min_throttle, navConfig()->fw.max_throttle);
 
+
+        if (throttleFilterReset) {
+            pt1FilterReset(&throttleFilter, correctedThrottleValue);
+            throttleFilterReset = false;
+        } else {
+            uint8_t pitchError = ABS(-attitude.values.pitch - pitchCorrection);
+	    /*pt1FilterSetTimeConstant(&throttleFilter, MAX(pidProfile()->nav_filtering.throttle_lpf_tau * (1 - sq(pitchError / 105.0f)), F_CUT_TO_RC(NAV_THROTTLE_CUTOFF_FREQENCY_HZ)));*/
+	    pt1FilterSetTimeConstant(&throttleFilter, scaleRangef(constrainf(1 - sq((float)pitchError / pidProfile()->nav_filtering.thr_min_filtering_pitch_err), 0, 1), 0, 1, F_CUT_TO_RC(NAV_THROTTLE_CUTOFF_FREQENCY_HZ), pidProfile()->nav_filtering.throttle_lpf_tau));
+            correctedThrottleValue = pt1FilterApply3(&throttleFilter, correctedThrottleValue, US2S(cmpTimeUs(currentTimeUs, last_call)));
+	}
+
         // Manual throttle increase
         if (navConfig()->fw.allow_manual_thr_increase && !FLIGHT_MODE(FAILSAFE_MODE)) {
             if (rcCommand[THROTTLE] < PWM_RANGE_MIN + (PWM_RANGE_MAX - PWM_RANGE_MIN) * 0.95)
@@ -505,12 +516,6 @@ void applyFixedWingPitchRollThrottleController(navigationFSMStateFlags_t navStat
         }
 
         rcCommand[THROTTLE] = constrain(correctedThrottleValue, motorConfig()->minthrottle, motorConfig()->maxthrottle);
-
-        if (throttleFilterReset) {
-            pt1FilterReset(&throttleFilter, rcCommand[THROTTLE]);
-            throttleFilterReset = false;
-        } else
-            rcCommand[THROTTLE] = pt1FilterApply3(&throttleFilter, rcCommand[THROTTLE], US2S(cmpTimeUs(currentTimeUs, last_call)));
 
         last_call = currentTimeUs;
     }
