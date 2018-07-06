@@ -1092,23 +1092,23 @@ groups:
       - name: nav_throttle_lpf_tau
         field: nav_filtering.throttle_lpf_tau
         min: 0
-        max: 15
+        max: 100
       - name: nav_pitch_lpf_tau
         field: nav_filtering.pitch_lpf_tau
         min: 0
-        max: 15
+        max: 100
       - name: nav_roll_lpf_tau
         field: nav_filtering.roll_lpf_tau
         min: 0
-        max: 15
+        max: 100
       - name: nav_roll_dterm_tau
         field: nav_filtering.roll_dterm_tau
         min: 0
-        max: 15
+        max: 100
       - name: nav_pitch_dterm_tau
         field: nav_filtering.pitch_dterm_tau
         min: 0
-        max: 15
+        max: 100
       - name: nav_roll_iterm_angle_limit
         min: 0
         max: 900
