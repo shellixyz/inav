@@ -1103,8 +1103,12 @@ groups:
         field: nav_filtering.thr_min_filtering_pitch_err
         min: 0
         max: 900
-      - name: nav_throttle_lpf_tau
-        field: nav_filtering.throttle_lpf_tau
+      - name: nav_throttle_lpf_tau_down
+        field: nav_filtering.throttle_lpf_tau_down
+        min: 0
+        max: 100
+      - name: nav_throttle_lpf_tau_up
+        field: nav_filtering.throttle_lpf_tau_up
         min: 0
         max: 100
       - name: nav_pitch_lpf_tau

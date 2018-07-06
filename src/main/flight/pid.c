@@ -170,7 +170,8 @@ PG_RESET_TEMPLATE(pidProfile_t, pidProfile,
 
         .nav_filtering = {
             .thr_min_filtering_pitch_err = 10,
-            .throttle_lpf_tau = F_CUT_TO_RC(4),
+            .throttle_lpf_tau_down = F_CUT_TO_RC(4),
+            .throttle_lpf_tau_up = F_CUT_TO_RC(4),
             .pitch_lpf_tau = F_CUT_TO_RC(2),
             .roll_lpf_tau = F_CUT_TO_RC(10),
             .pitch_dterm_tau = F_CUT_TO_RC(10),
