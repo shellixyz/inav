@@ -1099,9 +1099,13 @@ groups:
         condition: USE_NAV
         min: 0
         max: 255
-      - name: thr_min_filtering_pitch_err
-        field: nav_filtering.thr_min_filtering_pitch_err
-        min: 0
+      - name: thr_min_filtering_pitch_down_err
+        field: nav_filtering.thr_min_filtering_pitch_down_err
+        min: 1
+        max: 900
+      - name: thr_min_filtering_pitch_up_err
+        field: nav_filtering.thr_min_filtering_pitch_up_err
+        min: 1
         max: 900
       - name: nav_throttle_lpf_tau_down
         field: nav_filtering.throttle_lpf_tau_down
