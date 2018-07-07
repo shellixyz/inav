@@ -462,7 +462,7 @@ void applyFixedWingPitchRollThrottleController(navigationFSMStateFlags_t navStat
             case 1:
                 if (pitchCorrection > 0) {
                     const float thrust_to_weight_ratio = (float)mixerConfig()->max_thrust / mixerConfig()->weight;
-                    const uint16_t maxPitchUpThrCorrection = MAX(0, (float)motorConfig()->maxthrottle * 1.1f / thrust_to_weight_ratio - navConfig()->fw.cruise_throttle);
+                    const uint16_t maxPitchUpThrCorrection = MAX(0, (float)motorConfig()->maxthrottle * 1.0f / thrust_to_weight_ratio - navConfig()->fw.cruise_throttle);
                     throttleCorrection = maxPitchUpThrCorrection * sin_approx(DECIDEGREES_TO_RADIANS(pitchCorrection));
                 } else {
                     /*throttleCorrection = -scaleRange(constrain(-pitchCorrection, 0, mixerConfig()->fwMinThrottleDownPitchAngle), 0, mixerConfig()->fwMinThrottleDownPitchAngle, 0, navConfig()->fw.cruise_throttle - motorConfig()->minthrottle);*/
