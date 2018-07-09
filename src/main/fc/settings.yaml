@@ -627,12 +627,9 @@ groups:
         field: fwMinThrottleDownPitchAngle
         min: 0
         max: 450
-      - name: max_thrust
-        min: 1
-        max: 10000
-      - name: weight
-        min: 1
-        max: 10000
+      - name: thrust_to_weight_ratio
+        min: 0
+        max: 20
       - name: auto_thr_strategy
         field: auto_throttle_strategy
         min: 0

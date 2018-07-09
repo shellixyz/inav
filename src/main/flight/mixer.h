@@ -62,8 +62,7 @@ typedef struct mixerConfig_s {
     bool hasFlaps;
     int16_t appliedMixerPreset;
     uint16_t fwMinThrottleDownPitchAngle;
-    uint16_t weight;
-    uint16_t max_thrust;
+    float thrust_to_weight_ratio;
     uint8_t auto_throttle_strategy;
 } mixerConfig_t;
 

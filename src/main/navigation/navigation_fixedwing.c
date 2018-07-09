@@ -454,24 +454,13 @@ void applyFixedWingPitchRollThrottleController(navigationFSMStateFlags_t navStat
         // PITCH >0 dive, <0 climb
         int16_t pitchCorrection = constrain(posControl.rcAdjustment[PITCH], -DEGREES_TO_DECIDEGREES(navConfig()->fw.max_dive_angle), DEGREES_TO_DECIDEGREES(navConfig()->fw.max_climb_angle));
         rcCommand[PITCH] = -pidAngleToRcCommand(pitchCorrection, pidProfile()->max_angle_inclination[FD_PITCH]);
+
         int16_t throttleCorrection;
-        switch (mixerConfig()->auto_throttle_strategy) {
-            case 0:
-                throttleCorrection = DECIDEGREES_TO_DEGREES(pitchCorrection) * navConfig()->fw.pitch_to_throttle;
-                break;
-            case 1:
-                if (pitchCorrection > 0) {
-                    const float thrust_to_weight_ratio = (float)mixerConfig()->max_thrust / mixerConfig()->weight;
-                    const uint16_t maxPitchUpThrCorrection = MAX(0, (float)motorConfig()->maxthrottle * 1.0f / thrust_to_weight_ratio - navConfig()->fw.cruise_throttle);
-                    throttleCorrection = maxPitchUpThrCorrection * sin_approx(DECIDEGREES_TO_RADIANS(pitchCorrection));
-                } else {
-                    /*throttleCorrection = -scaleRange(constrain(-pitchCorrection, 0, mixerConfig()->fwMinThrottleDownPitchAngle), 0, mixerConfig()->fwMinThrottleDownPitchAngle, 0, navConfig()->fw.cruise_throttle - motorConfig()->minthrottle);*/
-                    throttleCorrection = -scaleRange(constrain(-pitchCorrection, 0, 2 * mixerConfig()->fwMinThrottleDownPitchAngle), 0, 2 * mixerConfig()->fwMinThrottleDownPitchAngle, 0, navConfig()->fw.cruise_throttle - motorConfig()->minthrottle);
-                }
-                break;
-            case 2:
-                throttleCorrection = lrintf(mixerConfig()->weight * (1.0f - cos_approx(DECIDEGREES_TO_RADIANS(pitchCorrection))) * (motorConfig()->maxthrottle - motorConfig()->minthrottle) / mixerConfig()->max_thrust * (pitchCorrection < 0 ? -0.9f : 1.1f));
-                break;
+        if (pitchCorrection > 0) {
+            const uint16_t maxPitchUpThrCorrection = MAX(0, (float)motorConfig()->maxthrottle * 1.0f / mixerConfig()->thrust_to_weight_ratio - navConfig()->fw.cruise_throttle);
+            throttleCorrection = maxPitchUpThrCorrection * sin_approx(DECIDEGREES_TO_RADIANS(pitchCorrection));
+        } else {
+            throttleCorrection = -scaleRange(constrain(-pitchCorrection, 0, 2 * mixerConfig()->fwMinThrottleDownPitchAngle), 0, 2 * mixerConfig()->fwMinThrottleDownPitchAngle, 0, navConfig()->fw.cruise_throttle - motorConfig()->minthrottle);
         }
 
 #ifdef NAV_FIXED_WING_LANDING
