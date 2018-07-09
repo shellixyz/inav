@@ -83,7 +83,6 @@ void resetFixedWingAltitudeController(void)
     posControl.rcAdjustment[PITCH] = 0;
     isPitchAdjustmentValid = false;
     throttleSpeedAdjustment = 0;
-    pt1FilterSetTimeConstant(&throttleFilter, pidProfile()->nav_filtering.throttle_lpf_tau);
     pt1FilterSetTimeConstant(&pitchFilter, pidProfile()->nav_filtering.pitch_lpf_tau);
     pt1FilterSetTimeConstant(&rollFilter, pidProfile()->nav_filtering.roll_lpf_tau);
     pitchFilterReset = rollFilterReset = throttleFilterReset = true;
