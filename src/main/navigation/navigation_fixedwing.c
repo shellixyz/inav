@@ -488,11 +488,7 @@ void applyFixedWingPitchRollThrottleController(navigationFSMStateFlags_t navStat
             throttleFilterReset = false;
         } else {
 	    int16_t pitchError = -attitude.values.pitch - pitchCorrection; // >0 need to pitch down, <0 need to pitch up
-            /*int16_t pitchError = attitude.values.pitch + pitchCorrection;*/
-	    /*pt1FilterSetTimeConstant(&throttleFilter, MAX(pidProfile()->nav_filtering.throttle_lpf_tau * (1 - sq(pitchError / 105.0f)), F_CUT_TO_RC(NAV_THROTTLE_CUTOFF_FREQENCY_HZ)));*/
-	    /*pt1FilterSetTimeConstant(&throttleFilter, scaleRangef(constrainf(1 - sq((float)pitchError / pidProfile()->nav_filtering.thr_min_filtering_pitch_err), 0, 1), 0, 1, F_CUT_TO_RC(NAV_THROTTLE_CUTOFF_FREQENCY_HZ), pidProfile()->nav_filtering.throttle_lpf_tau));*/
-	    /*pt1FilterSetTimeConstant(&throttleFilter, scaleRangef(constrainf(1 - sq((float)pitchError / pidProfile()->nav_filtering.thr_min_filtering_pitch_err), 0, 1), 0, 1, F_CUT_TO_RC(NAV_THROTTLE_CUTOFF_FREQENCY_HZ), (pitchError > 0 ? pidProfile()->nav_filtering.throttle_lpf_tau_down : pidProfile()->nav_filtering.throttle_lpf_tau_up)));*/
-	    pt1FilterSetTimeConstant(&throttleFilter, scaleRangef(constrainf(1 - sq((float)pitchError / (pitchError > 0 ? pidProfile()->nav_filtering.thr_min_filtering_pitch_down_err : pidProfile()->nav_filtering.thr_min_filtering_pitch_up_err)), 0, 1), 0, 1, F_CUT_TO_RC(NAV_THROTTLE_CUTOFF_FREQENCY_HZ), (pitchError > 0 ? pidProfile()->nav_filtering.throttle_lpf_tau_down : pidProfile()->nav_filtering.throttle_lpf_tau_up)));
+	    pt1FilterSetTimeConstant(&throttleFilter, scaleRangef(constrainf(1.0f - sq((float)pitchError / (pitchError > 0 ? pidProfile()->nav_filtering.thr_min_filtering_pitch_down_err : pidProfile()->nav_filtering.thr_min_filtering_pitch_up_err)), 0, 1), 0, 1, F_CUT_TO_RC(NAV_THROTTLE_CUTOFF_FREQENCY_HZ), (pitchError > 0 ? pidProfile()->nav_filtering.throttle_lpf_tau_down : pidProfile()->nav_filtering.throttle_lpf_tau_up)));
             correctedThrottleValue = pt1FilterApply3(&throttleFilter, correctedThrottleValue, US2S(cmpTimeUs(currentTimeUs, last_call)));
 	}
 
