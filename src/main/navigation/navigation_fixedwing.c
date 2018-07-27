@@ -64,6 +64,7 @@ static float throttleSpeedAdjustment = 0;
 static bool isAutoThrottleManuallyIncreased = false;
 static int32_t navHeadingError;
 static pt1Filter_t throttleFilter;
+static pt1Filter_t rollThrFilter;
 static pt1Filter_t pitchFilter;
 static pt1Filter_t rollFilter;
 static bool pitchFilterReset = true, rollFilterReset = true, throttleFilterReset = true;
@@ -85,6 +86,7 @@ void resetFixedWingAltitudeController(void)
     throttleSpeedAdjustment = 0;
     pt1FilterSetTimeConstant(&pitchFilter, pidProfile()->nav_filtering.pitch_lpf_tau);
     pt1FilterSetTimeConstant(&rollFilter, pidProfile()->nav_filtering.roll_lpf_tau);
+    pt1FilterSetTimeConstant(&rollThrFilter, pidProfile()->nav_filtering.roll_to_thr_lpf_tau);
     pitchFilterReset = rollFilterReset = throttleFilterReset = true;
 }
 
@@ -443,9 +445,10 @@ void applyFixedWingPitchRollThrottleController(navigationFSMStateFlags_t navStat
     int16_t minThrottleCorrection = navConfig()->fw.min_throttle - navConfig()->fw.cruise_throttle;
     int16_t maxThrottleCorrection = navConfig()->fw.max_throttle - navConfig()->fw.cruise_throttle;
 
+    int16_t rollCorrection;
     if (isRollAdjustmentValid && (navStateFlags & NAV_CTL_POS)) {
         // ROLL >0 right, <0 left
-        int16_t rollCorrection = constrain(posControl.rcAdjustment[ROLL], -DEGREES_TO_DECIDEGREES(navConfig()->fw.max_bank_angle), DEGREES_TO_DECIDEGREES(navConfig()->fw.max_bank_angle));
+        rollCorrection = constrain(posControl.rcAdjustment[ROLL], -DEGREES_TO_DECIDEGREES(navConfig()->fw.max_bank_angle), DEGREES_TO_DECIDEGREES(navConfig()->fw.max_bank_angle));
         rcCommand[ROLL] = pidAngleToRcCommand(rollCorrection, pidProfile()->max_angle_inclination[FD_ROLL]);
     }
 
@@ -479,17 +482,20 @@ void applyFixedWingPitchRollThrottleController(navigationFSMStateFlags_t navStat
             throttleCorrection = constrain(throttleCorrection, minThrottleCorrection, maxThrottleCorrection);
         }
 
-        uint16_t correctedThrottleValue = constrain(navConfig()->fw.cruise_throttle + throttleCorrection, navConfig()->fw.min_throttle, navConfig()->fw.max_throttle);
-
+        int16_t rollThrCorrection = lrintf(DECIDEGREES_TO_DEGREES((float)ABS(rollCorrection)) * navConfig()->fw.roll_to_throttle);
 
         if (throttleFilterReset) {
-            pt1FilterReset(&throttleFilter, correctedThrottleValue);
+            pt1FilterReset(&throttleFilter, throttleCorrection);
+            pt1FilterReset(&rollThrFilter, rollThrCorrection);
             throttleFilterReset = false;
         } else {
 	    int16_t pitchError = -attitude.values.pitch - pitchCorrection; // >0 need to pitch down, <0 need to pitch up
 	    pt1FilterSetTimeConstant(&throttleFilter, scaleRangef(constrainf(1.0f - sq((float)pitchError / (pitchError > 0 ? pidProfile()->nav_filtering.thr_min_filtering_pitch_down_err : pidProfile()->nav_filtering.thr_min_filtering_pitch_up_err)), 0, 1), 0, 1, F_CUT_TO_RC(NAV_THROTTLE_CUTOFF_FREQENCY_HZ), (pitchError > 0 ? pidProfile()->nav_filtering.throttle_lpf_tau_down : pidProfile()->nav_filtering.throttle_lpf_tau_up)));
-            correctedThrottleValue = pt1FilterApply3(&throttleFilter, correctedThrottleValue, US2S(cmpTimeUs(currentTimeUs, last_call)));
+            throttleCorrection = pt1FilterApply3(&throttleFilter, throttleCorrection, US2S(cmpTimeUs(currentTimeUs, last_call)));
+            rollThrCorrection = pt1FilterApply3(&rollThrFilter, rollThrCorrection, US2S(cmpTimeUs(currentTimeUs, last_call)));
 	}
+
+        uint16_t correctedThrottleValue = constrain(navConfig()->fw.cruise_throttle + throttleCorrection + rollThrCorrection, navConfig()->fw.min_throttle, navConfig()->fw.max_throttle);
 
         // Manual throttle increase
         if (navConfig()->fw.allow_manual_thr_increase && !FLIGHT_MODE(FAILSAFE_MODE)) {

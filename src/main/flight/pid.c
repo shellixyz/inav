@@ -175,6 +175,7 @@ PG_RESET_TEMPLATE(pidProfile_t, pidProfile,
             .throttle_lpf_tau_up = F_CUT_TO_RC(4),
             .pitch_lpf_tau = F_CUT_TO_RC(2),
             .roll_lpf_tau = F_CUT_TO_RC(10),
+            .roll_to_thr_lpf_tau = 0.5,
             .pitch_dterm_tau = F_CUT_TO_RC(10),
             .roll_dterm_tau = F_CUT_TO_RC(10)
         },

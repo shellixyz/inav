@@ -1120,6 +1120,10 @@ groups:
         field: nav_filtering.roll_lpf_tau
         min: 0
         max: 100
+      - name: nav_roll_to_thr_lpf_tau
+        field: nav_filtering.roll_to_thr_lpf_tau
+        min: 0
+        max: 100
       - name: nav_roll_dterm_tau
         field: nav_filtering.roll_dterm_tau
         min: 0
@@ -1379,6 +1383,10 @@ groups:
         max: 80
       - name: nav_fw_pitch2thr
         field: fw.pitch_to_throttle
+        min: 0
+        max: 100
+      - name: nav_fw_roll2thr
+        field: fw.roll_to_throttle
         min: 0
         max: 100
       - name: nav_fw_loiter_radius

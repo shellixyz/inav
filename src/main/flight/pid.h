@@ -83,6 +83,7 @@ typedef struct {
     float throttle_lpf_tau;
     float pitch_lpf_tau;
     float roll_lpf_tau;
+    float roll_to_thr_lpf_tau;
     float pitch_dterm_tau;
     float roll_dterm_tau;
 } navFilterSettings_t;
