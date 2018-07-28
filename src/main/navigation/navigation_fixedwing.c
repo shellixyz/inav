@@ -442,10 +442,8 @@ int16_t applyFixedWingMinSpeedController(timeUs_t currentTimeUs)
 void applyFixedWingPitchRollThrottleController(navigationFSMStateFlags_t navStateFlags, timeUs_t currentTimeUs)
 {
     static timeUs_t last_call = 0;
-    int16_t minThrottleCorrection = navConfig()->fw.min_throttle - navConfig()->fw.cruise_throttle;
-    int16_t maxThrottleCorrection = navConfig()->fw.max_throttle - navConfig()->fw.cruise_throttle;
 
-    int16_t rollCorrection;
+    int16_t rollCorrection = 0;
     if (isRollAdjustmentValid && (navStateFlags & NAV_CTL_POS)) {
         // ROLL >0 right, <0 left
         rollCorrection = constrain(posControl.rcAdjustment[ROLL], -DEGREES_TO_DECIDEGREES(navConfig()->fw.max_bank_angle), DEGREES_TO_DECIDEGREES(navConfig()->fw.max_bank_angle));
@@ -465,21 +463,9 @@ void applyFixedWingPitchRollThrottleController(navigationFSMStateFlags_t navStat
             throttleCorrection = -scaleRange(constrain(-pitchCorrection, 0, 2 * mixerConfig()->fwMinThrottleDownPitchAngle), 0, 2 * mixerConfig()->fwMinThrottleDownPitchAngle, 0, navConfig()->fw.cruise_throttle - motorConfig()->minthrottle);
         }
 
-#ifdef NAV_FIXED_WING_LANDING
-        if (navStateFlags & NAV_CTL_LAND) {
-            // During LAND we do not allow to raise THROTTLE when nose is up to reduce speed
-            throttleCorrection = constrain(throttleCorrection, minThrottleCorrection, 0);
-        } else {
-#endif
-            throttleCorrection = constrain(throttleCorrection, minThrottleCorrection, maxThrottleCorrection);
-#ifdef NAV_FIXED_WING_LANDING
-        }
-#endif
-
         // Speed controller - only apply in POS mode when NOT NAV_CTL_LAND
         if ((navStateFlags & NAV_CTL_POS) && !(navStateFlags & NAV_CTL_LAND)) {
             throttleCorrection += applyFixedWingMinSpeedController(currentTimeUs);
-            throttleCorrection = constrain(throttleCorrection, minThrottleCorrection, maxThrottleCorrection);
         }
 
         int16_t rollThrCorrection = lrintf(DECIDEGREES_TO_DEGREES((float)ABS(rollCorrection)) * navConfig()->fw.roll_to_throttle);
@@ -495,21 +481,25 @@ void applyFixedWingPitchRollThrottleController(navigationFSMStateFlags_t navStat
             rollThrCorrection = pt1FilterApply3(&rollThrFilter, rollThrCorrection, US2S(cmpTimeUs(currentTimeUs, last_call)));
 	}
 
-        uint16_t correctedThrottleValue = constrain(navConfig()->fw.cruise_throttle + throttleCorrection + rollThrCorrection, navConfig()->fw.min_throttle, navConfig()->fw.max_throttle);
-
         // Manual throttle increase
         if (navConfig()->fw.allow_manual_thr_increase && !FLIGHT_MODE(FAILSAFE_MODE)) {
             if (rcCommand[THROTTLE] < PWM_RANGE_MIN + (PWM_RANGE_MAX - PWM_RANGE_MIN) * 0.95)
-                correctedThrottleValue += MAX(0, rcCommand[THROTTLE] - navConfig()->fw.cruise_throttle);
+                throttleCorrection += MAX(0, rcCommand[THROTTLE] - navConfig()->fw.cruise_throttle);
             else
-                correctedThrottleValue = motorConfig()->maxthrottle;
+                throttleCorrection += PWM_RANGE_MAX - PWM_RANGE_MIN;
             isAutoThrottleManuallyIncreased = (rcCommand[THROTTLE] > navConfig()->fw.cruise_throttle);
         } else {
             isAutoThrottleManuallyIncreased = false;
         }
 
-        rcCommand[THROTTLE] = constrain(correctedThrottleValue, motorConfig()->minthrottle, motorConfig()->maxthrottle);
+#ifdef NAV_FIXED_WING_LANDING
+        // During LAND we do not allow to raise THROTTLE when nose is up to reduce speed
+        uint16_t maxThrottle = (navStateFlags & NAV_CTL_LAND) ? navConfig()->fw.cruise_throttle : motorConfig()->maxthrottle;
+#else
+        uint16_t maxThrottle = motorConfig()->maxthrottle;
+#endif
 
+        rcCommand[THROTTLE] = constrain(navConfig()->fw.cruise_throttle + throttleCorrection + rollThrCorrection, motorConfig()->minthrottle, maxThrottle);
         last_call = currentTimeUs;
     }
 
