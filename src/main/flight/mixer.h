@@ -63,7 +63,6 @@ typedef struct mixerConfig_s {
     int16_t appliedMixerPreset;
     uint16_t fwMinThrottleDownPitchAngle;
     float thrust_to_weight_ratio;
-    uint8_t auto_throttle_strategy;
 } mixerConfig_t;
 
 PG_DECLARE(mixerConfig_t, mixerConfig);

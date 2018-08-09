@@ -630,10 +630,6 @@ groups:
       - name: thrust_to_weight_ratio
         min: 0
         max: 20
-      - name: auto_thr_strategy
-        field: auto_throttle_strategy
-        min: 0
-        max: 2
 
   - name: PG_MOTOR_3D_CONFIG
     type: flight3DConfig_t
