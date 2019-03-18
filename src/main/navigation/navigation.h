@@ -225,6 +225,21 @@ typedef struct {
     uint8_t flag;
 } navWaypoint_t;
 
+typedef struct wp_planes_s  {
+    navWaypoint_t planeWP;
+    uint32_t wp_nb;
+    int16_t GPS_distanceToMe;
+    int16_t GPS_altitudeToMe;
+    int32_t planePoiDirection;
+    uint16_t drawn;
+    int posX;
+    int posY;
+} wp_planes_t;
+
+#define MAX_PLANES 5
+extern wp_planes_t planesInfos[MAX_PLANES];
+
+
 typedef struct {
     fpVector3_t pos;
     int32_t     yaw;             // deg * 100

@@ -71,6 +71,8 @@ gpsLocation_t GPS_home;
 uint16_t      GPS_distanceToHome;        // distance to home point in meters
 int16_t       GPS_directionToHome;       // direction to home point in degrees
 
+wp_planes_t  planesInfos[MAX_PLANES];
+
 #if defined(USE_NAV)
 #if defined(NAV_NON_VOLATILE_WAYPOINT_STORAGE)
 PG_DECLARE_ARRAY(navWaypoint_t, NAV_MAX_WAYPOINTS, nonVolatileWaypointList);
@@ -1918,6 +1920,13 @@ static int32_t calculateBearingFromDelta(float deltaX, float deltaY)
     return wrap_36000(RADIANS_TO_CENTIDEGREES(atan2_approx(deltaY, deltaX)));
 }
 
+uint32_t calculateAltitudeToMe(const fpVector3_t * destinationPos)
+{
+    const float deltaZ = destinationPos->z - navGetCurrentActualPositionAndVelocity()->pos.z;
+
+    return deltaZ;
+}
+
 uint32_t calculateDistanceToDestination(const fpVector3_t * destinationPos)
 {
     const navEstimatedPosVel_t *posvel = navGetCurrentActualPositionAndVelocity();
@@ -2167,6 +2176,53 @@ void updateHomePosition(void)
             updateHomePositionCompatibility();
         }
     }
+}
+
+/*-----------------------------------------------------------
+ * LoRa Radar, get aircraft positions from the waypoints
+ *-----------------------------------------------------------*/
+
+static void navRadarUpdatePlane(void){
+  gpsLocation_t planeLocation;
+  fpVector3_t posPlane;
+    for (int i = 0; i < MAX_PLANES; i++) { //INITIALISE 5 PLANES (waypoint 100 to 105)
+      planesInfos[i].planeWP.lat = 0;
+      planesInfos[i].drawn = 0;
+      planesInfos[i].planeWP.lon = 0;
+      planesInfos[i].planeWP.alt = 0;
+    }
+    //store waypoint 1 to 5
+    for (int i = 0; i < MAX_PLANES; i++) { //store waypoint 1 to 5
+      getWaypoint(i+1,&planesInfos[i].planeWP); //load waypoint informations
+      planesInfos[i].wp_nb = i+1; //store wp number
+      //Create gpsLocation_t in order to Convert to POS vector with  geoConvertGeodeticToLocal
+      planeLocation.lat = planesInfos[i].planeWP.lat;
+      planeLocation.lon = planesInfos[i].planeWP.lon;
+      planeLocation.alt = planesInfos[i].planeWP.alt;
+      geoConvertGeodeticToLocal( &posPlane, &posControl.gpsOrigin, &planeLocation, GEO_ALT_RELATIVE);
+      planesInfos[i].GPS_distanceToMe = calculateDistanceToDestination(&posPlane);
+      planesInfos[i].planePoiDirection = calculateBearingToDestination(&posPlane);
+      planesInfos[i].GPS_altitudeToMe = calculateAltitudeToMe(&posPlane);
+    }
+}
+
+/*-----------------------------------------------------------
+ * LoRa Radar, get the nearest aircraft
+ *-----------------------------------------------------------*/
+
+static int getNearestPlaneId()
+{
+  int16_t min = planesInfos[0].GPS_distanceToMe;
+	int plane_id_near=0;
+  for (int c = 0; c < MAX_PLANES; c++) {
+		 if ((planesInfos[c].planeWP.p3==1)){
+			 if ((planesInfos[c].GPS_distanceToMe) < min) {
+				 plane_id_near = c;
+				 min = planesInfos[c].GPS_distanceToMe;
+			 }
+		 }
+	 }
+	return plane_id_near;
 }
 
 /*-----------------------------------------------------------
@@ -3005,6 +3061,9 @@ void updateWaypointsAndNavigationMode(void)
     // Map navMode back to enabled flight modes
     switchNavigationFlightModes();
 
+    // Update InavRadar
+    navRadarUpdatePlane();
+    
 #if defined(NAV_BLACKBOX)
     navCurrentState = (int16_t)posControl.navPersistentId;
 #endif
