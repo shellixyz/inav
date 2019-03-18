@@ -1184,6 +1184,24 @@ static void osdHudWrite3digits(uint8_t x, uint8_t y, uint16_t value)
     osdHudWrite(x + 2, y, symb[2]);
 }
 
+/* LoRa Radar, get the nearest aircraft
+ */
+
+static int getNearestPlaneId()
+{
+  int16_t min = planesInfos[0].GPS_distanceToMe;
+	int plane_id_near=0;
+  for (int c = 0; c < MAX_PLANES; c++) {
+		 if ((planesInfos[c].planeWP.p3==1)){
+			 if ((planesInfos[c].GPS_distanceToMe) < min) {
+				 plane_id_near = c;
+				 min = planesInfos[c].GPS_distanceToMe;
+			 }
+		 }
+	 }
+	return plane_id_near;
+}
+
 /* Display one POI on the hud, centered on crosshair position.
  * poiDistance and poiAltitude in meters, poiAltitude is relative to the aircraft (negative means below)
  * poiType : 0 = Home point (H), 1 = Aircraft from radar (A B C), 2 = Waypoint (W1 W2 W3)
@@ -1900,8 +1918,18 @@ static bool osdDrawSingleElement(uint8_t item)
                 osdHudDrawPoi(GPS_distanceToHome, GPS_directionToHome, -osdGetAltitude() / 100, SYM_HUD_A + 7);
             }
 
-            if (osdConfig()->hud_disp_aircrafts > 0) {
-                osdHudDrawPoi(GPS_distanceToHome - 10, GPS_directionToHome, 50 - osdGetAltitude()/100, SYM_HUD_A); // Ghost aircraft 50 meters above home, 10m closer
+            if (osdConfig()->hud_disp_aircrafts > 0) { // From the LoRa Radar
+
+            
+// -------------------------------
+            int plane_id = getNearestPlaneId(); // Displays only the closest WP for now, unconditional
+            osdHudDrawPoi(planesInfos[plane_id].GPS_distanceToMe / 100, // Distance in meters
+                osdGetHeadingAngle(planesInfos[plane_id].planePoiDirection / 100), // POI direction between 0 and 360°
+                planesInfos[plane_id].GPS_altitudeToMe / 100, // Altitude, negative means POI is below our aircraft
+                SYM_HUD_A);
+// -------------------------------
+
+
             }
             if (osdConfig()->hud_disp_waypoints > 0) {
                // osdHudDrawPoi(200, -30, -100, SYM_HUD_0 + 1);
