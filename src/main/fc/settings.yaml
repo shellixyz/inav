@@ -1662,11 +1662,7 @@ groups:
       - name: osd_hud_disp_aircrafts
         field: hud_disp_aircrafts
         min: 0
-        max: 3
-      - name: osd_hud_disp_waypoints
-        field: hud_disp_waypoints
-        min: 0
-        max: 3
+        max: 5
       - name: osd_horizon_offset
         field: horizon_offset
         min: -2

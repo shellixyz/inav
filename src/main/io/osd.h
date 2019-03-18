@@ -211,7 +211,6 @@ typedef struct osdConfig_s {
     uint8_t camera_fov_v;
 	bool hud_disp_home;
     uint8_t hud_disp_aircrafts;
-    uint8_t hud_disp_waypoints;
     int8_t horizon_offset;
     uint8_t left_sidebar_scroll; // from osd_sidebar_scroll_e
     uint8_t right_sidebar_scroll; // from osd_sidebar_scroll_e

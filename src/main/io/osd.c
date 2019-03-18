@@ -1909,7 +1909,7 @@ static bool osdDrawSingleElement(uint8_t item)
                 displayWriteChar(osdDisplayPort, elemPosX, elemPosY+1, crh_d);
             }
 
-            if (osdConfig()->hud_disp_home || osdConfig()->hud_disp_aircrafts > 0 || osdConfig()->hud_disp_waypoints > 0) {
+            if (osdConfig()->hud_disp_home || osdConfig()->hud_disp_aircrafts > 0) {
                 osdHudClear();
             }
 
@@ -1918,21 +1918,11 @@ static bool osdDrawSingleElement(uint8_t item)
             }
 
             if (osdConfig()->hud_disp_aircrafts > 0) { // From the LoRa Radar
-
-            
-// -------------------------------
             int plane_id = getNearestPlaneId(); // Displays only the closest WP for now, unconditional
             osdHudDrawPoi(planesInfos[plane_id].distance / 100, // Distance in meters
                 osdGetHeadingAngle(planesInfos[plane_id].direction / 100), // POI direction between 0 and 360°
                 planesInfos[plane_id].altitude / 100, // Altitude, negative means POI is below our aircraft
                 SYM_HUD_A);
-// -------------------------------
-
-
-            }
-            if (osdConfig()->hud_disp_waypoints > 0) {
-               // osdHudDrawPoi(200, -30, -100, SYM_HUD_0 + 1);
-            }
         }
 
         return true;
@@ -2937,7 +2927,6 @@ void pgResetFn_osdConfig(osdConfig_t *osdConfig)
     osdConfig->camera_fov_v = 85;
     osdConfig->hud_disp_home = 0;
     osdConfig->hud_disp_aircrafts = 0;
-    osdConfig->hud_disp_waypoints = 0;
     osdConfig->horizon_offset = 0;
     osdConfig->left_sidebar_scroll = OSD_SIDEBAR_SCROLL_NONE;
     osdConfig->right_sidebar_scroll = OSD_SIDEBAR_SCROLL_NONE;
