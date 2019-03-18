@@ -1184,26 +1184,26 @@ static void osdHudWrite3digits(uint8_t x, uint8_t y, uint16_t value)
     osdHudWrite(x + 2, y, symb[2]);
 }
 
-/* LoRa Radar, get the nearest aircraft
+/* Squad, get the nearest aircraft
  */
-
+/*
 static int getNearestPlaneId()
 {
-    uint32_t min = planesInfos[0].distance;
+    uint32_t min = squad_pois[0].distance;
     int plane_id_near=0;
     
-    for (int c = 1; c < MAX_PLANES; c++) {
-		 if ((planesInfos[c].waypoint.p3 == 1) && ((planesInfos[c].distance) < min)) {
-			plane_id_near = c;
-			min = planesInfos[c].distance;
-			}
-		}
-	return plane_id_near;
+    for (int c = 1; c < SQUAD_MAX_POIS; c++) {
+         if ((squad_pois[c].waypoint.p3 == 1) && ((squad_pois[c].distance) < min)) {
+            plane_id_near = c;
+            min = squad_pois[c].distance;
+            }
+        }
+    return plane_id_near;
 }
+*/
 
 /* Display one POI on the hud, centered on crosshair position.
  * poiDistance and poiAltitude in meters, poiAltitude is relative to the aircraft (negative means below)
- * poiType : 0 = Home point (H), 1 = Aircraft from radar (A B C), 2 = Waypoint (W1 W2 W3)
  */
 
 static void osdHudDrawPoi(uint32_t poiDistance, int16_t poiDirection, int32_t poiAltitude,
@@ -1909,7 +1909,7 @@ static bool osdDrawSingleElement(uint8_t item)
                 displayWriteChar(osdDisplayPort, elemPosX, elemPosY+1, crh_d);
             }
 
-            if (osdConfig()->hud_disp_home || osdConfig()->hud_disp_aircrafts > 0) {
+            if (osdConfig()->hud_disp_home || osdConfig()->hud_disp_squadpois > 0) {
                 osdHudClear();
             }
 
@@ -1917,12 +1917,16 @@ static bool osdDrawSingleElement(uint8_t item)
                 osdHudDrawPoi(GPS_distanceToHome, GPS_directionToHome, -osdGetAltitude() / 100, SYM_HUD_A + 7);
             }
 
-            if (osdConfig()->hud_disp_aircrafts > 0) { // From the LoRa Radar
-            int plane_id = getNearestPlaneId(); // Displays only the closest WP for now, unconditional
-            osdHudDrawPoi(planesInfos[plane_id].distance / 100, // Distance in meters
-                osdGetHeadingAngle(planesInfos[plane_id].direction / 100), // POI direction between 0 and 360°
-                planesInfos[plane_id].altitude / 100, // Altitude, negative means POI is below our aircraft
-                SYM_HUD_A);
+            if (osdConfig()->hud_disp_squadpois > 0) { // Squad POis
+                for (int i = 0; i < osdConfig()->hud_disp_squadpois; i++) { 
+                    if ((squad_pois[i].state == 1)) { // POI is armed
+                        osdHudDrawPoi(squad_pois[i].distance / 100,
+                        osdGetHeadingAngle(squad_pois[i].direction / 100),
+                        squad_pois[i].altitude / 100,
+                        SYM_HUD_A + i);
+                    }
+                }
+            }
         }
 
         return true;
@@ -2926,7 +2930,7 @@ void pgResetFn_osdConfig(osdConfig_t *osdConfig)
     osdConfig->camera_fov_h = 135;
     osdConfig->camera_fov_v = 85;
     osdConfig->hud_disp_home = 0;
-    osdConfig->hud_disp_aircrafts = 0;
+    osdConfig->hud_disp_squadpois = 0;
     osdConfig->horizon_offset = 0;
     osdConfig->left_sidebar_scroll = OSD_SIDEBAR_SCROLL_NONE;
     osdConfig->right_sidebar_scroll = OSD_SIDEBAR_SCROLL_NONE;

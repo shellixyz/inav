@@ -71,7 +71,7 @@ gpsLocation_t GPS_home;
 uint16_t      GPS_distanceToHome;        // distance to home point in meters
 int16_t       GPS_directionToHome;       // direction to home point in degrees
 
-wp_planes_t  planesInfos[MAX_PLANES];
+squad_pois_t squad_pois[SQUAD_MAX_POIS];
 
 #if defined(USE_NAV)
 #if defined(NAV_NON_VOLATILE_WAYPOINT_STORAGE)
@@ -2179,31 +2179,49 @@ void updateHomePosition(void)
 }
 
 /*-----------------------------------------------------------
- * LoRa Radar, get aircraft positions from the waypoints
+ * Squad, get the point of interests from the waypoints 1 to 5
  *-----------------------------------------------------------*/
 
-static void navRadarUpdatePlane(void){
-  gpsLocation_t planeLocation;
-  fpVector3_t posPlane;
-  
-    for (int i = 0; i < MAX_PLANES; i++) {
-      planesInfos[i].waypoint.lat = 0;
-      planesInfos[i].waypoint.lon = 0;
-      planesInfos[i].waypoint.alt = 0;
+static void squadUpdatePois(void){
+    gpsLocation_t poi_position;
+    fpVector3_t poi;
+
+    for (int i = 0; i < SQUAD_MAX_POIS; i++) {
+        getWaypoint(i + 1, &squad_pois[i].waypoint);
+        
+        if (squad_pois[i].waypoint.lat != 0 && squad_pois[i].waypoint.lon != 0) {
+            squad_pois[i].waypoint_id = i + 1;
+            
+            squad_pois[i].speed = squad_pois[i].waypoint.p1; // The speed of the other aircraft
+            squad_pois[i].heading = squad_pois[i].waypoint.p2; // The heading of the other aircraft
+            squad_pois[i].state = squad_pois[i].waypoint.p3; // 0=undefined, 1=armed, 2=hidden
+            
+            poi_position.lat = squad_pois[i].waypoint.lat;
+            poi_position.lon = squad_pois[i].waypoint.lon;
+            poi_position.alt = squad_pois[i].waypoint.alt;
+            
+            geoConvertGeodeticToLocal(&poi, &posControl.gpsOrigin, &poi_position, GEO_ALT_RELATIVE);
+            
+            squad_pois[i].distance = calculateDistanceToDestination(&poi);
+            squad_pois[i].direction = calculateBearingToDestination(&poi);
+            squad_pois[i].altitude = calculateAltitudeToMe(&poi);
+        }
+        else {
+            squad_pois[i].state = 0;
+        }
     }
 
-    for (int i = 0; i < MAX_PLANES; i++) {
-      getWaypoint(i+1,&planesInfos[i].waypoint);
-      planesInfos[i].waypoint_id = i + 1;
-
-      planeLocation.lat = planesInfos[i].waypoint.lat;
-      planeLocation.lon = planesInfos[i].waypoint.lon;
-      planeLocation.alt = planesInfos[i].waypoint.alt;
-      geoConvertGeodeticToLocal(&posPlane, &posControl.gpsOrigin, &planeLocation, GEO_ALT_RELATIVE);
-      planesInfos[i].distance = calculateDistanceToDestination(&posPlane);
-      planesInfos[i].direction = calculateBearingToDestination(&posPlane);
-      planesInfos[i].altitude = calculateAltitudeToMe(&posPlane);
-    }
+    // ----------------- DEBUG
+    
+    squad_pois[4].state = 1;
+    squad_pois[4].waypoint_id = 5;
+    squad_pois[4].speed = 7700;
+    squad_pois[4].heading = 18000;
+    squad_pois[4].distance = 15000;
+    squad_pois[4].direction = 4500;
+    squad_pois[4].altitude = -5000;    
+    
+    // ----------------- DEBUG
 }
 
 /*-----------------------------------------------------------
@@ -3042,8 +3060,8 @@ void updateWaypointsAndNavigationMode(void)
     // Map navMode back to enabled flight modes
     switchNavigationFlightModes();
 
-    // Update InavRadar
-    navRadarUpdatePlane();
+    // Update Inav Radar
+    squadUpdatePois();
     
 #if defined(NAV_BLACKBOX)
     navCurrentState = (int16_t)posControl.navPersistentId;

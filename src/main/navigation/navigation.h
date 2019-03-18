@@ -225,17 +225,19 @@ typedef struct {
     uint8_t flag;
 } navWaypoint_t;
 
-typedef struct wp_planes_s {
+typedef struct squad_pois_s {
     navWaypoint_t waypoint;
     uint16_t waypoint_id;
+    int state;
     uint32_t distance;
     int32_t altitude;
     int32_t direction;
-} wp_planes_t;
+    int32_t heading;
+    int32_t speed;
+} squad_pois_t;
 
-#define MAX_PLANES 5
-extern wp_planes_t planesInfos[MAX_PLANES];
-
+#define SQUAD_MAX_POIS 5
+extern squad_pois_t squad_pois[SQUAD_MAX_POIS];
 
 typedef struct {
     fpVector3_t pos;

@@ -1659,8 +1659,8 @@ groups:
       - name: osd_hud_disp_home
         field: hud_disp_home
         type: bool
-      - name: osd_hud_disp_aircrafts
-        field: hud_disp_aircrafts
+      - name: osd_hud_disp_squadpois
+        field: hud_disp_squadpois
         min: 0
         max: 5
       - name: osd_horizon_offset

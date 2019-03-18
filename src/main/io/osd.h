@@ -161,7 +161,7 @@ typedef enum {
 typedef enum {
     OSD_HOMING_FOCUS_NARROW,
     OSD_HOMING_FOCUS_MEDIUM,
-    OSD_HOMING_FOCUS_WIDE,	
+    OSD_HOMING_FOCUS_WIDE,  
 } osd_homing_focus_e;
 
 typedef enum {
@@ -209,8 +209,8 @@ typedef struct osdConfig_s {
     int8_t camera_uptilt;
     uint8_t camera_fov_h;
     uint8_t camera_fov_v;
-	bool hud_disp_home;
-    uint8_t hud_disp_aircrafts;
+    bool hud_disp_home;
+    uint8_t hud_disp_squadpois;
     int8_t horizon_offset;
     uint8_t left_sidebar_scroll; // from osd_sidebar_scroll_e
     uint8_t right_sidebar_scroll; // from osd_sidebar_scroll_e
