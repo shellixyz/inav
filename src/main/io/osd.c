@@ -131,6 +131,13 @@
 #define OSD_CENTER_LEN(x) ((osdDisplayPort->cols - x) / 2)
 #define OSD_CENTER_S(s) OSD_CENTER_LEN(strlen(s))
 
+#define OSD_HOMING_LIM_H1 7
+#define OSD_HOMING_LIM_H2 17
+#define OSD_HOMING_LIM_H3 40
+#define OSD_HOMING_LIM_V1 5
+#define OSD_HOMING_LIM_V2 10
+#define OSD_HOMING_LIM_V3 15
+
 #define OSD_MIN_FONT_VERSION 1
 
 static unsigned currentLayout = 0;
@@ -182,6 +189,10 @@ static displayPort_t *osdDisplayPort;
 #define AH_SIDEBAR_HEIGHT_POS 3
 
 PG_REGISTER_WITH_RESET_FN(osdConfig_t, osdConfig, PG_OSD_CONFIG, 7);
+
+#define HUD_DRAWN_MAXCHARS 42 // 7 POI (1 home, 3 aicrafts, 3 waypoints) x 6 chars max for each
+static int8_t hud_drawn[HUD_DRAWN_MAXCHARS][2];
+static int8_t hud_drawn_pt;
 
 static int digitCount(int32_t value)
 {
@@ -807,21 +818,14 @@ static void osdUpdateBatteryCapacityOrVoltageTextAttributes(textAttributes_t *at
         TEXT_ATTRIBUTES_ADD_BLINK(*attr);
 }
 
-static void osdCrosshairsBounds(uint8_t *x, uint8_t *y, uint8_t *length)
+static void osdCrosshairPosition(uint8_t *x, uint8_t *y)
 {
-    *x = 14 - 1; // Offset for 1 char to the left
+    *x = 14;
     *y = 6;
     if (IS_DISPLAY_PAL) {
         ++(*y);
     }
-    int size = 3;
-    if (osdConfig()->crosshairs_style == OSD_CROSSHAIRS_STYLE_AIRCRAFT) {
-        (*x)--;
-        size = 5;
-    }
-    if (length) {
-        *length = size;
-    }
+    *y += osdConfig()->horizon_offset;
 }
 
 /**
@@ -1134,6 +1138,114 @@ static void osdDrawRadar(uint16_t *drawn, uint32_t *usedScale)
     int16_t reference = DECIDEGREES_TO_DEGREES(osdGetHeading());
     int16_t poiDirection = osdGetHeadingAngle(GPS_directionToHome + 180);
     osdDrawMap(reference, 0, SYM_ARROW_UP, GPS_distanceToHome, poiDirection, SYM_HOME, drawn, usedScale);
+}
+
+/* Overwrite all previously written positions on the OSD with a blank
+ */
+
+static void osdHudClear()
+{
+    for (int i = 0; i < HUD_DRAWN_MAXCHARS; i++) {
+        if (hud_drawn[i][0] > -1) {
+            displayWriteChar(osdDisplayPort, hud_drawn[i][0], hud_drawn[i][1], SYM_BLANK);
+            hud_drawn[i][0] = -1;
+        }
+    }
+    hud_drawn_pt = 0;
+}
+
+/* Write a single char on the OSD, and record its position for the next loop
+ */
+
+static void osdHudWrite(uint8_t x, uint8_t y, uint16_t symb)
+{
+    displayWriteChar(osdDisplayPort, x, y, symb);
+    hud_drawn[hud_drawn_pt][0] = x;
+    hud_drawn[hud_drawn_pt][1] = y;
+    hud_drawn_pt++;
+    if (hud_drawn_pt >= HUD_DRAWN_MAXCHARS)
+        { hud_drawn_pt = 0; }
+}
+
+/* Write an unsigned 3-digit number on the OSD, in alternate color
+ */
+
+static void osdHudWrite3digits(uint8_t x, uint8_t y, uint16_t value)
+{
+    char buff[3];
+    uint16_t symb[3];
+
+    tfp_sprintf(buff, "%3d", constrain(value, 0, 999));
+    for (int i = 0; i < 3; i++) {
+        symb[i] = (buff[i] > 47 && buff[i] < 58) ? buff[i] + SYM_HUD_0 - 48 : SYM_BLANK;
+        }
+    osdHudWrite(x, y, symb[0]);
+    osdHudWrite(x + 1, y, symb[1]);
+    osdHudWrite(x + 2, y, symb[2]);
+}
+
+/* Display one POI on the hud, centered on crosshair position.
+ * poiDistance and poiAltitude in meters, poiAltitude is relative to the aircraft (negative means below)
+ * poiType : 0 = Home point (H), 1 = Aircraft from radar (A B C), 2 = Waypoint (W1 W2 W3)
+ */
+
+static void osdHudDrawPoi(uint32_t poiDistance, int16_t poiDirection, int32_t poiAltitude,
+                          uint16_t poiSymbol)
+    {
+    int hud_poi_x;
+    int hud_poi_y;
+    uint8_t hud_center_x;
+    uint8_t hud_center_y;
+    uint8_t hud_range_x = 8;
+    uint8_t hud_range_y = 4;
+    bool hud_poi_is_oos = 0;
+    
+    int16_t hud_poi_error_x = poiDirection - DECIDEGREES_TO_DEGREES(osdGetHeading());
+    osdCrosshairPosition(&hud_center_x, &hud_center_y);
+
+    while (hud_poi_error_x < -179) {
+        hud_poi_error_x += 360;
+    }
+    while (hud_poi_error_x > 180) {
+        hud_poi_error_x -= 360;
+    }
+
+    if ((hud_poi_error_x > -osdConfig()->camera_fov_h / 2) && (hud_poi_error_x < osdConfig()->camera_fov_h / 2)) { // POI might be in sight, extra geometry needed
+        float hud_scaled_x = sin_approx(DEGREES_TO_RADIANS(hud_poi_error_x)) / sin_approx(DEGREES_TO_RADIANS(osdConfig()->camera_fov_h / 2));
+        hud_poi_x = hud_center_x + 15 * hud_scaled_x;
+        }
+    else {
+        hud_poi_is_oos = 1; // POI is out of sight for sure
+        }
+
+    if ((hud_poi_x > hud_center_x + hud_range_x) || hud_poi_is_oos) { // Out of sight or out of hud area to the right
+        hud_poi_x = hud_center_x + hud_range_x;
+        hud_poi_y = constrain(poiAltitude / 20, -hud_range_y, hud_range_y);
+        hud_poi_y += hud_center_y;
+        osdHudWrite(hud_poi_x + 1, hud_poi_y, SYM_HUD_RIGHT);        
+        }
+    else if ((hud_poi_x < hud_center_x - hud_range_x) || hud_poi_is_oos) { // Out of sight or out of hud area to the left
+        hud_poi_x = hud_center_x - hud_range_x;
+        hud_poi_y = constrain(poiAltitude / 20, -hud_range_y, hud_range_y);
+        hud_poi_y += hud_center_y;
+        osdHudWrite(hud_poi_x + 1, hud_poi_y, SYM_HUD_LEFT);
+        }
+    else { // On camera sight and in hud area
+        float hud_poi_angle = atan2_approx(-poiAltitude, poiDistance);
+        hud_poi_angle = RADIANS_TO_DEGREES(hud_poi_angle);
+        int16_t hud_plane_angle = attitude.values.pitch / 10;
+        int hud_camera_angle = osdConfig()->camera_uptilt;
+        int16_t hud_poi_error_y = hud_poi_angle - hud_plane_angle + hud_camera_angle;
+
+        float hud_scaled_y = sin_approx(DEGREES_TO_RADIANS(hud_poi_error_y)) / sin_approx(DEGREES_TO_RADIANS(osdConfig()->camera_fov_v / 2));
+        hud_poi_y = (IS_DISPLAY_PAL) ? hud_scaled_y * 8 : hud_scaled_y * 6.5;
+        hud_poi_y = constrain(hud_scaled_y, -hud_range_y, hud_range_y);
+        hud_poi_y += hud_center_y;
+        }
+
+    osdHudWrite(hud_poi_x - 1, hud_poi_y, poiSymbol);
+    osdHudWrite(hud_poi_x, hud_poi_y, SYM_HUD_POI);
+    osdHudWrite3digits(hud_poi_x - 1, hud_poi_y + 1, poiDistance);    
 }
 
 static int16_t osdGet3DSpeed(void)
@@ -1499,8 +1611,8 @@ static bool osdDrawSingleElement(uint8_t item)
             int32_t alt = osdGetAltitudeMsl();
             osdFormatAltitudeSymbol(buff, alt);
             break;
-        }		
-		
+        }
+
     case OSD_ONTIME:
         {
             osdFormatOnTime(buff);
@@ -1658,23 +1770,145 @@ static bool osdDrawSingleElement(uint8_t item)
         break;
 
     case OSD_CROSSHAIRS:
-        osdCrosshairsBounds(&elemPosX, &elemPosY, NULL);
-        switch ((osd_crosshairs_style_e)osdConfig()->crosshairs_style) {
-            case OSD_CROSSHAIRS_STYLE_DEFAULT:
-                buff[0] = SYM_AH_CH_LEFT;
-                buff[1] = SYM_AH_CH_CENTER;
-                buff[2] = SYM_AH_CH_RIGHT;
-                buff[3] = '\0';
-                break;
-            case OSD_CROSSHAIRS_STYLE_AIRCRAFT:
-                buff[0] = SYM_AH_CH_AIRCRAFT0;
-                buff[1] = SYM_AH_CH_AIRCRAFT1;
-                buff[2] = SYM_AH_CH_AIRCRAFT2;
-                buff[3] = SYM_AH_CH_AIRCRAFT3;
-                buff[4] = SYM_AH_CH_AIRCRAFT4;
-                buff[5] = '\0';
-                break;
+
+        osdCrosshairPosition(&elemPosX, &elemPosY);
+
+        static const uint16_t crh_style_all[] = {
+        SYM_AH_CH_LEFT, SYM_AH_CH_CENTER, SYM_AH_CH_RIGHT,
+        SYM_AH_CH_AIRCRAFT1, SYM_AH_CH_AIRCRAFT2, SYM_AH_CH_AIRCRAFT3,
+        SYM_AH_CH_TYPE3, SYM_AH_CH_TYPE3 + 1, SYM_AH_CH_TYPE3 + 2,
+        SYM_AH_CH_TYPE4, SYM_AH_CH_TYPE4 + 1, SYM_AH_CH_TYPE4 + 2,
+        SYM_AH_CH_TYPE5, SYM_AH_CH_TYPE5 + 1, SYM_AH_CH_TYPE5 + 2,
+        SYM_AH_CH_TYPE6, SYM_AH_CH_TYPE6 + 1, SYM_AH_CH_TYPE6 + 2,
+        SYM_AH_CH_TYPE7, SYM_AH_CH_TYPE7 + 1, SYM_AH_CH_TYPE7 + 2,
+        };
+
+        uint8_t crh_crosshair = (osd_crosshairs_style_e)osdConfig()->crosshairs_style;
+
+        displayWriteChar(osdDisplayPort, elemPosX-1, elemPosY,crh_style_all[crh_crosshair * 3]);
+        displayWriteChar(osdDisplayPort, elemPosX, elemPosY, crh_style_all[crh_crosshair * 3 + 1]);
+        displayWriteChar(osdDisplayPort, elemPosX+1, elemPosY, crh_style_all[crh_crosshair * 3 + 2]);
+
+        if (STATE(GPS_FIX) && STATE(GPS_FIX_HOME) && isImuHeadingValid()) {
+
+            if (osdConfig()->homing) {
+
+                int crh_l = SYM_BLANK;
+                int crh_r = SYM_BLANK;
+                int crh_u = SYM_BLANK;
+                int crh_d = SYM_BLANK;
+
+                int crh_diff_head = GPS_directionToHome - DECIDEGREES_TO_DEGREES(osdGetHeading());
+
+                while (crh_diff_head < -179) {
+                    crh_diff_head += 360;
+                }
+                while (crh_diff_head > 180) {
+                    crh_diff_head -= 360;
+                }
+
+                float crh_focus_scale;
+
+                switch ((osd_homing_focus_e)osdConfig()->homing_focus) {
+                    case OSD_HOMING_FOCUS_NARROW:
+                    crh_focus_scale = 0.70;
+                    break;
+
+                    case OSD_HOMING_FOCUS_MEDIUM:
+                    crh_focus_scale = 1;
+                    break;
+
+                    case OSD_HOMING_FOCUS_WIDE:
+                    crh_focus_scale = 1.5;
+                    break;
+                    }
+
+                int crh_h1 = OSD_HOMING_LIM_H1 * crh_focus_scale;
+                int crh_h2 = OSD_HOMING_LIM_H2 * crh_focus_scale;
+                int crh_h3 = OSD_HOMING_LIM_H3 * crh_focus_scale;
+
+                if (crh_diff_head <= -162 || crh_diff_head >= 162) {
+                    crh_l = SYM_HUD_ARROWS_L3;
+                    crh_r = SYM_HUD_ARROWS_R3;
+                } else if (crh_diff_head > -162 && crh_diff_head <= -126) {
+                    crh_l = SYM_HUD_ARROWS_L3;
+                    crh_r = SYM_HUD_ARROWS_R2;
+                } else if (crh_diff_head > -126 && crh_diff_head <= -90) {
+                    crh_l = SYM_HUD_ARROWS_L3;
+                    crh_r = SYM_HUD_ARROWS_R1;
+                } else if (crh_diff_head > -90 && crh_diff_head <= -crh_h3) {
+                    crh_l = SYM_HUD_ARROWS_L3;
+                } else if (crh_diff_head > -crh_h3 && crh_diff_head <= -crh_h2) {
+                    crh_l = SYM_HUD_ARROWS_L2;
+                } else if (crh_diff_head > -crh_h2 && crh_diff_head <= -crh_h1) {
+                    crh_l = SYM_HUD_ARROWS_L1;
+                } else if (crh_diff_head >= crh_h1 && crh_diff_head < crh_h2) {
+                    crh_r = SYM_HUD_ARROWS_R1;
+                } else if (crh_diff_head >= crh_h2 && crh_diff_head < crh_h3) {
+                    crh_r = SYM_HUD_ARROWS_R2;
+                } else if (crh_diff_head >= crh_h3 && crh_diff_head < 90) {
+                    crh_r = SYM_HUD_ARROWS_R3;
+                } else if (crh_diff_head >= 90 && crh_diff_head < 126) {
+                    crh_l = SYM_HUD_ARROWS_L1;
+                    crh_r = SYM_HUD_ARROWS_R3;
+                } else if (crh_diff_head >= 126 && crh_diff_head < 162) {
+                    crh_l = SYM_HUD_ARROWS_L2;
+                    crh_r = SYM_HUD_ARROWS_R3;
+                }
+
+                if (ABS(crh_diff_head) < 90) {
+
+                    int32_t crh_altitude = osdGetAltitude() / 100;
+                    int32_t crh_distance = GPS_distanceToHome;
+
+                    float crh_home_angle = atan2_approx(crh_altitude, crh_distance);
+                    crh_home_angle = RADIANS_TO_DEGREES(crh_home_angle);
+                    int crh_plane_angle = attitude.values.pitch / 10;
+                    int crh_camera_angle = osdConfig()->camera_uptilt;
+
+                    int crh_diff_vert = crh_home_angle - crh_plane_angle + crh_camera_angle;
+
+                    int crh_v1 = OSD_HOMING_LIM_V1 * crh_focus_scale;
+                    int crh_v2 = OSD_HOMING_LIM_V2 * crh_focus_scale;
+                    int crh_v3 = OSD_HOMING_LIM_V3 * crh_focus_scale;
+
+                    if (crh_diff_vert > -crh_v2 && crh_diff_vert <= -crh_v1 ) {
+                        crh_u = SYM_HUD_ARROWS_U1;
+                    } else if (crh_diff_vert > -crh_v3 && crh_diff_vert <= -crh_v2) {
+                        crh_u = SYM_HUD_ARROWS_U2;
+                    } else if (crh_diff_vert <= -crh_v3) {
+                        crh_u = SYM_HUD_ARROWS_U3;
+                    } else if (crh_diff_vert >= crh_v1  && crh_diff_vert < crh_v2) {
+                        crh_d = SYM_HUD_ARROWS_D1;
+                    } else if (crh_diff_vert >= crh_v2 && crh_diff_vert < crh_v3) {
+                        crh_d = SYM_HUD_ARROWS_D2;
+                    } else if (crh_diff_vert >= crh_v3) {
+                        crh_d = SYM_HUD_ARROWS_D3;
+                    }
+                }
+                displayWriteChar(osdDisplayPort, elemPosX-2, elemPosY, crh_l);
+                displayWriteChar(osdDisplayPort, elemPosX+2, elemPosY, crh_r);
+                displayWriteChar(osdDisplayPort, elemPosX, elemPosY-1, crh_u);
+                displayWriteChar(osdDisplayPort, elemPosX, elemPosY+1, crh_d);
+            }
+
+            if (osdConfig()->hud_disp_home || osdConfig()->hud_disp_aircrafts > 0 || osdConfig()->hud_disp_waypoints > 0) {
+                osdHudClear();
+            }
+
+            if (osdConfig()->hud_disp_home) {
+                osdHudDrawPoi(GPS_distanceToHome, GPS_directionToHome, -osdGetAltitude() / 100, SYM_HUD_A + 7);
+            }
+
+            if (osdConfig()->hud_disp_aircrafts > 0) {
+                osdHudDrawPoi(GPS_distanceToHome - 10, GPS_directionToHome, 50 - osdGetAltitude()/100, SYM_HUD_A); // Ghost aircraft 50 meters above home, 10m closer
+            }
+            if (osdConfig()->hud_disp_waypoints > 0) {
+               // osdHudDrawPoi(200, -30, -100, SYM_HUD_0 + 1);
+            }
         }
+
+        return true;
         break;
 
     case OSD_ATTITUDE_ROLL:
@@ -1696,9 +1930,7 @@ static bool osdDrawSingleElement(uint8_t item)
 
     case OSD_ARTIFICIAL_HORIZON:
         {
-
-            elemPosX = 14;
-            elemPosY = 6; // Center of the AH area
+            osdCrosshairPosition(&elemPosX, &elemPosY);
 
             // Store the positions we draw over to erase only these at the next iteration
             static int8_t previous_written[AH_PREV_SIZE];
@@ -1711,10 +1943,6 @@ static bool osdDrawSingleElement(uint8_t item)
 
             if (osdConfig()->ahi_reverse_roll) {
                 rollAngle = -rollAngle;
-            }
-
-            if (IS_DISPLAY_PAL) {
-                ++elemPosY;
             }
 
             float ky = sin_approx(rollAngle);
@@ -1775,12 +2003,7 @@ static bool osdDrawSingleElement(uint8_t item)
 
     case OSD_HORIZON_SIDEBARS:
         {
-            elemPosX = 14;
-            elemPosY = 6;
-
-            if (IS_DISPLAY_PAL) {
-                ++elemPosY;
-            }
+            osdCrosshairPosition(&elemPosX, &elemPosY);
 
             static osd_sidebar_t left;
             static osd_sidebar_t right;
@@ -2680,6 +2903,15 @@ void pgResetFn_osdConfig(osdConfig_t *osdConfig)
     osdConfig->ahi_reverse_roll = 0;
     osdConfig->ahi_max_pitch = AH_MAX_PITCH_DEFAULT;
     osdConfig->crosshairs_style = OSD_CROSSHAIRS_STYLE_DEFAULT;
+    osdConfig->homing = 0;
+    osdConfig->homing_focus = OSD_HOMING_FOCUS_MEDIUM;
+    osdConfig->camera_uptilt = 0;
+    osdConfig->camera_fov_h = 135;
+    osdConfig->camera_fov_v = 85;
+    osdConfig->hud_disp_home = 0;
+    osdConfig->hud_disp_aircrafts = 0;
+    osdConfig->hud_disp_waypoints = 0;
+    osdConfig->horizon_offset = 0;
     osdConfig->left_sidebar_scroll = OSD_SIDEBAR_SCROLL_NONE;
     osdConfig->right_sidebar_scroll = OSD_SIDEBAR_SCROLL_NONE;
     osdConfig->sidebar_scroll_arrows = 0;
@@ -2951,7 +3183,7 @@ static void osdShowArmed(void)
             displayWrite(osdDisplayPort, (osdDisplayPort->cols - strlen(buf)) / 2, y + 1, buf);
             int digits = osdConfig()->plus_code_digits;
             olc_encode(GPS_home.lat, GPS_home.lon, digits, buf, sizeof(buf));
-			displayWrite(osdDisplayPort, (osdDisplayPort->cols - strlen(buf)) / 2, y + 2, buf);
+            displayWrite(osdDisplayPort, (osdDisplayPort->cols - strlen(buf)) / 2, y + 2, buf);
             y += 4;
         } else {
             strcpy(buf, "!NO HOME POSITION!");

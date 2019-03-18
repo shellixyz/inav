@@ -24,8 +24,8 @@
 #ifdef USE_MAX7456
 
 #define SYM_RSSI                  0x01 // 001 Icon RSSI
-#define SYM_AH_RIGHT              0x02 // 002 Arrow left
-#define SYM_AH_LEFT               0x03 // 003 Arrow right
+#define SYM_AH_LEFT               0x02 // 002 Arrow left
+#define SYM_AH_RIGHT              0x03 // 003 Arrow right
 #define SYM_THR                   0x04 // 004 Throttle
 #define SYM_AH_DECORATION_UP      0x05 // 005 Arrow up AHI
 #define SYM_VOLT                  0x06 // 006 V
@@ -186,11 +186,11 @@
 
 #define SYM_ZERO_HALF_LEADING_DOT 0xD0 // 208 to 217 Numbers with leading dot
 
-#define SYM_AH_CH_AIRCRAFT0       0xDA // 218 Crossair aircraft left
-#define SYM_AH_CH_AIRCRAFT1       0xDB // 219 Crossair aircraft 
-#define SYM_AH_CH_AIRCRAFT2       0xDC // 220 Crossair aircraft center
-#define SYM_AH_CH_AIRCRAFT3       0xDD // 221 Crossair aircraft 
-#define SYM_AH_CH_AIRCRAFT4       0xDE // 222 Crossair aircraft right
+#define SYM_AH_CH_AIRCRAFT0       0xDA // 218 Crosshair aircraft 1
+#define SYM_AH_CH_AIRCRAFT1       0xDB // 219 Crosshair aircraft 2
+#define SYM_AH_CH_AIRCRAFT2       0xDC // 220 Crosshair aircraft 3
+#define SYM_AH_CH_AIRCRAFT3       0xDD // 221 Crosshair aircraft 4
+#define SYM_AH_CH_AIRCRAFT4       0xDE // 222 Crosshair aircraft 5
 
 #define SYM_PITCH_DOWN            0xDF // 223 Pitch down
 
@@ -208,6 +208,31 @@
 #define SYM_LOGO_WIDTH            6
 #define SYM_LOGO_HEIGHT           4
 
-#define SYM_CURSOR SYM_AH_LEFT // Menu cursor
+#define SYM_AH_CH_TYPE3           0x190 // 400 to 402, crosshair 3
+#define SYM_AH_CH_TYPE4           0x193 // 403 to 405, crosshair 4
+#define SYM_AH_CH_TYPE5           0x196 // 406 to 408, crosshair 5
+#define SYM_AH_CH_TYPE6           0x199 // 409 to 411, crosshair 6
+#define SYM_AH_CH_TYPE7           0x19C // 412 to 414, crosshair 7
+
+#define SYM_HUD_ARROWS_L1         0x1A2 // 418 Smart crosshair
+#define SYM_HUD_ARROWS_L2         0x1A3 // 419 Smart crosshair
+#define SYM_HUD_ARROWS_L3         0x1A4 // 420 Smart crosshair
+#define SYM_HUD_ARROWS_R1         0x1A5 // 421 Smart crosshair
+#define SYM_HUD_ARROWS_R2         0x1A6 // 422 Smart crosshair
+#define SYM_HUD_ARROWS_R3         0x1A7 // 423 Smart crosshair
+#define SYM_HUD_ARROWS_U1         0x1A8 // 424 Smart crosshair
+#define SYM_HUD_ARROWS_U2         0x1A9 // 425 Smart crosshair
+#define SYM_HUD_ARROWS_U3         0x1AA // 426 Smart crosshair
+#define SYM_HUD_ARROWS_D1         0x1AB // 427 Smart crosshair
+#define SYM_HUD_ARROWS_D2         0x1AC // 428 Smart crosshair
+#define SYM_HUD_ARROWS_D3         0x1AD // 429 Smart crosshair
+
+#define SYM_HUD_0                 0x1AE // 430 to 439 Zero to 9
+#define SYM_HUD_A                 0x1B8 // 440 to 447 A to H
+#define SYM_HUD_LEFT              0x1C0 // 448 Left arrow
+#define SYM_HUD_RIGHT             0x1C1 // 449 Right arrow
+#define SYM_HUD_POI               0x1C2 // 450 POI
+#define SYM_HUD_DIS               0x1C3 // 451 DIStance
+#define SYM_HUD_ALT               0x1C4 // 452 ALTitude
 
 #endif // USE_MAX7456
