@@ -1189,16 +1189,15 @@ static void osdHudWrite3digits(uint8_t x, uint8_t y, uint16_t value)
 
 static int getNearestPlaneId()
 {
-  int16_t min = planesInfos[0].GPS_distanceToMe;
-	int plane_id_near=0;
-  for (int c = 0; c < MAX_PLANES; c++) {
-		 if ((planesInfos[c].planeWP.p3==1)){
-			 if ((planesInfos[c].GPS_distanceToMe) < min) {
-				 plane_id_near = c;
-				 min = planesInfos[c].GPS_distanceToMe;
-			 }
-		 }
-	 }
+    uint32_t min = planesInfos[0].distance;
+    int plane_id_near=0;
+    
+    for (int c = 1; c < MAX_PLANES; c++) {
+		 if ((planesInfos[c].waypoint.p3 == 1) && ((planesInfos[c].distance) < min)) {
+			plane_id_near = c;
+			min = planesInfos[c].distance;
+			}
+		}
 	return plane_id_near;
 }
 
@@ -1923,9 +1922,9 @@ static bool osdDrawSingleElement(uint8_t item)
             
 // -------------------------------
             int plane_id = getNearestPlaneId(); // Displays only the closest WP for now, unconditional
-            osdHudDrawPoi(planesInfos[plane_id].GPS_distanceToMe / 100, // Distance in meters
-                osdGetHeadingAngle(planesInfos[plane_id].planePoiDirection / 100), // POI direction between 0 and 360°
-                planesInfos[plane_id].GPS_altitudeToMe / 100, // Altitude, negative means POI is below our aircraft
+            osdHudDrawPoi(planesInfos[plane_id].distance / 100, // Distance in meters
+                osdGetHeadingAngle(planesInfos[plane_id].direction / 100), // POI direction between 0 and 360°
+                planesInfos[plane_id].altitude / 100, // Altitude, negative means POI is below our aircraft
                 SYM_HUD_A);
 // -------------------------------
 

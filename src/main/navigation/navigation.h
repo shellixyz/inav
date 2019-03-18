@@ -225,15 +225,12 @@ typedef struct {
     uint8_t flag;
 } navWaypoint_t;
 
-typedef struct wp_planes_s  {
-    navWaypoint_t planeWP;
-    uint32_t wp_nb;
-    int16_t GPS_distanceToMe;
-    int16_t GPS_altitudeToMe;
-    int32_t planePoiDirection;
-    uint16_t drawn;
-    int posX;
-    int posY;
+typedef struct wp_planes_s {
+    navWaypoint_t waypoint;
+    uint16_t waypoint_id;
+    uint32_t distance;
+    int32_t altitude;
+    int32_t direction;
 } wp_planes_t;
 
 #define MAX_PLANES 5
