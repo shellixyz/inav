@@ -2207,25 +2207,6 @@ static void navRadarUpdatePlane(void){
 }
 
 /*-----------------------------------------------------------
- * LoRa Radar, get the nearest aircraft
- *-----------------------------------------------------------*/
-
-static int getNearestPlaneId()
-{
-  int16_t min = planesInfos[0].GPS_distanceToMe;
-	int plane_id_near=0;
-  for (int c = 0; c < MAX_PLANES; c++) {
-		 if ((planesInfos[c].planeWP.p3==1)){
-			 if ((planesInfos[c].GPS_distanceToMe) < min) {
-				 plane_id_near = c;
-				 min = planesInfos[c].GPS_distanceToMe;
-			 }
-		 }
-	 }
-	return plane_id_near;
-}
-
-/*-----------------------------------------------------------
  * Update flight statistics
  *-----------------------------------------------------------*/
 static void updateNavigationFlightStatistics(void)
