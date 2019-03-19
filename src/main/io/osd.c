@@ -1167,22 +1167,6 @@ static void osdHudWrite(uint8_t x, uint8_t y, uint16_t symb)
         { hud_drawn_pt = 0; }
 }
 
-/* Write an unsigned 3-digit number on the OSD, in alternate color
- */
-
-static void osdHudWrite3digits(uint8_t x, uint8_t y, uint16_t value)
-{
-    char buff[3];
-    uint16_t symb[3];
-
-    tfp_sprintf(buff, "%3d", constrain(value, 0, 999));
-    for (int i = 0; i < 3; i++) {
-        symb[i] = (buff[i] > 47 && buff[i] < 58) ? buff[i] + SYM_HUD_0 - 48 : SYM_BLANK;
-        }
-    osdHudWrite(x, y, symb[0]);
-    osdHudWrite(x + 1, y, symb[1]);
-    osdHudWrite(x + 2, y, symb[2]);
-}
 
 /* Squad, get the nearest aircraft
  */
@@ -1239,13 +1223,13 @@ static void osdHudDrawPoi(uint32_t poiDistance, int16_t poiDirection, int32_t po
         hud_poi_x = hud_center_x + hud_range_x;
         hud_poi_y = constrain(poiAltitude / 20, -hud_range_y, hud_range_y);
         hud_poi_y += hud_center_y;
-        osdHudWrite(hud_poi_x + 1, hud_poi_y, SYM_HUD_RIGHT);        
+        osdHudWrite(hud_poi_x + 1, hud_poi_y, SYM_AH_RIGHT);        
         }
     else if ((hud_poi_x < hud_center_x - hud_range_x) || hud_poi_is_oos) { // Out of sight or out of hud area to the left
         hud_poi_x = hud_center_x - hud_range_x;
         hud_poi_y = constrain(poiAltitude / 20, -hud_range_y, hud_range_y);
         hud_poi_y += hud_center_y;
-        osdHudWrite(hud_poi_x + 1, hud_poi_y, SYM_HUD_LEFT);
+        osdHudWrite(hud_poi_x + 1, hud_poi_y, SYM_AH_LEFT);
         }
     else { // On camera sight and in hud area
         float hud_poi_angle = atan2_approx(-poiAltitude, poiDistance);
@@ -1255,14 +1239,22 @@ static void osdHudDrawPoi(uint32_t poiDistance, int16_t poiDirection, int32_t po
         int16_t hud_poi_error_y = hud_poi_angle - hud_plane_angle + hud_camera_angle;
 
         float hud_scaled_y = sin_approx(DEGREES_TO_RADIANS(hud_poi_error_y)) / sin_approx(DEGREES_TO_RADIANS(osdConfig()->camera_fov_v / 2));
-        hud_poi_y = (IS_DISPLAY_PAL) ? hud_scaled_y * 8 : hud_scaled_y * 6.5;
-        hud_poi_y = constrain(hud_scaled_y, -hud_range_y, hud_range_y);
+        
+        // hud_poi_y = (IS_DISPLAY_PAL) ? hud_scaled_y * 8 : hud_scaled_y * 6.5;
+        //hud_poi_y = constrain(hud_scaled_y, -hud_range_y, hud_range_y);
+        //hud_poi_y += hud_center_y;
+
+        hud_poi_y = constrain(8 * hud_scaled_y, -hud_range_y, hud_range_y);
         hud_poi_y += hud_center_y;
         }
 
-    osdHudWrite(hud_poi_x - 1, hud_poi_y, poiSymbol);
-    osdHudWrite(hud_poi_x, hud_poi_y, SYM_HUD_POI);
-    osdHudWrite3digits(hud_poi_x - 1, hud_poi_y + 1, poiDistance);    
+    osdHudWrite(hud_poi_x, hud_poi_y, poiSymbol);
+    
+    char buff[3];    
+    osdFormatCentiNumber(buff, poiDistance * 100, METERS_PER_KILOMETER, 0, 3, 3);
+    osdHudWrite(hud_poi_x - 1, hud_poi_y + 1, buff[0]);
+    osdHudWrite(hud_poi_x , hud_poi_y + 1, buff[1]);
+    osdHudWrite(hud_poi_x + 1, hud_poi_y + 1, buff[2]);
 }
 
 static int16_t osdGet3DSpeed(void)
@@ -1914,7 +1906,7 @@ static bool osdDrawSingleElement(uint8_t item)
             }
 
             if (osdConfig()->hud_disp_home) {
-                osdHudDrawPoi(GPS_distanceToHome, GPS_directionToHome, -osdGetAltitude() / 100, SYM_HUD_A + 7);
+                osdHudDrawPoi(GPS_distanceToHome, GPS_directionToHome, -osdGetAltitude() / 100, 'H');
             }
 
             if (osdConfig()->hud_disp_squadpois > 0) { // Squad POis
@@ -1923,7 +1915,7 @@ static bool osdDrawSingleElement(uint8_t item)
                         osdHudDrawPoi(squad_pois[i].distance / 100,
                         osdGetHeadingAngle(squad_pois[i].direction / 100),
                         squad_pois[i].altitude / 100,
-                        SYM_HUD_A + i);
+                        65 + i);
                     }
                 }
             }

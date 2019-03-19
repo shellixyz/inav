@@ -227,12 +227,4 @@
 #define SYM_HUD_ARROWS_D2         0x1AC // 428 Smart crosshair
 #define SYM_HUD_ARROWS_D3         0x1AD // 429 Smart crosshair
 
-#define SYM_HUD_0                 0x1AE // 430 to 439 Zero to 9
-#define SYM_HUD_A                 0x1B8 // 440 to 447 A to H
-#define SYM_HUD_LEFT              0x1C0 // 448 Left arrow
-#define SYM_HUD_RIGHT             0x1C1 // 449 Right arrow
-#define SYM_HUD_POI               0x1C2 // 450 POI
-#define SYM_HUD_DIS               0x1C3 // 451 DIStance
-#define SYM_HUD_ALT               0x1C4 // 452 ALTitude
-
 #endif // USE_MAX7456

@@ -128,7 +128,7 @@ PG_RESET_TEMPLATE(navConfig_t, navConfig,
         .braking_boost_timeout = 750,           // Timout boost after 750ms
         .braking_boost_speed_threshold = 150,   // Boost can happen only above 1.5m/s
         .braking_boost_disengage_speed = 100,   // Disable boost at 1m/s
-        .braking_bank_angle = 40,               // Max braking angle     
+        .braking_bank_angle = 40,               // Max braking angle
     },
 
     // Fixed wing
@@ -2188,20 +2188,31 @@ static void squadUpdatePois(void){
 
     for (int i = 0; i < SQUAD_MAX_POIS; i++) {
         getWaypoint(i + 1, &squad_pois[i].waypoint);
+
+            /* ----------------- DEBUG
         
+        if (i == 3)
+            {
+            squad_pois[i].waypoint.lat = 0;
+            squad_pois[i].waypoint.lon = 0;
+            squad_pois[i].waypoint.alt = 0;
+            squad_pois[i].waypoint.p3 = 1;
+            }
+     ----------------- DEBUG */
+    
         if (squad_pois[i].waypoint.lat != 0 && squad_pois[i].waypoint.lon != 0) {
             squad_pois[i].waypoint_id = i + 1;
-            
+
             squad_pois[i].speed = squad_pois[i].waypoint.p1; // The speed of the other aircraft
             squad_pois[i].heading = squad_pois[i].waypoint.p2; // The heading of the other aircraft
             squad_pois[i].state = squad_pois[i].waypoint.p3; // 0=undefined, 1=armed, 2=hidden
-            
+
             poi_position.lat = squad_pois[i].waypoint.lat;
             poi_position.lon = squad_pois[i].waypoint.lon;
             poi_position.alt = squad_pois[i].waypoint.alt;
-            
+
             geoConvertGeodeticToLocal(&poi, &posControl.gpsOrigin, &poi_position, GEO_ALT_RELATIVE);
-            
+
             squad_pois[i].distance = calculateDistanceToDestination(&poi);
             squad_pois[i].direction = calculateBearingToDestination(&poi);
             squad_pois[i].altitude = calculateAltitudeToMe(&poi);
@@ -2211,17 +2222,17 @@ static void squadUpdatePois(void){
         }
     }
 
-    // ----------------- DEBUG
-    
+    /* ----------------- DEBUG
+
     squad_pois[4].state = 1;
     squad_pois[4].waypoint_id = 5;
+    squad_pois[4].distance = 998000;
+    squad_pois[4].direction = 8900;
+    squad_pois[4].altitude = 86000;
     squad_pois[4].speed = 7700;
     squad_pois[4].heading = 18000;
-    squad_pois[4].distance = 15000;
-    squad_pois[4].direction = 4500;
-    squad_pois[4].altitude = -5000;    
-    
-    // ----------------- DEBUG
+
+     ----------------- DEBUG */
 }
 
 /*-----------------------------------------------------------
@@ -3062,7 +3073,7 @@ void updateWaypointsAndNavigationMode(void)
 
     // Update Inav Radar
     squadUpdatePois();
-    
+
 #if defined(NAV_BLACKBOX)
     navCurrentState = (int16_t)posControl.navPersistentId;
 #endif
