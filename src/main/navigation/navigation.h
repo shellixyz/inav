@@ -227,13 +227,13 @@ typedef struct {
 
 typedef struct squad_pois_s {
     navWaypoint_t waypoint;
-    uint16_t waypoint_id;
-    int state;
-    uint32_t distance;
-    int32_t altitude;
-    int32_t direction;
-    int32_t heading;
-    int32_t speed;
+    uint8_t waypoint_id;
+    uint8_t state;
+    uint16_t distance;
+    int16_t altitude;
+    int16_t direction;
+    int16_t heading;
+    uint16_t speed;
 } squad_pois_t;
 
 #define SQUAD_MAX_POIS 5

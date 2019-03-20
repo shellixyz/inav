@@ -2203,8 +2203,8 @@ static void squadUpdatePois(void){
         if (squad_pois[i].waypoint.lat != 0 && squad_pois[i].waypoint.lon != 0) {
             squad_pois[i].waypoint_id = i + 1;
 
-            squad_pois[i].speed = squad_pois[i].waypoint.p1; // The speed of the other aircraft
-            squad_pois[i].heading = squad_pois[i].waypoint.p2; // The heading of the other aircraft
+            squad_pois[i].speed = squad_pois[i].waypoint.p1 / 100; // Speed of the other aircraft in m/s ?
+            squad_pois[i].heading = squad_pois[i].waypoint.p2 / 100; // Heading of the other aircraft in ° ?
             squad_pois[i].state = squad_pois[i].waypoint.p3; // 0=undefined, 1=armed, 2=hidden
 
             poi_position.lat = squad_pois[i].waypoint.lat;
@@ -2213,9 +2213,9 @@ static void squadUpdatePois(void){
 
             geoConvertGeodeticToLocal(&poi, &posControl.gpsOrigin, &poi_position, GEO_ALT_RELATIVE);
 
-            squad_pois[i].distance = calculateDistanceToDestination(&poi);
-            squad_pois[i].direction = calculateBearingToDestination(&poi);
-            squad_pois[i].altitude = calculateAltitudeToMe(&poi);
+            squad_pois[i].distance = calculateDistanceToDestination(&poi) / 100; // In meters
+            squad_pois[i].direction = calculateBearingToDestination(&poi) / 100; // In °
+            squad_pois[i].altitude = calculateAltitudeToMe(&poi) / 100; // In meters, - is below
         }
         else {
             squad_pois[i].state = 0;
@@ -2226,11 +2226,11 @@ static void squadUpdatePois(void){
 
     squad_pois[4].state = 1;
     squad_pois[4].waypoint_id = 5;
-    squad_pois[4].distance = 998000;
-    squad_pois[4].direction = 8900;
-    squad_pois[4].altitude = 86000;
-    squad_pois[4].speed = 7700;
-    squad_pois[4].heading = 18000;
+    squad_pois[4].distance = 9980;
+    squad_pois[4].direction = 89;
+    squad_pois[4].altitude = 860;
+    squad_pois[4].speed = 77;
+    squad_pois[4].heading = 180;
 
      ----------------- DEBUG */
 }

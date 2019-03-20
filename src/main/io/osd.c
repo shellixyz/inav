@@ -1168,23 +1168,22 @@ static void osdHudWrite(uint8_t x, uint8_t y, uint16_t symb)
 }
 
 
-/* Squad, get the nearest aircraft
+/* Squad, get the nearest POI
  */
-/*
-static int getNearestPlaneId()
+
+static int squadGetNearestPoi()
 {
     uint32_t min = squad_pois[0].distance;
-    int plane_id_near=0;
-    
-    for (int c = 1; c < SQUAD_MAX_POIS; c++) {
-         if ((squad_pois[c].waypoint.p3 == 1) && ((squad_pois[c].distance) < min)) {
-            plane_id_near = c;
-            min = squad_pois[c].distance;
+    int poi_near = 0;
+
+    for (int i = 1; i < SQUAD_MAX_POIS; i++) {
+         if ((squad_pois[i].state == 1) && ((squad_pois[i].distance) < min) && ((squad_pois[i].distance) > 0)) {
+            min = squad_pois[i].distance;
+            poi_near = i;
             }
         }
-    return plane_id_near;
+    return poi_near;
 }
-*/
 
 /* Display one POI on the hud, centered on crosshair position.
  * poiDistance and poiAltitude in meters, poiAltitude is relative to the aircraft (negative means below)
@@ -1200,7 +1199,7 @@ static void osdHudDrawPoi(uint32_t poiDistance, int16_t poiDirection, int32_t po
     uint8_t hud_range_x = 8;
     uint8_t hud_range_y = 4;
     bool hud_poi_is_oos = 0;
-    
+
     int16_t hud_poi_error_x = poiDirection - DECIDEGREES_TO_DEGREES(osdGetHeading());
     osdCrosshairPosition(&hud_center_x, &hud_center_y);
 
@@ -1223,7 +1222,7 @@ static void osdHudDrawPoi(uint32_t poiDistance, int16_t poiDirection, int32_t po
         hud_poi_x = hud_center_x + hud_range_x;
         hud_poi_y = constrain(poiAltitude / 20, -hud_range_y, hud_range_y);
         hud_poi_y += hud_center_y;
-        osdHudWrite(hud_poi_x + 1, hud_poi_y, SYM_AH_RIGHT);        
+        osdHudWrite(hud_poi_x + 1, hud_poi_y, SYM_AH_RIGHT);
         }
     else if ((hud_poi_x < hud_center_x - hud_range_x) || hud_poi_is_oos) { // Out of sight or out of hud area to the left
         hud_poi_x = hud_center_x - hud_range_x;
@@ -1239,7 +1238,7 @@ static void osdHudDrawPoi(uint32_t poiDistance, int16_t poiDirection, int32_t po
         int16_t hud_poi_error_y = hud_poi_angle - hud_plane_angle + hud_camera_angle;
 
         float hud_scaled_y = sin_approx(DEGREES_TO_RADIANS(hud_poi_error_y)) / sin_approx(DEGREES_TO_RADIANS(osdConfig()->camera_fov_v / 2));
-        
+
         // hud_poi_y = (IS_DISPLAY_PAL) ? hud_scaled_y * 8 : hud_scaled_y * 6.5;
         //hud_poi_y = constrain(hud_scaled_y, -hud_range_y, hud_range_y);
         //hud_poi_y += hud_center_y;
@@ -1249,8 +1248,8 @@ static void osdHudDrawPoi(uint32_t poiDistance, int16_t poiDirection, int32_t po
         }
 
     osdHudWrite(hud_poi_x, hud_poi_y, poiSymbol);
-    
-    char buff[3];    
+
+    char buff[3];
     osdFormatCentiNumber(buff, poiDistance * 100, METERS_PER_KILOMETER, 0, 3, 3);
     osdHudWrite(hud_poi_x - 1, hud_poi_y + 1, buff[0]);
     osdHudWrite(hud_poi_x , hud_poi_y + 1, buff[1]);
@@ -1901,23 +1900,43 @@ static bool osdDrawSingleElement(uint8_t item)
                 displayWriteChar(osdDisplayPort, elemPosX, elemPosY+1, crh_d);
             }
 
-            if (osdConfig()->hud_disp_home || osdConfig()->hud_disp_squadpois > 0) {
-                osdHudClear();
-            }
+            switch ((osd_hud_mode_e)osdConfig()->hud_mode) {
 
-            if (osdConfig()->hud_disp_home) {
-                osdHudDrawPoi(GPS_distanceToHome, GPS_directionToHome, -osdGetAltitude() / 100, 'H');
-            }
+                case OSD_HUD_MODE_OFF:
 
-            if (osdConfig()->hud_disp_squadpois > 0) { // Squad POis
-                for (int i = 0; i < osdConfig()->hud_disp_squadpois; i++) { 
-                    if ((squad_pois[i].state == 1)) { // POI is armed
-                        osdHudDrawPoi(squad_pois[i].distance / 100,
-                        osdGetHeadingAngle(squad_pois[i].direction / 100),
-                        squad_pois[i].altitude / 100,
-                        65 + i);
+                break;
+
+                case OSD_HUD_MODE_3D:
+
+                    if (osdConfig()->hud_disp_home || osdConfig()->hud_disp_pois > 0) {
+                        osdHudClear();
                     }
-                }
+
+                    if (osdConfig()->hud_disp_home) {
+                        osdHudDrawPoi(GPS_distanceToHome, GPS_directionToHome, -osdGetAltitude() / 100, 'H');
+                    }
+
+                    if (osdConfig()->hud_disp_pois > 0) { // Squad POIs
+                        for (int i = 0; i < osdConfig()->hud_disp_pois; i++) {
+                            if ((squad_pois[i].state == 1)) { // POI is armed
+                                osdHudDrawPoi(squad_pois[i].distance, osdGetHeadingAngle(squad_pois[i].direction), squad_pois[i].altitude, 65 + i);
+                            }
+                        }
+                    }
+
+                break;
+
+                case OSD_HUD_MODE_MAP: // Map, view from the top, only the closest POI for now
+                    ;
+                    static uint16_t drawn = 0;
+                    static uint32_t scale = 0;
+                    int16_t reference = DECIDEGREES_TO_DEGREES(osdGetHeading());
+                    int poi_id = squadGetNearestPoi();
+                    int16_t poiDirection = osdGetHeadingAngle(squad_pois[poi_id].direction + 180);
+                    osdDrawMap(reference, 0, SYM_ARROW_UP, squad_pois[poi_id].distance, poiDirection, 65 + poi_id, &drawn, &scale);
+
+                break;
+
             }
         }
 
@@ -2921,8 +2940,9 @@ void pgResetFn_osdConfig(osdConfig_t *osdConfig)
     osdConfig->camera_uptilt = 0;
     osdConfig->camera_fov_h = 135;
     osdConfig->camera_fov_v = 85;
-    osdConfig->hud_disp_home = 0;
-    osdConfig->hud_disp_squadpois = 0;
+    osdConfig->hud_mode = OSD_HUD_MODE_3D;
+    osdConfig->hud_disp_home = 1;
+    osdConfig->hud_disp_pois = 0;
     osdConfig->horizon_offset = 0;
     osdConfig->left_sidebar_scroll = OSD_SIDEBAR_SCROLL_NONE;
     osdConfig->right_sidebar_scroll = OSD_SIDEBAR_SCROLL_NONE;

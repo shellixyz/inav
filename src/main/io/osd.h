@@ -165,6 +165,12 @@ typedef enum {
 } osd_homing_focus_e;
 
 typedef enum {
+    OSD_HUD_MODE_OFF,
+    OSD_HUD_MODE_3D,
+    OSD_HUD_MODE_MAP,  
+} osd_hud_mode_e;
+
+typedef enum {
     OSD_SIDEBAR_SCROLL_NONE,
     OSD_SIDEBAR_SCROLL_ALTITUDE,
     OSD_SIDEBAR_SCROLL_GROUND_SPEED,
@@ -209,8 +215,9 @@ typedef struct osdConfig_s {
     int8_t camera_uptilt;
     uint8_t camera_fov_h;
     uint8_t camera_fov_v;
+    uint8_t hud_mode; // from osd_hud_mode_e
     bool hud_disp_home;
-    uint8_t hud_disp_squadpois;
+    uint8_t hud_disp_pois;
     int8_t horizon_offset;
     uint8_t left_sidebar_scroll; // from osd_sidebar_scroll_e
     uint8_t right_sidebar_scroll; // from osd_sidebar_scroll_e
