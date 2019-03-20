@@ -1797,145 +1797,133 @@ static bool osdDrawSingleElement(uint8_t item)
         displayWriteChar(osdDisplayPort, elemPosX, elemPosY, crh_style_all[crh_crosshair * 3 + 1]);
         displayWriteChar(osdDisplayPort, elemPosX+1, elemPosY, crh_style_all[crh_crosshair * 3 + 2]);
 
-        if (STATE(GPS_FIX) && STATE(GPS_FIX_HOME) && isImuHeadingValid()) {
+        if (osdConfig()->homing && STATE(GPS_FIX) && STATE(GPS_FIX_HOME) && isImuHeadingValid()) {
 
-            if (osdConfig()->homing) {
+            int crh_l = SYM_BLANK;
+            int crh_r = SYM_BLANK;
+            int crh_u = SYM_BLANK;
+            int crh_d = SYM_BLANK;
 
-                int crh_l = SYM_BLANK;
-                int crh_r = SYM_BLANK;
-                int crh_u = SYM_BLANK;
-                int crh_d = SYM_BLANK;
+            int crh_diff_head = GPS_directionToHome - DECIDEGREES_TO_DEGREES(osdGetHeading());
 
-                int crh_diff_head = GPS_directionToHome - DECIDEGREES_TO_DEGREES(osdGetHeading());
-
-                while (crh_diff_head < -179) {
-                    crh_diff_head += 360;
-                }
-                while (crh_diff_head > 180) {
-                    crh_diff_head -= 360;
-                }
-
-                float crh_focus_scale;
-
-                switch ((osd_homing_focus_e)osdConfig()->homing_focus) {
-                    case OSD_HOMING_FOCUS_NARROW:
-                    crh_focus_scale = 0.70;
-                    break;
-
-                    case OSD_HOMING_FOCUS_MEDIUM:
-                    crh_focus_scale = 1;
-                    break;
-
-                    case OSD_HOMING_FOCUS_WIDE:
-                    crh_focus_scale = 1.5;
-                    break;
-                    }
-
-                int crh_h1 = OSD_HOMING_LIM_H1 * crh_focus_scale;
-                int crh_h2 = OSD_HOMING_LIM_H2 * crh_focus_scale;
-                int crh_h3 = OSD_HOMING_LIM_H3 * crh_focus_scale;
-
-                if (crh_diff_head <= -162 || crh_diff_head >= 162) {
-                    crh_l = SYM_HUD_ARROWS_L3;
-                    crh_r = SYM_HUD_ARROWS_R3;
-                } else if (crh_diff_head > -162 && crh_diff_head <= -126) {
-                    crh_l = SYM_HUD_ARROWS_L3;
-                    crh_r = SYM_HUD_ARROWS_R2;
-                } else if (crh_diff_head > -126 && crh_diff_head <= -90) {
-                    crh_l = SYM_HUD_ARROWS_L3;
-                    crh_r = SYM_HUD_ARROWS_R1;
-                } else if (crh_diff_head > -90 && crh_diff_head <= -crh_h3) {
-                    crh_l = SYM_HUD_ARROWS_L3;
-                } else if (crh_diff_head > -crh_h3 && crh_diff_head <= -crh_h2) {
-                    crh_l = SYM_HUD_ARROWS_L2;
-                } else if (crh_diff_head > -crh_h2 && crh_diff_head <= -crh_h1) {
-                    crh_l = SYM_HUD_ARROWS_L1;
-                } else if (crh_diff_head >= crh_h1 && crh_diff_head < crh_h2) {
-                    crh_r = SYM_HUD_ARROWS_R1;
-                } else if (crh_diff_head >= crh_h2 && crh_diff_head < crh_h3) {
-                    crh_r = SYM_HUD_ARROWS_R2;
-                } else if (crh_diff_head >= crh_h3 && crh_diff_head < 90) {
-                    crh_r = SYM_HUD_ARROWS_R3;
-                } else if (crh_diff_head >= 90 && crh_diff_head < 126) {
-                    crh_l = SYM_HUD_ARROWS_L1;
-                    crh_r = SYM_HUD_ARROWS_R3;
-                } else if (crh_diff_head >= 126 && crh_diff_head < 162) {
-                    crh_l = SYM_HUD_ARROWS_L2;
-                    crh_r = SYM_HUD_ARROWS_R3;
-                }
-
-                if (ABS(crh_diff_head) < 90) {
-
-                    int32_t crh_altitude = osdGetAltitude() / 100;
-                    int32_t crh_distance = GPS_distanceToHome;
-
-                    float crh_home_angle = atan2_approx(crh_altitude, crh_distance);
-                    crh_home_angle = RADIANS_TO_DEGREES(crh_home_angle);
-                    int crh_plane_angle = attitude.values.pitch / 10;
-                    int crh_camera_angle = osdConfig()->camera_uptilt;
-
-                    int crh_diff_vert = crh_home_angle - crh_plane_angle + crh_camera_angle;
-
-                    int crh_v1 = OSD_HOMING_LIM_V1 * crh_focus_scale;
-                    int crh_v2 = OSD_HOMING_LIM_V2 * crh_focus_scale;
-                    int crh_v3 = OSD_HOMING_LIM_V3 * crh_focus_scale;
-
-                    if (crh_diff_vert > -crh_v2 && crh_diff_vert <= -crh_v1 ) {
-                        crh_u = SYM_HUD_ARROWS_U1;
-                    } else if (crh_diff_vert > -crh_v3 && crh_diff_vert <= -crh_v2) {
-                        crh_u = SYM_HUD_ARROWS_U2;
-                    } else if (crh_diff_vert <= -crh_v3) {
-                        crh_u = SYM_HUD_ARROWS_U3;
-                    } else if (crh_diff_vert >= crh_v1  && crh_diff_vert < crh_v2) {
-                        crh_d = SYM_HUD_ARROWS_D1;
-                    } else if (crh_diff_vert >= crh_v2 && crh_diff_vert < crh_v3) {
-                        crh_d = SYM_HUD_ARROWS_D2;
-                    } else if (crh_diff_vert >= crh_v3) {
-                        crh_d = SYM_HUD_ARROWS_D3;
-                    }
-                }
-                displayWriteChar(osdDisplayPort, elemPosX-2, elemPosY, crh_l);
-                displayWriteChar(osdDisplayPort, elemPosX+2, elemPosY, crh_r);
-                displayWriteChar(osdDisplayPort, elemPosX, elemPosY-1, crh_u);
-                displayWriteChar(osdDisplayPort, elemPosX, elemPosY+1, crh_d);
+            while (crh_diff_head < -179) {
+                crh_diff_head += 360;
+            }
+            while (crh_diff_head > 180) {
+                crh_diff_head -= 360;
             }
 
-            switch ((osd_hud_mode_e)osdConfig()->hud_mode) {
+            float crh_focus_scale;
 
-                case OSD_HUD_MODE_OFF:
-
+            switch ((osd_homing_focus_e)osdConfig()->homing_focus) {
+                case OSD_HOMING_FOCUS_NARROW:
+                crh_focus_scale = 0.70;
                 break;
 
-                case OSD_HUD_MODE_3D:
+                case OSD_HOMING_FOCUS_MEDIUM:
+                crh_focus_scale = 1;
+                break;
 
-                    if (osdConfig()->hud_disp_home || osdConfig()->hud_disp_pois > 0) {
-                        osdHudClear();
-                    }
+                case OSD_HOMING_FOCUS_WIDE:
+                crh_focus_scale = 1.5;
+                break;
+                }
 
-                    if (osdConfig()->hud_disp_home) {
-                        osdHudDrawPoi(GPS_distanceToHome, GPS_directionToHome, -osdGetAltitude() / 100, 'H');
-                    }
+            int crh_h1 = OSD_HOMING_LIM_H1 * crh_focus_scale;
+            int crh_h2 = OSD_HOMING_LIM_H2 * crh_focus_scale;
+            int crh_h3 = OSD_HOMING_LIM_H3 * crh_focus_scale;
 
-                    if (osdConfig()->hud_disp_pois > 0) { // Squad POIs
-                        for (int i = 0; i < osdConfig()->hud_disp_pois; i++) {
-                            if ((squad_pois[i].state == 1)) { // POI is armed
-                                osdHudDrawPoi(squad_pois[i].distance, osdGetHeadingAngle(squad_pois[i].direction), squad_pois[i].altitude, 65 + i);
-                            }
+            if (crh_diff_head <= -162 || crh_diff_head >= 162) {
+                crh_l = SYM_HUD_ARROWS_L3;
+                crh_r = SYM_HUD_ARROWS_R3;
+            } else if (crh_diff_head > -162 && crh_diff_head <= -126) {
+                crh_l = SYM_HUD_ARROWS_L3;
+                crh_r = SYM_HUD_ARROWS_R2;
+            } else if (crh_diff_head > -126 && crh_diff_head <= -90) {
+                crh_l = SYM_HUD_ARROWS_L3;
+                crh_r = SYM_HUD_ARROWS_R1;
+            } else if (crh_diff_head > -90 && crh_diff_head <= -crh_h3) {
+                crh_l = SYM_HUD_ARROWS_L3;
+            } else if (crh_diff_head > -crh_h3 && crh_diff_head <= -crh_h2) {
+                crh_l = SYM_HUD_ARROWS_L2;
+            } else if (crh_diff_head > -crh_h2 && crh_diff_head <= -crh_h1) {
+                crh_l = SYM_HUD_ARROWS_L1;
+            } else if (crh_diff_head >= crh_h1 && crh_diff_head < crh_h2) {
+                crh_r = SYM_HUD_ARROWS_R1;
+            } else if (crh_diff_head >= crh_h2 && crh_diff_head < crh_h3) {
+                crh_r = SYM_HUD_ARROWS_R2;
+            } else if (crh_diff_head >= crh_h3 && crh_diff_head < 90) {
+                crh_r = SYM_HUD_ARROWS_R3;
+            } else if (crh_diff_head >= 90 && crh_diff_head < 126) {
+                crh_l = SYM_HUD_ARROWS_L1;
+                crh_r = SYM_HUD_ARROWS_R3;
+            } else if (crh_diff_head >= 126 && crh_diff_head < 162) {
+                crh_l = SYM_HUD_ARROWS_L2;
+                crh_r = SYM_HUD_ARROWS_R3;
+            }
+
+            if (ABS(crh_diff_head) < 90) {
+
+                int32_t crh_altitude = osdGetAltitude() / 100;
+                int32_t crh_distance = GPS_distanceToHome;
+
+                float crh_home_angle = atan2_approx(crh_altitude, crh_distance);
+                crh_home_angle = RADIANS_TO_DEGREES(crh_home_angle);
+                int crh_plane_angle = attitude.values.pitch / 10;
+                int crh_camera_angle = osdConfig()->camera_uptilt;
+                int crh_diff_vert = crh_home_angle - crh_plane_angle + crh_camera_angle;
+
+                int crh_v1 = OSD_HOMING_LIM_V1 * crh_focus_scale;
+                int crh_v2 = OSD_HOMING_LIM_V2 * crh_focus_scale;
+                int crh_v3 = OSD_HOMING_LIM_V3 * crh_focus_scale;
+
+                if (crh_diff_vert > -crh_v2 && crh_diff_vert <= -crh_v1 ) {
+                    crh_u = SYM_HUD_ARROWS_U1;
+                } else if (crh_diff_vert > -crh_v3 && crh_diff_vert <= -crh_v2) {
+                    crh_u = SYM_HUD_ARROWS_U2;
+                } else if (crh_diff_vert <= -crh_v3) {
+                    crh_u = SYM_HUD_ARROWS_U3;
+                } else if (crh_diff_vert >= crh_v1  && crh_diff_vert < crh_v2) {
+                    crh_d = SYM_HUD_ARROWS_D1;
+                } else if (crh_diff_vert >= crh_v2 && crh_diff_vert < crh_v3) {
+                    crh_d = SYM_HUD_ARROWS_D2;
+                } else if (crh_diff_vert >= crh_v3) {
+                    crh_d = SYM_HUD_ARROWS_D3;
+                }
+            }
+            displayWriteChar(osdDisplayPort, elemPosX-2, elemPosY, crh_l);
+            displayWriteChar(osdDisplayPort, elemPosX+2, elemPosY, crh_r);
+            displayWriteChar(osdDisplayPort, elemPosX, elemPosY-1, crh_u);
+            displayWriteChar(osdDisplayPort, elemPosX, elemPosY+1, crh_d);
+        }
+
+        if ((osd_hud_mode_e)osdConfig()->hud_mode != OSD_HUD_MODE_OFF && STATE(GPS_FIX) && isImuHeadingValid()) {
+
+            if ((osd_hud_mode_e)osdConfig()->hud_mode == OSD_HUD_MODE_3D) { // 3D mode
+
+                if (osdConfig()->hud_disp_home || osdConfig()->hud_disp_pois > 0) {
+                    osdHudClear();
+                }
+
+                if (osdConfig()->hud_disp_home) {
+                    osdHudDrawPoi(GPS_distanceToHome, GPS_directionToHome, -osdGetAltitude() / 100, 'H');
+                }
+
+                if (osdConfig()->hud_disp_pois > 0) {
+                    for (int i = 0; i < osdConfig()->hud_disp_pois; i++) {
+                        if ((squad_pois[i].state == 1)) { // POI is armed
+                            osdHudDrawPoi(squad_pois[i].distance, osdGetHeadingAngle(squad_pois[i].direction), squad_pois[i].altitude, 65 + i);
                         }
                     }
+                }
+            }
+            else if ((osd_hud_mode_e)osdConfig()->hud_mode == OSD_HUD_MODE_MAP) { // Map, view from the top, only the closest POI for now
 
-                break;
-
-                case OSD_HUD_MODE_MAP: // Map, view from the top, only the closest POI for now
-                    ;
-                    static uint16_t drawn = 0;
-                    static uint32_t scale = 0;
-                    int16_t reference = DECIDEGREES_TO_DEGREES(osdGetHeading());
-                    int poi_id = squadGetNearestPoi();
-                    int16_t poiDirection = osdGetHeadingAngle(squad_pois[poi_id].direction + 180);
-                    osdDrawMap(reference, 0, SYM_ARROW_UP, squad_pois[poi_id].distance, poiDirection, 65 + poi_id, &drawn, &scale);
-
-                break;
+                static uint16_t drawn = 0;
+                static uint32_t scale = 0;
+                int poi_id = squadGetNearestPoi();
+                osdDrawMap(DECIDEGREES_TO_DEGREES(osdGetHeading()), 0, SYM_ARROW_UP, squad_pois[poi_id].distance * 100,
+                           osdGetHeadingAngle(squad_pois[poi_id].direction), 65 + poi_id, &drawn, &scale);
 
             }
         }
