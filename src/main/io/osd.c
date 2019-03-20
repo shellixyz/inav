@@ -1906,7 +1906,7 @@ static bool osdDrawSingleElement(uint8_t item)
                 }
 
                 if (osdConfig()->hud_disp_home) {
-                    osdHudDrawPoi(GPS_distanceToHome, GPS_directionToHome, -osdGetAltitude() / 100, 'H');
+                    osdHudDrawPoi(GPS_distanceToHome, GPS_directionToHome, -osdGetAltitude() / 100, SYM_HOME);
                 }
 
                 if (osdConfig()->hud_disp_pois > 0) {
@@ -1922,9 +1922,14 @@ static bool osdDrawSingleElement(uint8_t item)
                 static uint16_t drawn = 0;
                 static uint32_t scale = 0;
                 int poi_id = squadGetNearestPoi();
-                osdDrawMap(DECIDEGREES_TO_DEGREES(osdGetHeading()), 0, SYM_ARROW_UP, squad_pois[poi_id].distance * 100,
-                           osdGetHeadingAngle(squad_pois[poi_id].direction), 65 + poi_id, &drawn, &scale);
-
+                if (squad_pois[poi_id].distance > 0) { // POI found
+                    osdDrawMap(DECIDEGREES_TO_DEGREES(osdGetHeading()), 0, SYM_ARROW_UP, squad_pois[poi_id].distance * 100,
+                               osdGetHeadingAngle(squad_pois[poi_id].direction), 65 + poi_id, &drawn, &scale);
+                }
+                else { // No POI, display the home point
+                    osdDrawMap(DECIDEGREES_TO_DEGREES(osdGetHeading()), 0, SYM_ARROW_UP, GPS_distanceToHome,
+                               osdGetHeadingAngle(GPS_directionToHome + 180), SYM_HOME, &drawn, &scale);
+                }
             }
         }
 
