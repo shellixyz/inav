@@ -15,72 +15,18 @@
  * along with Cleanflight.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <stdbool.h>
 #include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
-#include <ctype.h>
-#include <math.h>
 
 #include "platform.h"
 
-#include "build/debug.h"
-#include "build/version.h"
-
-#include "cms/cms.h"
-#include "cms/cms_types.h"
-#include "cms/cms_menu_osd.h"
-
-#include "common/axis.h"
-#include "common/filter.h"
-#include "common/olc.h"
-#include "common/printf.h"
-#include "common/string_light.h"
-#include "common/time.h"
-#include "common/typeconversion.h"
-#include "common/utils.h"
-
-#include "config/feature.h"
-#include "config/parameter_group.h"
-#include "config/parameter_group_ids.h"
-
-#include "drivers/display.h"
 #include "drivers/max7456_symbols.h"
-#include "drivers/time.h"
-#include "drivers/vtx_common.h"
-
-#include "io/flashfs.h"
-#include "io/gps.h"
-#include "io/osd.h"
-#include "io/vtx_string.h"
-
-#include "fc/config.h"
-#include "fc/controlrate_profile.h"
-#include "fc/fc_core.h"
-#include "fc/fc_tasks.h"
-#include "fc/rc_adjustments.h"
-#include "fc/rc_controls.h"
-#include "fc/rc_modes.h"
-#include "fc/runtime_config.h"
-#include "fc/settings.h"
 
 #include "flight/imu.h"
-#include "flight/mixer.h"
-#include "flight/pid.h"
-#include "flight/rth_estimator.h"
-#include "flight/wind_estimator.h"
+
+#include "io/osd.h"
 
 #include "navigation/navigation.h"
-#include "navigation/navigation_private.h"
 
-#include "rx/rx.h"
-
-#include "sensors/battery.h"
-#include "sensors/boardalignment.h"
-#include "sensors/diagnostics.h"
-#include "sensors/sensors.h"
-#include "sensors/pitotmeter.h"
-#include "sensors/temperature.h"
 
 #define HUD_DRAWN_MAXCHARS 42 // 7 POI (1 home, 3 aicrafts, 3 waypoints) x 6 chars max for each
 static int8_t hud_drawn[HUD_DRAWN_MAXCHARS][2];
