@@ -973,8 +973,8 @@ static void osdDrawMap(int referenceHeading, uint8_t referenceSym, uint8_t cente
 {
     // TODO: These need to be tested with several setups. We might
     // need to make them configurable.
-    const int hMargin = 1;
-    const int vMargin = 1;
+    const int hMargin = 5;
+    const int vMargin = 3;
 
     // TODO: Get this from the display driver?
     const int charWidth = 12;
@@ -1240,8 +1240,8 @@ static void osdHudDrawPoi(uint32_t poiDistance, int16_t poiDirection, int32_t po
         float hud_scaled_y = sin_approx(DEGREES_TO_RADIANS(hud_poi_error_y)) / sin_approx(DEGREES_TO_RADIANS(osdConfig()->camera_fov_v / 2));
 
         // hud_poi_y = (IS_DISPLAY_PAL) ? hud_scaled_y * 8 : hud_scaled_y * 6.5;
-        //hud_poi_y = constrain(hud_scaled_y, -hud_range_y, hud_range_y);
-        //hud_poi_y += hud_center_y;
+        // hud_poi_y = constrain(hud_scaled_y, -hud_range_y, hud_range_y);
+        // hud_poi_y += hud_center_y;
 
         hud_poi_y = constrain(8 * hud_scaled_y, -hud_range_y, hud_range_y);
         hud_poi_y += hud_center_y;
@@ -1250,10 +1250,17 @@ static void osdHudDrawPoi(uint32_t poiDistance, int16_t poiDirection, int32_t po
     osdHudWrite(hud_poi_x, hud_poi_y, poiSymbol);
 
     char buff[3];
-    osdFormatCentiNumber(buff, poiDistance * 100, METERS_PER_KILOMETER, 0, 3, 3);
+    if ((osd_unit_e)osdConfig()->units == OSD_UNIT_IMPERIAL) {
+        osdFormatCentiNumber(buff, CENTIMETERS_TO_CENTIFEET(poiDistance * 100), FEET_PER_MILE, 0, 3, 3);
+    }
+    else {
+        osdFormatCentiNumber(buff, poiDistance * 100, METERS_PER_KILOMETER, 0, 3, 3);
+    }
+    
     osdHudWrite(hud_poi_x - 1, hud_poi_y + 1, buff[0]);
     osdHudWrite(hud_poi_x , hud_poi_y + 1, buff[1]);
     osdHudWrite(hud_poi_x + 1, hud_poi_y + 1, buff[2]);
+    
 }
 
 static int16_t osdGet3DSpeed(void)
@@ -1921,18 +1928,51 @@ static bool osdDrawSingleElement(uint8_t item)
 
                 static uint16_t drawn = 0;
                 static uint32_t scale = 0;
-                int poi_id = squadGetNearestPoi();
-                if (squad_pois[poi_id].distance > 0) { // POI found
-                    osdDrawMap(DECIDEGREES_TO_DEGREES(osdGetHeading()), 0, SYM_ARROW_UP, squad_pois[poi_id].distance * 100,
-                               osdGetHeadingAngle(squad_pois[poi_id].direction), 65 + poi_id, &drawn, &scale);
+                
+                // int poi_id = squadGetNearestPoi();
+                int poi_id = 0; // ------------- DEBUG
+                
+                if (squad_pois[poi_id].distance > 0 && osdConfig()->hud_disp_pois > 0) { // POI found
+                    osdDrawMap(DECIDEGREES_TO_DEGREES(osdGetHeading()), 0, SYM_ARROW_UP, squad_pois[poi_id].distance,
+                               osdGetHeadingAngle(squad_pois[poi_id].direction) - 180, 65 + poi_id, &drawn, &scale);
                 }
                 else { // No POI, display the home point
                     osdDrawMap(DECIDEGREES_TO_DEGREES(osdGetHeading()), 0, SYM_ARROW_UP, GPS_distanceToHome,
-                               osdGetHeadingAngle(GPS_directionToHome + 180), SYM_HOME, &drawn, &scale);
+                               osdGetHeadingAngle(GPS_directionToHome) - 180, SYM_HOME, &drawn, &scale);
                 }
             }
         }
 
+        if (osdConfig()->hud_debug) {
+            
+           // int poi_id = squadGetNearestPoi();
+            
+            char buftmp[15];
+            
+            //if (abs(squad_pois[poi_id].distance) > 0 ) {
+                
+            tfp_sprintf(buftmp, "%c%10d", SYM_LAT,  squad_pois[0].waypoint.lat);
+            displayWrite(osdDisplayPort, 7, 4, buftmp);  
+            tfp_sprintf(buftmp, "%c%10d", SYM_LON,  squad_pois[0].waypoint.lon);
+            displayWrite(osdDisplayPort, 7, 5, buftmp);            
+            tfp_sprintf(buftmp, "%c%10d", SYM_ALT_M,  squad_pois[0].waypoint.alt);
+            displayWrite(osdDisplayPort, 7, 6, buftmp);
+            
+            tfp_sprintf(buftmp, "%c%6d", SYM_DIST_M ,  squad_pois[0].distance);
+            displayWrite(osdDisplayPort, 7, 9, buftmp);  
+            tfp_sprintf(buftmp, "%c%6d", SYM_DEGREES,  squad_pois[0].direction);
+            displayWrite(osdDisplayPort, 7, 10, buftmp);            
+            tfp_sprintf(buftmp, "%c%6d", SYM_ALT_M,  squad_pois[0].altitude);
+            displayWrite(osdDisplayPort, 7, 11, buftmp);
+           // }
+          //  else {
+          //  displayWrite(osdDisplayPort, 7, 4, "NO POI FOUND");  
+          //  }
+            
+        }
+        
+        
+        
         return true;
         break;
 
@@ -2928,14 +2968,15 @@ void pgResetFn_osdConfig(osdConfig_t *osdConfig)
     osdConfig->ahi_reverse_roll = 0;
     osdConfig->ahi_max_pitch = AH_MAX_PITCH_DEFAULT;
     osdConfig->crosshairs_style = OSD_CROSSHAIRS_STYLE_DEFAULT;
-    osdConfig->homing = 0;
+    osdConfig->homing = 1;
     osdConfig->homing_focus = OSD_HOMING_FOCUS_MEDIUM;
     osdConfig->camera_uptilt = 0;
     osdConfig->camera_fov_h = 135;
     osdConfig->camera_fov_v = 85;
     osdConfig->hud_mode = OSD_HUD_MODE_3D;
     osdConfig->hud_disp_home = 1;
-    osdConfig->hud_disp_pois = 0;
+    osdConfig->hud_disp_pois = 5;
+    osdConfig->hud_debug = 0;
     osdConfig->horizon_offset = 0;
     osdConfig->left_sidebar_scroll = OSD_SIDEBAR_SCROLL_NONE;
     osdConfig->right_sidebar_scroll = OSD_SIDEBAR_SCROLL_NONE;

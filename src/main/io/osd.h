@@ -218,6 +218,7 @@ typedef struct osdConfig_s {
     uint8_t hud_mode; // from osd_hud_mode_e
     bool hud_disp_home;
     uint8_t hud_disp_pois;
+    bool hud_debug;
     int8_t horizon_offset;
     uint8_t left_sidebar_scroll; // from osd_sidebar_scroll_e
     uint8_t right_sidebar_scroll; // from osd_sidebar_scroll_e

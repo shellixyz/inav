@@ -2189,16 +2189,16 @@ static void squadUpdatePois(void){
     for (int i = 0; i < SQUAD_MAX_POIS; i++) {
         getWaypoint(i + 1, &squad_pois[i].waypoint);
 
-            /* ----------------- DEBUG
+       
         
-        if (i == 3)
-            {
-            squad_pois[i].waypoint.lat = 0;
-            squad_pois[i].waypoint.lon = 0;
-            squad_pois[i].waypoint.alt = 0;
-            squad_pois[i].waypoint.p3 = 1;
-            }
-     ----------------- DEBUG */
+//        if (i == 0)
+//            {
+//            squad_pois[i].waypoint.lat = 453296230;
+//            squad_pois[i].waypoint.lon = 55002870;
+//            squad_pois[i].waypoint.alt = 45000;
+//            squad_pois[i].waypoint.p3 = 1;
+//            }
+
     
         if (squad_pois[i].waypoint.lat != 0 && squad_pois[i].waypoint.lon != 0) {
             squad_pois[i].waypoint_id = i + 1;
@@ -2222,17 +2222,6 @@ static void squadUpdatePois(void){
         }
     }
 
-    /* ----------------- DEBUG
-
-    squad_pois[4].state = 1;
-    squad_pois[4].waypoint_id = 5;
-    squad_pois[4].distance = 9980;
-    squad_pois[4].direction = 89;
-    squad_pois[4].altitude = 860;
-    squad_pois[4].speed = 77;
-    squad_pois[4].heading = 180;
-
-     ----------------- DEBUG */
 }
 
 /*-----------------------------------------------------------

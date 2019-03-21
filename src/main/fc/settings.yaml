@@ -1670,6 +1670,9 @@ groups:
         field: hud_disp_pois
         min: 0
         max: 5
+      - name: osd_hud_debug
+        field: hud_debug
+        type: bool        
       - name: osd_horizon_offset
         field: horizon_offset
         min: -2
