@@ -21,6 +21,7 @@
 #include "config/parameter_group.h"
 
 #include "drivers/vcd.h"
+#include "drivers/display.h"
 
 #ifndef OSD_ALTERNATE_LAYOUT_COUNT
 #define OSD_ALTERNATE_LAYOUT_COUNT 3
@@ -250,3 +251,24 @@ void osdOverrideLayout(int layout, timeMs_t duration);
 // set by the user configuration (modes, etc..) or by overriding it.
 int osdGetActiveLayout(bool *overridden);
 bool osdItemIsFixed(osd_items_e item);
+
+void osdDrawHomeMap(int referenceHeading, uint8_t referenceSym, uint16_t *drawn, uint32_t *usedScale);
+void osdDrawRadar(uint16_t *drawn, uint32_t *usedScale);
+void osdHudClear();
+void osdHudWrite(uint8_t x, uint8_t y, uint16_t symb);
+int squadGetNearestPoi();
+int squadGetFarthestPoi();
+void osdHudDrawPoi(uint32_t poiDistance, int16_t poiDirection, int32_t poiAltitude, uint16_t poiSymbol);
+void osdDrawMap(int referenceHeading, uint8_t referenceSym, uint8_t centerSym, uint32_t poiDistance, int16_t poiDirection, uint8_t poiSymbol, uint16_t *drawn, uint32_t *usedScale);
+void osdCrosshairPosition(uint8_t *x, uint8_t *y);
+int16_t osdGetHeading(void);
+int osdGetHeadingAngle(int angle);
+bool osdFormatCentiNumber(char *buff, int32_t centivalue, uint32_t scale, int maxDecimals, int maxScaledDecimals, int length);
+
+#define CENTIMETERS_TO_CENTIFEET(cm)            (cm * (328 / 100.0))
+#define CENTIMETERS_TO_FEET(cm)                 (cm * (328 / 10000.0))
+#define CENTIMETERS_TO_METERS(cm)               (cm / 100)
+#define FEET_PER_MILE                           5280
+#define FEET_PER_KILOFEET                       1000 // Used for altitude
+#define METERS_PER_KILOMETER                    1000
+#define METERS_PER_MILE                         1609

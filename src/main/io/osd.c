@@ -98,14 +98,6 @@
 #define VIDEO_BUFFER_CHARS_PAL    480
 #define IS_DISPLAY_PAL (displayScreenSize(osdDisplayPort) == VIDEO_BUFFER_CHARS_PAL)
 
-#define CENTIMETERS_TO_CENTIFEET(cm)            (cm * (328 / 100.0))
-#define CENTIMETERS_TO_FEET(cm)                 (cm * (328 / 10000.0))
-#define CENTIMETERS_TO_METERS(cm)               (cm / 100)
-#define FEET_PER_MILE                           5280
-#define FEET_PER_KILOFEET                       1000 // Used for altitude
-#define METERS_PER_KILOMETER                    1000
-#define METERS_PER_MILE                         1609
-
 #define DELAYED_REFRESH_RESUME_COMMAND (checkStickPosition(THR_HI) || checkStickPosition(PIT_HI))
 
 #define SPLASH_SCREEN_DISPLAY_TIME 4000 // ms
@@ -177,7 +169,7 @@ static bool fullRedraw = false;
 
 static uint8_t armState;
 
-static displayPort_t *osdDisplayPort;
+displayPort_t *osdDisplayPort;
 
 #define AH_MAX_PITCH_DEFAULT 20 // Specify default maximum AHI pitch value displayed (degrees)
 #define AH_HEIGHT 9
@@ -190,9 +182,7 @@ static displayPort_t *osdDisplayPort;
 
 PG_REGISTER_WITH_RESET_FN(osdConfig_t, osdConfig, PG_OSD_CONFIG, 7);
 
-#define HUD_DRAWN_MAXCHARS 42 // 7 POI (1 home, 3 aicrafts, 3 waypoints) x 6 chars max for each
-static int8_t hud_drawn[HUD_DRAWN_MAXCHARS][2];
-static int8_t hud_drawn_pt;
+
 
 static int digitCount(int32_t value)
 {
@@ -214,7 +204,7 @@ static int digitCount(int32_t value)
  * of the same length. If the value doesn't fit into the provided length
  * it will be divided by scale and true will be returned.
  */
- static bool osdFormatCentiNumber(char *buff, int32_t centivalue, uint32_t scale, int maxDecimals, int maxScaledDecimals, int length)
+bool osdFormatCentiNumber(char *buff, int32_t centivalue, uint32_t scale, int maxDecimals, int maxScaledDecimals, int length)
  {
     char *ptr = buff;
     char *dec;
@@ -818,7 +808,7 @@ static void osdUpdateBatteryCapacityOrVoltageTextAttributes(textAttributes_t *at
         TEXT_ATTRIBUTES_ADD_BLINK(*attr);
 }
 
-static void osdCrosshairPosition(uint8_t *x, uint8_t *y)
+void osdCrosshairPosition(uint8_t *x, uint8_t *y)
 {
     *x = 14;
     *y = 6;
@@ -940,13 +930,13 @@ static bool osdIsHeadingValid(void)
     return isImuHeadingValid();
 }
 
-static int16_t osdGetHeading(void)
+int16_t osdGetHeading(void)
 {
     return attitude.values.yaw;
 }
 
 // Returns a heading angle in degrees normalized to [0, 360).
-static int osdGetHeadingAngle(int angle)
+int osdGetHeadingAngle(int angle)
 {
     while (angle < 0) {
         angle += 360;
@@ -967,7 +957,7 @@ static int osdGetHeadingAngle(int angle)
  * in-out used to store the last position where the craft was drawn to avoid
  * erasing all screen on each redraw.
  */
-static void osdDrawMap(int referenceHeading, uint8_t referenceSym, uint8_t centerSym,
+void osdDrawMap(int referenceHeading, uint8_t referenceSym, uint8_t centerSym,
                        uint32_t poiDistance, int16_t poiDirection, uint8_t poiSymbol,
                        uint16_t *drawn, uint32_t *usedScale)
 {
@@ -1125,7 +1115,7 @@ static void osdDrawMap(int referenceHeading, uint8_t referenceSym, uint8_t cente
 /* Draws a map with the home in the center and the craft moving around.
  * See osdDrawMap() for reference.
  */
-static void osdDrawHomeMap(int referenceHeading, uint8_t referenceSym, uint16_t *drawn, uint32_t *usedScale)
+void osdDrawHomeMap(int referenceHeading, uint8_t referenceSym, uint16_t *drawn, uint32_t *usedScale)
 {
     osdDrawMap(referenceHeading, referenceSym, SYM_HOME, GPS_distanceToHome, GPS_directionToHome, SYM_ARROW_UP, drawn, usedScale);
 }
@@ -1133,151 +1123,11 @@ static void osdDrawHomeMap(int referenceHeading, uint8_t referenceSym, uint16_t 
 /* Draws a map with the aircraft in the center and the home moving around.
  * See osdDrawMap() for reference.
  */
-static void osdDrawRadar(uint16_t *drawn, uint32_t *usedScale)
+void osdDrawRadar(uint16_t *drawn, uint32_t *usedScale)
 {
     int16_t reference = DECIDEGREES_TO_DEGREES(osdGetHeading());
     int16_t poiDirection = osdGetHeadingAngle(GPS_directionToHome + 180);
     osdDrawMap(reference, 0, SYM_ARROW_UP, GPS_distanceToHome, poiDirection, SYM_HOME, drawn, usedScale);
-}
-
-/* Overwrite all previously written positions on the OSD with a blank
- */
-
-static void osdHudClear()
-{
-    for (int i = 0; i < HUD_DRAWN_MAXCHARS; i++) {
-        if (hud_drawn[i][0] > -1) {
-            displayWriteChar(osdDisplayPort, hud_drawn[i][0], hud_drawn[i][1], SYM_BLANK);
-            hud_drawn[i][0] = -1;
-        }
-    }
-    hud_drawn_pt = 0;
-}
-
-/* Write a single char on the OSD, and record its position for the next loop
- */
-
-static void osdHudWrite(uint8_t x, uint8_t y, uint16_t symb)
-{
-    displayWriteChar(osdDisplayPort, x, y, symb);
-    hud_drawn[hud_drawn_pt][0] = x;
-    hud_drawn[hud_drawn_pt][1] = y;
-    hud_drawn_pt++;
-    if (hud_drawn_pt >= HUD_DRAWN_MAXCHARS)
-        { hud_drawn_pt = 0; }
-}
-
-
-/* Squad, get the nearest POI
- */
-
-static int squadGetNearestPoi()
-{
-    int poi = -1;
-    uint16_t min = 10000; // 10kms
-
-    for (int i = 0; i < SQUAD_MAX_POIS; i++) {
-         if ((squad_pois[i].state == 1) && ((squad_pois[i].distance) > 0) && ((squad_pois[i].distance) < min)) {
-            min = squad_pois[i].distance;
-            poi = i;
-            }
-        }
-    return poi;
-}
-
-/* Squad, get the farthest POI
- */
-
-static int squadGetFarthestPoi()
-{
-    int poi = -1;
-    uint16_t max = 0;
-
-    for (int i = 0; i < SQUAD_MAX_POIS; i++) {
-         if ((squad_pois[i].state == 1) && ((squad_pois[i].distance) > max) && ((squad_pois[i].distance) < 10000)) {
-            max = squad_pois[i].distance;
-            poi = i;
-            }
-        }
-    return poi;
-}
-
-/* Display one POI on the hud, centered on crosshair position.
- * poiDistance and poiAltitude in meters, poiAltitude is relative to the aircraft (negative means below)
- */
-
-static void osdHudDrawPoi(uint32_t poiDistance, int16_t poiDirection, int32_t poiAltitude,
-                          uint16_t poiSymbol)
-    {
-    int hud_poi_x;
-    int hud_poi_y;
-    uint8_t hud_center_x;
-    uint8_t hud_center_y;
-    uint8_t hud_range_x = 8;
-    uint8_t hud_range_y = 4;
-    bool hud_poi_is_oos = 0;
-
-    int16_t hud_poi_error_x = poiDirection - DECIDEGREES_TO_DEGREES(osdGetHeading());
-    osdCrosshairPosition(&hud_center_x, &hud_center_y);
-
-    while (hud_poi_error_x < -179) {
-        hud_poi_error_x += 360;
-    }
-    while (hud_poi_error_x > 180) {
-        hud_poi_error_x -= 360;
-    }
-
-    if ((hud_poi_error_x > -osdConfig()->camera_fov_h / 2) && (hud_poi_error_x < osdConfig()->camera_fov_h / 2)) { // POI might be in sight, extra geometry needed
-        float hud_scaled_x = sin_approx(DEGREES_TO_RADIANS(hud_poi_error_x)) / sin_approx(DEGREES_TO_RADIANS(osdConfig()->camera_fov_h / 2));
-        hud_poi_x = hud_center_x + 15 * hud_scaled_x;
-        }
-    else {
-        hud_poi_is_oos = 1; // POI is out of sight for sure
-        }
-
-    if ((hud_poi_x > hud_center_x + hud_range_x) || hud_poi_is_oos) { // Out of sight or out of hud area to the right
-        hud_poi_x = hud_center_x + hud_range_x;
-        hud_poi_y = constrain(poiAltitude / 20, -hud_range_y, hud_range_y);
-        hud_poi_y += hud_center_y;
-        osdHudWrite(hud_poi_x + 1, hud_poi_y, SYM_AH_RIGHT);
-        }
-    else if ((hud_poi_x < hud_center_x - hud_range_x) || hud_poi_is_oos) { // Out of sight or out of hud area to the left
-        hud_poi_x = hud_center_x - hud_range_x;
-        hud_poi_y = constrain(poiAltitude / 20, -hud_range_y, hud_range_y);
-        hud_poi_y += hud_center_y;
-        osdHudWrite(hud_poi_x + 1, hud_poi_y, SYM_AH_LEFT);
-        }
-    else { // On camera sight and in hud area
-        float hud_poi_angle = atan2_approx(-poiAltitude, poiDistance);
-        hud_poi_angle = RADIANS_TO_DEGREES(hud_poi_angle);
-        int16_t hud_plane_angle = attitude.values.pitch / 10;
-        int hud_camera_angle = osdConfig()->camera_uptilt;
-        int16_t hud_poi_error_y = hud_poi_angle - hud_plane_angle + hud_camera_angle;
-
-        float hud_scaled_y = sin_approx(DEGREES_TO_RADIANS(hud_poi_error_y)) / sin_approx(DEGREES_TO_RADIANS(osdConfig()->camera_fov_v / 2));
-
-        // hud_poi_y = (IS_DISPLAY_PAL) ? hud_scaled_y * 8 : hud_scaled_y * 6.5;
-        // hud_poi_y = constrain(hud_scaled_y, -hud_range_y, hud_range_y);
-        // hud_poi_y += hud_center_y;
-
-        hud_poi_y = constrain(8 * hud_scaled_y, -hud_range_y, hud_range_y);
-        hud_poi_y += hud_center_y;
-        }
-
-    osdHudWrite(hud_poi_x, hud_poi_y, poiSymbol);
-
-    char buff[3];
-    if ((osd_unit_e)osdConfig()->units == OSD_UNIT_IMPERIAL) {
-        osdFormatCentiNumber(buff, CENTIMETERS_TO_CENTIFEET(poiDistance * 100), FEET_PER_MILE, 0, 3, 3);
-    }
-    else {
-        osdFormatCentiNumber(buff, poiDistance * 100, METERS_PER_KILOMETER, 0, 3, 3);
-    }
-
-    osdHudWrite(hud_poi_x - 1, hud_poi_y + 1, buff[0]);
-    osdHudWrite(hud_poi_x , hud_poi_y + 1, buff[1]);
-    osdHudWrite(hud_poi_x + 1, hud_poi_y + 1, buff[2]);
-
 }
 
 static int16_t osdGet3DSpeed(void)
