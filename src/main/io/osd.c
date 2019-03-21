@@ -1173,16 +1173,33 @@ static void osdHudWrite(uint8_t x, uint8_t y, uint16_t symb)
 
 static int squadGetNearestPoi()
 {
-    uint32_t min = squad_pois[0].distance;
-    int poi_near = 0;
+    int poi = -1;
+    uint16_t min = 10000; // 10kms
 
-    for (int i = 1; i < SQUAD_MAX_POIS; i++) {
-         if ((squad_pois[i].state == 1) && ((squad_pois[i].distance) < min) && ((squad_pois[i].distance) > 0)) {
+    for (int i = 0; i < SQUAD_MAX_POIS; i++) {
+         if ((squad_pois[i].state == 1) && ((squad_pois[i].distance) > 0) && ((squad_pois[i].distance) < min)) {
             min = squad_pois[i].distance;
-            poi_near = i;
+            poi = i;
             }
         }
-    return poi_near;
+    return poi;
+}
+
+/* Squad, get the farthest POI
+ */
+
+static int squadGetFarthestPoi()
+{
+    int poi = -1;
+    uint16_t max = 0;
+
+    for (int i = 0; i < SQUAD_MAX_POIS; i++) {
+         if ((squad_pois[i].state == 1) && ((squad_pois[i].distance) > max) && ((squad_pois[i].distance) < 10000)) {
+            max = squad_pois[i].distance;
+            poi = i;
+            }
+        }
+    return poi;
 }
 
 /* Display one POI on the hud, centered on crosshair position.
@@ -1256,11 +1273,11 @@ static void osdHudDrawPoi(uint32_t poiDistance, int16_t poiDirection, int32_t po
     else {
         osdFormatCentiNumber(buff, poiDistance * 100, METERS_PER_KILOMETER, 0, 3, 3);
     }
-    
+
     osdHudWrite(hud_poi_x - 1, hud_poi_y + 1, buff[0]);
     osdHudWrite(hud_poi_x , hud_poi_y + 1, buff[1]);
     osdHudWrite(hud_poi_x + 1, hud_poi_y + 1, buff[2]);
-    
+
 }
 
 static int16_t osdGet3DSpeed(void)
@@ -1929,14 +1946,33 @@ static bool osdDrawSingleElement(uint8_t item)
                 static uint16_t drawn = 0;
                 static uint32_t scale = 0;
                 
-                // int poi_id = squadGetNearestPoi();
-                int poi_id = 0; // ------------- DEBUG
+                if (osdConfig()->hud_disp_pois > 0) {
+
+/* ------------
                 
-                if (squad_pois[poi_id].distance > 0 && osdConfig()->hud_disp_pois > 0) { // POI found
-                    osdDrawMap(DECIDEGREES_TO_DEGREES(osdGetHeading()), 0, SYM_ARROW_UP, squad_pois[poi_id].distance,
-                               osdGetHeadingAngle(squad_pois[poi_id].direction) - 180, 65 + poi_id, &drawn, &scale);
-                }
-                else { // No POI, display the home point
+                    int poi_id = squadGetFarthestPoi();
+
+                    if (poi_id >= 0) { // At least 1 POI found
+                        osdDrawMap(DECIDEGREES_TO_DEGREES(osdGetHeading()), 0, SYM_ARROW_UP, squad_pois[poi_id].distance,
+                                   osdGetHeadingAngle(squad_pois[poi_id].direction) - 180, 65 + poi_id, &drawn, &scale);
+                    
+                        for (int i = 0; i < SQUAD_MAX_POIS; i++) {
+                            if ((squad_pois[i].state == 1) && ((squad_pois[i].distance) > 0) && i != poi_id) {
+                            osdDrawMap(DECIDEGREES_TO_DEGREES(osdGetHeading()), 0, SYM_ARROW_UP, squad_pois[i].distance,
+                                       osdGetHeadingAngle(squad_pois[i].direction) - 180, 65 + i, &drawn, &scale);
+                            }
+                        }              
+                    }              
+-------------- */
+                
+                    int poi_id = squadGetNearestPoi();
+                
+                    if (poi_id >= 0) { // At least 1 POI found
+                        osdDrawMap(DECIDEGREES_TO_DEGREES(osdGetHeading()), 0, SYM_ARROW_UP, squad_pois[poi_id].distance,
+                                  osdGetHeadingAngle(squad_pois[poi_id].direction) - 180, 65 + poi_id, &drawn, &scale);
+                    }
+                }              
+                else if (osdConfig()->hud_disp_home) { // Display the home point
                     osdDrawMap(DECIDEGREES_TO_DEGREES(osdGetHeading()), 0, SYM_ARROW_UP, GPS_distanceToHome,
                                osdGetHeadingAngle(GPS_directionToHome) - 180, SYM_HOME, &drawn, &scale);
                 }
@@ -1944,35 +1980,32 @@ static bool osdDrawSingleElement(uint8_t item)
         }
 
         if (osdConfig()->hud_debug) {
-            
-           // int poi_id = squadGetNearestPoi();
-            
+
+            int poi_id = squadGetNearestPoi();
+
             char buftmp[15];
-            
-            //if (abs(squad_pois[poi_id].distance) > 0 ) {
-                
-            tfp_sprintf(buftmp, "%c%10d", SYM_LAT,  squad_pois[0].waypoint.lat);
-            displayWrite(osdDisplayPort, 7, 4, buftmp);  
-            tfp_sprintf(buftmp, "%c%10d", SYM_LON,  squad_pois[0].waypoint.lon);
-            displayWrite(osdDisplayPort, 7, 5, buftmp);            
-            tfp_sprintf(buftmp, "%c%10d", SYM_ALT_M,  squad_pois[0].waypoint.alt);
-            displayWrite(osdDisplayPort, 7, 6, buftmp);
-            
-            tfp_sprintf(buftmp, "%c%6d", SYM_DIST_M ,  squad_pois[0].distance);
-            displayWrite(osdDisplayPort, 7, 9, buftmp);  
-            tfp_sprintf(buftmp, "%c%6d", SYM_DEGREES,  squad_pois[0].direction);
-            displayWrite(osdDisplayPort, 7, 10, buftmp);            
-            tfp_sprintf(buftmp, "%c%6d", SYM_ALT_M,  squad_pois[0].altitude);
-            displayWrite(osdDisplayPort, 7, 11, buftmp);
-           // }
-          //  else {
-          //  displayWrite(osdDisplayPort, 7, 4, "NO POI FOUND");  
-          //  }
-            
+
+            if (poi_id >= 0) {
+
+                tfp_sprintf(buftmp, "%c%10d", SYM_LAT,  squad_pois[poi_id].waypoint.lat);
+                displayWrite(osdDisplayPort, 7, 4, buftmp);
+                tfp_sprintf(buftmp, "%c%10d", SYM_LON,  squad_pois[poi_id].waypoint.lon);
+                displayWrite(osdDisplayPort, 7, 5, buftmp);
+                tfp_sprintf(buftmp, "%c%10d", SYM_ALT_M,  squad_pois[poi_id].waypoint.alt);
+                displayWrite(osdDisplayPort, 7, 6, buftmp);
+
+                tfp_sprintf(buftmp, "%c%6d", SYM_DIST_M ,  squad_pois[poi_id].distance);
+                displayWrite(osdDisplayPort, 7, 9, buftmp);
+                tfp_sprintf(buftmp, "%c%6d", SYM_DEGREES,  squad_pois[poi_id].direction);
+                displayWrite(osdDisplayPort, 7, 10, buftmp);
+                tfp_sprintf(buftmp, "%c%6d", SYM_ALT_M,  squad_pois[poi_id].altitude);
+                displayWrite(osdDisplayPort, 7, 11, buftmp);
+            }
+            else {
+                displayWrite(osdDisplayPort, 7, 4, "NO POI FOUND");
+            }
         }
-        
-        
-        
+
         return true;
         break;
 

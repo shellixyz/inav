@@ -2188,17 +2188,16 @@ static void squadUpdatePois(void){
 
     for (int i = 0; i < SQUAD_MAX_POIS; i++) {
         getWaypoint(i + 1, &squad_pois[i].waypoint);
-
-       
         
-//        if (i == 0)
-//            {
-//            squad_pois[i].waypoint.lat = 453296230;
-//            squad_pois[i].waypoint.lon = 55002870;
-//            squad_pois[i].waypoint.alt = 45000;
-//            squad_pois[i].waypoint.p3 = 1;
-//            }
-
+/* -------------
+        if (i == 4)
+            {
+            squad_pois[i].waypoint.lat = 0;
+            squad_pois[i].waypoint.lon = 0;
+            squad_pois[i].waypoint.alt = 0;
+            squad_pois[i].waypoint.p3 = 0;
+            }
+*/ 
     
         if (squad_pois[i].waypoint.lat != 0 && squad_pois[i].waypoint.lon != 0) {
             squad_pois[i].waypoint_id = i + 1;
