@@ -224,7 +224,6 @@ LDFLAGS     = -lm \
               -nostartfiles \
               --specs=nano.specs \
               -lc \
-              -lnosys \
               $(ARCH_FLAGS) \
               $(LTO_FLAGS) \
               $(DEBUG_FLAGS) \
