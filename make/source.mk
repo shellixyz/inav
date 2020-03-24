@@ -121,6 +121,7 @@ COMMON_SRC = \
             rx/crsf.c \
             rx/eleres.c \
             rx/fport.c \
+            rx/fport2.c \
             rx/ibus.c \
             rx/jetiexbus.c \
             rx/msp.c \

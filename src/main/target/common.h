@@ -33,6 +33,7 @@
 #define USE_SERIALRX_SBUS       // Very common protocol
 #define USE_SERIALRX_IBUS       // Cheap FlySky & Turnigy receivers
 #define USE_SERIALRX_FPORT
+#define USE_SERIALRX_FPORT2
 
 #define COMMON_DEFAULT_FEATURES (FEATURE_TX_PROF_SEL)
 
