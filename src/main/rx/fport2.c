@@ -50,7 +50,8 @@
 #define FPORT2_MAX_TELEMETRY_RESPONSE_DELAY_US 1000
 #define FPORT2_MIN_TELEMETRY_RESPONSE_DELAY_US 500
 #define FPORT2_MAX_TELEMETRY_AGE_MS 500
-#define FPORT2_FC_ID 0x1B
+#define FPORT2_FC_COMMON_ID 0x1B
+#define FPORT2_FC_MSP_ID 0x0D
 #define FPORT2_CRC_VALUE 0xFF
 #define FPORT2_BAUDRATE 115200
 #define FPORT2_PORT_OPTIONS (SERIAL_STOPBITS_1 | SERIAL_PARITY_NO)
@@ -255,7 +256,7 @@ static void writeUplinkFrame(const smartPortPayload_t *payload)
 
     uint16_t checksum = 0;
     smartPortSendByte(FPORT2_UPLINK_FRAME_LENGTH, NULL, fportPort);
-    smartPortSendByte(FPORT2_FC_ID, &checksum, fportPort);
+    smartPortSendByte(FPORT2_FC_COMMON_ID, &checksum, fportPort);
     smartPortWriteFrameSerial(payload, fportPort, checksum);
 }
 #endif
@@ -307,7 +308,7 @@ static uint8_t frameStatus(rxRuntimeConfig_t *rxRuntimeConfig)
 
             case FT_DOWNLINK:
 #if defined(USE_TELEMETRY_SMARTPORT)
-                        if ((!telemetryEnabled) || (frame->data.downlinkData.phyid != FPORT2_FC_ID)) {
+                        if ((!telemetryEnabled) || ((frame->data.downlinkData.phyid != FPORT2_FC_COMMON_ID) && (frame->data.downlinkData.phyid != FPORT2_FC_MSP_ID))) {
                             break;
                         }
 
