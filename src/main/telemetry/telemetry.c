@@ -225,6 +225,7 @@ void telemetryProcess(timeUs_t currentTimeUs)
 #if defined(USE_SERIALRX_CRSF) && defined(USE_TELEMETRY_CRSF)
     handleCrsfTelemetry(currentTimeUs);
 #endif
+
 }
 
 #endif
