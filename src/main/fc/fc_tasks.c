@@ -60,6 +60,7 @@
 #include "io/pwmdriver_i2c.h"
 #include "io/serial.h"
 #include "io/rcdevice_cam.h"
+#include "io/smartport_master.h"
 #include "io/vtx.h"
 #include "io/osd_dji_hd.h"
 
@@ -354,6 +355,9 @@ void fcTasksInit(void)
 #ifdef USE_GLOBAL_FUNCTIONS
     setTaskEnabled(TASK_GLOBAL_FUNCTIONS, true);
 #endif
+#if defined(USE_SMARTPORT_MASTER)
+    setTaskEnabled(TASK_SMARTPORT_MASTER, true);
+#endif
 }
 
 cfTask_t cfTasks[TASK_COUNT] = {
@@ -480,7 +484,7 @@ cfTask_t cfTasks[TASK_COUNT] = {
 #endif
 
 #if defined(USE_SMARTPORT_MASTER)
-    [TASK_TELEMETRY] = {
+    [TASK_SMARTPORT_MASTER] = {
         .taskName = "SPORT MASTER",
         .taskFunc = taskSmartportMaster,
         .desiredPeriod = TASK_PERIOD_HZ(500),         // 500 Hz
