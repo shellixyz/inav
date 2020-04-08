@@ -240,6 +240,13 @@ void taskTelemetry(timeUs_t currentTimeUs)
 }
 #endif
 
+#if defined(USE_SMARTPORT_MASTER)
+void taskSmartportMaster(timeUs_t currentTimeUs)
+{
+    smartportMasterHandle(currentTimeUs);
+}
+#endif
+
 #ifdef USE_LED_STRIP
 void taskLedStrip(timeUs_t currentTimeUs)
 {
@@ -467,6 +474,15 @@ cfTask_t cfTasks[TASK_COUNT] = {
     [TASK_TELEMETRY] = {
         .taskName = "TELEMETRY",
         .taskFunc = taskTelemetry,
+        .desiredPeriod = TASK_PERIOD_HZ(500),         // 500 Hz
+        .staticPriority = TASK_PRIORITY_IDLE,
+    },
+#endif
+
+#if defined(USE_SMARTPORT_MASTER)
+    [TASK_TELEMETRY] = {
+        .taskName = "SPORT MASTER",
+        .taskFunc = taskSmartportMaster,
         .desiredPeriod = TASK_PERIOD_HZ(500),         // 500 Hz
         .staticPriority = TASK_PRIORITY_IDLE,
     },

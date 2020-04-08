@@ -180,6 +180,7 @@ COMMON_SRC = \
             drivers/vtx_common.c \
             io/rangefinder_msp.c \
             io/rangefinder_benewake.c \
+            io/smartport_master.c \
             io/opflow_cxof.c \
             io/opflow_msp.c \
             io/dashboard.c \
@@ -221,7 +222,6 @@ COMMON_SRC = \
             telemetry/mavlink.c \
             telemetry/msp_shared.c \
             telemetry/smartport.c \
-            telemetry/smartport_master.c \
             telemetry/sim.c \
             telemetry/telemetry.c \
             io/vtx.c \

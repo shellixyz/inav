@@ -25,5 +25,5 @@
 
 #include <common/time.h>
 
-void handleSmartPortMasterTelemetry(timeUs_t currentTimeUs);
-bool initSmartPortMasterTelemetry(void);
+bool smartportMasterInit(void);
+void smartportMasterHandle(timeUs_t currentTimeUs);

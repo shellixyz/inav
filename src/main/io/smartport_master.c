@@ -11,22 +11,25 @@
 #include "platform.h"
 FILE_COMPILE_FOR_SPEED
 
-#if defined(USE_TELEMETRY) && defined(USE_TELEMETRY_SMARTPORT_MASTER)
+#if defined(USE_SMARTPORT_MASTER)
 
 /*#include "common/axis.h"*/
 /*#include "common/color.h"*/
 /*#include "common/maths.h"*/
-/*#include "common/utils.h"*/
+#include "common/utils.h"
 #include "common/bitarray.h"
 
 /*#include "config/feature.h"*/
 #include "config/parameter_group.h"
 #include "config/parameter_group_ids.h"
 
+#include "drivers/serial.h"
 #include "drivers/time.h"
 
+#include "io/serial.h"
+#include "io/smartport_master.h"
+
 #include "telemetry/telemetry.h"
-#include "telemetry/smartport_master.h"
 
 enum
 {
@@ -74,7 +77,7 @@ static serialPortConfig_t *portConfig;
 
 static BITARRAY_DECLARE(activePhyIDs, SMARTPORT_PHYID_COUNT);
 
-bool initSmartPortMasterTelemetry(void)
+bool smartportMasterInit(void)
 {
     portConfig = findSerialPortConfig(FUNCTION_TELEMETRY_SMARTPORT_MASTER);
     if (!portConfig) {
@@ -150,7 +153,7 @@ void smartPortMasterReceive(void)
 {
 }
 
-void handleSmartPortMasterTelemetry(timeUs_t currentTimeUs)
+void smartportMasterHandle(timeUs_t currentTimeUs)
 {
     static timeUs_t pollTimestamp = 0;
 
