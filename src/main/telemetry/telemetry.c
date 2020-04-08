@@ -43,6 +43,7 @@
 #include "telemetry/frsky_d.h"
 #include "telemetry/hott.h"
 #include "telemetry/smartport.h"
+#include "telemetry/smartport_master.h"
 #include "telemetry/ltm.h"
 #include "telemetry/mavlink.h"
 #include "telemetry/jetiexbus.h"
@@ -97,6 +98,10 @@ void telemetryInit(void)
 
 #if defined(USE_TELEMETRY_SMARTPORT)
     initSmartPortTelemetry();
+#endif
+
+#if defined(USE_TELEMETRY_SMARTPORT_MASTER)
+    initSmartPortMasterTelemetry();
 #endif
 
 #if defined(USE_TELEMETRY_LTM)
@@ -200,6 +205,10 @@ void telemetryProcess(timeUs_t currentTimeUs)
 
 #if defined(USE_TELEMETRY_SMARTPORT)
     handleSmartPortTelemetry();
+#endif
+
+#if defined(USE_TELEMETRY_SMARTPORT_MASTER)
+    handleSmartPortMasterTelemetry(currentTimeUs);
 #endif
 
 #if defined(USE_TELEMETRY_LTM)

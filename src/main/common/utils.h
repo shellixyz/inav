@@ -52,6 +52,7 @@
 #define BUILD_BUG_ON(condition) ((void)sizeof(char[1 - 2*!!(condition)]))
 
 #define BIT(x) (1 << (x))
+#define GET_BIT(value, bit) ((value >> bit) & 1)
 
 #define STATIC_ASSERT(condition, name) \
     typedef char assert_failed_ ## name [(condition) ? 1 : -1 ] __attribute__((unused))
