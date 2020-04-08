@@ -119,6 +119,9 @@ typedef enum {
 #ifdef USE_RPM_FILTER
     TASK_RPM_FILTER,
 #endif
+#if defined(USE_SMARTPORT_MASTER)
+    TASK_SMARTPORT_MASTER,
+#endif
     /* Count of real tasks */
     TASK_COUNT,
 
