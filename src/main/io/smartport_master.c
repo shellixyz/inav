@@ -227,7 +227,6 @@ static void decode_cells_data(uint32_t sdata)
         for (uint8_t i = 0; i < 6; ++i)
             debug[i+1] = cd->cellVoltage[i];
     }
-    /*LOG_E(SYSTEM, "i: %d, S: %d, v1: %d, v2: %d", voltageStartIndex, cellCount, voltage1, voltage2);*/
 }
 
 static void processPayload(smartPortPayload_t *payload)
@@ -244,26 +243,25 @@ static void processPayload(smartPortPayload_t *payload)
 static void smartportMasterReceive(void)
 {
     static smartportPayloadBuffer_u buffer;
+
     while (serialRxBytesWaiting(smartportMasterSerialPort)) {
-        if (rxBufferLen < sizeof(buffer)) {
-            uint8_t c = serialRead(smartportMasterSerialPort);
-            buffer.bytes[rxBufferLen] = c;
-            /*LOG_E(SYSTEM, "rxBufferLen = %d, data = %x", rxBufferLen, c);*/
-            if (currentPolledPhyID > -1) { // If we polled a PhyID
-                rxBufferLen += 1;
-            }
-        } else {
-            // payload complete, check crc and process payload
-            uint8_t crc = serialRead(smartportMasterSerialPort);
-            uint8_t calc = calculatePayloadCRC(&buffer.frame.payload);
-            /*LOG_E(SYSTEM, "crc = %d, calc = %d", crc, calc);*/
-            /*if (crc == calculatePayloadCRC(&buffer.frame.payload)) {*/
-            if (crc == calc) {
+
+        uint8_t c = serialRead(smartportMasterSerialPort);
+        buffer.bytes[rxBufferLen] = c;
+        if (currentPolledPhyID > -1) { // If we polled a PhyID
+            rxBufferLen += 1;
+        }
+
+        if (rxBufferLen == sizeof(buffer)) {
+            // payload complete, check crc, process payload if CRC is good, reset buffer
+            uint8_t rxCRC = serialRead(smartportMasterSerialPort);
+            uint8_t calcCRC = calculatePayloadCRC(&buffer.frame.payload);
+            if (rxCRC == calcCRC) {
                 bitArraySet(activePhyIDs, currentPolledPhyID);
                 processPayload(&buffer.frame.payload);
-                rxBufferLen = 0; // reset buffer
-                currentPolledPhyID = -1; // previously polled PhyID has answered, no expecting more data until next poll
             }
+            currentPolledPhyID = -1; // previously polled PhyID has answered, no expecting more data until next poll
+            rxBufferLen = 0; // reset buffer
         }
 
     }
