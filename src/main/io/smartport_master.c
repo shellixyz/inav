@@ -19,7 +19,6 @@
 #include "build/debug.h"
 #include "common/log.h"
 #include "common/utils.h"
-#include "common/bitarray.h"
 
 /*#include "config/feature.h"*/
 #include "config/parameter_group.h"
@@ -90,12 +89,16 @@ enum
 
 #define SMARTPORT_FRAME_START 0x7E
 
-static serialPort_t *smartportMasterSerialPort = NULL;
-static serialPortConfig_t *portConfig;
-static int8_t currentPolledPhyID = -1;
-static uint8_t rxBufferLen = 0;
+typedef struct smartPortMasterFrame_s {
+    uint8_t magic;
+    uint8_t PhyID;
+    smartPortPayload_t payload;
+} PACKED smartportFrame_t;
 
-static BITARRAY_DECLARE(activePhyIDs, SMARTPORT_PHYID_COUNT);
+typedef union {
+    smartportFrame_t frame;
+    uint8_t bytes[sizeof(smartportFrame_t)];
+} smartportPayloadBuffer_u;
 
 typedef struct {
     int8_t cellCount;
@@ -105,6 +108,14 @@ typedef struct {
 typedef struct {
     cellsData_t cellsData;
 } smartportSensorsData_t;
+
+
+static serialPort_t *smartportMasterSerialPort = NULL;
+static serialPortConfig_t *portConfig;
+static int8_t currentPolledPhyID = -1;
+static uint8_t rxBufferLen = 0;
+
+static uint32_t activePhyIDs = 0;
 
 smartportSensorsData_t smartportSensorsData = { .cellsData.cellCount = -1 };
 
@@ -120,9 +131,55 @@ bool smartportMasterInit(void)
     portOptions_t portOptions = (telemetryConfig()->halfDuplex ? SERIAL_BIDIR : SERIAL_UNIDIR) | (telemetryConfig()->telemetry_inverted ? SERIAL_NOT_INVERTED : SERIAL_INVERTED);
     smartportMasterSerialPort = openSerialPort(portConfig->identifier, FUNCTION_TELEMETRY_SMARTPORT_MASTER, NULL, NULL, SMARTPORT_BAUD, SMARTPORT_UART_MODE, portOptions);
 
-    BITARRAY_CLR_ALL(activePhyIDs);
-
     return true;
+}
+
+static void phyIDSetActive(uint8_t phyID, bool active)
+{
+    uint32_t mask = 1 << phyID;
+    if (active) {
+        activePhyIDs |= mask;
+    } else {
+        activePhyIDs &= ~mask;
+    }
+}
+
+static uint32_t phyIDAllActiveMask(void)
+{
+    uint32_t mask = 0;
+    for (uint8_t i = 0; i < SMARTPORT_PHYID_COUNT; ++i) {
+        mask |= 1 << i;
+    }
+    return mask;
+}
+
+static int8_t phyIDNext(uint8_t start, bool active)
+{
+    for (uint8_t i = start; i < start + SMARTPORT_PHYID_COUNT; ++i) {
+        uint8_t phyID = i % SMARTPORT_PHYID_COUNT;
+        uint32_t mask = 1 << phyID;
+        uint32_t phyIDMasked = activePhyIDs & mask;
+        if ((active && phyIDMasked) || !(active || phyIDMasked)) {
+            return phyID;
+        }
+    }
+    return -1;
+}
+
+static bool phyIDNoneActive(void)
+{
+    return activePhyIDs == 0;
+}
+
+static bool phyIDAllActive(void)
+{
+    static uint32_t allActiveMask = 0;
+
+    if (!allActiveMask) {
+        allActiveMask = phyIDAllActiveMask();
+    }
+
+    return !!((activePhyIDs & allActiveMask) == allActiveMask);
 }
 
 static void smartportMasterSendByte(uint8_t byte)
@@ -138,42 +195,40 @@ typedef enum {
 void smartportMasterPoll(void)
 {
     static pollType_e nextPollType = PT_INACTIVE_ID;
-    static uint8_t currentActivePhyID = 0, currentInactivePhyID = 0;
+    static uint8_t nextActivePhyID = 0, nextInactivePhyID = 0;
     uint8_t phyIDToPoll;
+
+    if (currentPolledPhyID != -1) {
+        // currentPolledPhyID hasn't been reset by smartportMasterReceive so we didn't get valid data for this PhyID (inactive)
+        phyIDSetActive(currentPolledPhyID, false);
+    }
+
+    if (phyIDNoneActive()) {
+        nextPollType = PT_INACTIVE_ID;
+    }
+
+    if (phyIDAllActive()) {
+        nextPollType = PT_ACTIVE_ID;
+    }
 
     switch (nextPollType) {
 
         case PT_ACTIVE_ID: {
-            int8_t nextActivePhyID = BITARRAY_FIND_FIRST_SET(activePhyIDs, currentActivePhyID); // find next active PhyID
-            if (nextActivePhyID == -1) {                                // no active PhyID found
-                currentActivePhyID = 0;                                 // back to first valid PhyID
-                nextPollType = PT_INACTIVE_ID;                          // continue by polling inactive PhyID
-            } else {
-                phyIDToPoll = nextActivePhyID;
-                if (currentActivePhyID == SMARTPORT_PHYID_MAX) {        // last PhyID
-                    currentActivePhyID = 0;                             // back to first valid PhyID
-                } else {
-                    currentActivePhyID += 1;                            // prepare next round
-                }
-                break;
-            }
-            FALLTHROUGH;
+            phyIDToPoll = phyIDNext(nextActivePhyID, true);
+            nextActivePhyID = (phyIDToPoll == SMARTPORT_PHYID_MAX ? 0 : phyIDToPoll + 1);
+            nextPollType = PT_INACTIVE_ID;
+            break;
         }
 
         case PT_INACTIVE_ID: {
-            phyIDToPoll = currentInactivePhyID;
-            if (currentInactivePhyID == SMARTPORT_PHYID_MAX) {          // last PhyID
-                currentInactivePhyID = 0;                               // back to first valid PhyID
-            } else {
-                currentInactivePhyID += 1;                              // prepare next round
-            }
-            nextPollType = PT_ACTIVE_ID;                                // next poll active PhyID
+            phyIDToPoll = phyIDNext(nextInactivePhyID, false);
+            nextInactivePhyID = (phyIDToPoll == SMARTPORT_PHYID_MAX ? 0 : phyIDToPoll + 1);
+            nextPollType = PT_ACTIVE_ID;
             break;
         }
 
     }
 
-    /*phyIDToPoll = 1;*/
 
     currentPolledPhyID = phyIDToPoll;
 
@@ -182,26 +237,12 @@ void smartportMasterPoll(void)
     phyIDToPoll |= (GET_BIT(phyIDToPoll, 2) ^ GET_BIT(phyIDToPoll, 3) ^ GET_BIT(phyIDToPoll, 4)) << 6;
     phyIDToPoll |= (GET_BIT(phyIDToPoll, 0) ^ GET_BIT(phyIDToPoll, 2) ^ GET_BIT(phyIDToPoll, 4)) << 7;
 
-    /*LOG_E(SYSTEM, "Polling %X (%X)", currentPolledPhyID, phyIDToPoll);*/
-    /*LOG_E(SYSTEM, "Polling %X (%X) -- rxBufferLen = %d", currentPolledPhyID, phyIDToPoll, rxBufferLen);*/
-
     // poll
     smartportMasterSendByte(SMARTPORT_FRAME_START);
     smartportMasterSendByte(phyIDToPoll);
 
-    rxBufferLen = 0; // discard data received during previous poll
+    rxBufferLen = 0; // discard incomplete frames received during previous poll
 }
-
-typedef struct smartPortMasterFrame_s {
-    uint8_t magic;
-    uint8_t PhyID;
-    smartPortPayload_t payload;
-} PACKED smartportFrame_t;
-
-typedef union {
-    smartportFrame_t frame;
-    uint8_t bytes[sizeof(smartportFrame_t)];
-} smartportPayloadBuffer_u;
 
 static uint8_t calculatePayloadCRC(smartPortPayload_t* payload)
 {
@@ -257,7 +298,7 @@ static void smartportMasterReceive(void)
             uint8_t rxCRC = serialRead(smartportMasterSerialPort);
             uint8_t calcCRC = calculatePayloadCRC(&buffer.frame.payload);
             if (rxCRC == calcCRC) {
-                bitArraySet(activePhyIDs, currentPolledPhyID);
+                phyIDSetActive(currentPolledPhyID, true);
                 processPayload(&buffer.frame.payload);
             }
             currentPolledPhyID = -1; // previously polled PhyID has answered, no expecting more data until next poll
