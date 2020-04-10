@@ -88,6 +88,8 @@ enum
 /*#define SMARTPORT_POLLING_INTERVAL 200 // ms*/
 
 #define SMARTPORT_FRAME_START 0x7E
+#define SMARTPORT_BYTESTUFFING_MARKER 0x7D
+#define SMARTPORT_BYTESTUFFING_XOR_VALUE 0x20
 
 typedef struct smartPortMasterFrame_s {
     uint8_t magic;
@@ -284,14 +286,30 @@ static void processPayload(smartPortPayload_t *payload)
 static void smartportMasterReceive(void)
 {
     static smartportPayloadBuffer_u buffer;
+    static bool processByteStuffing = false;
+
+    if (!rxBufferLen) {
+        processByteStuffing = false;
+    }
 
     while (serialRxBytesWaiting(smartportMasterSerialPort)) {
 
         uint8_t c = serialRead(smartportMasterSerialPort);
-        buffer.bytes[rxBufferLen] = c;
-        if (currentPolledPhyID > -1) { // If we polled a PhyID
-            rxBufferLen += 1;
+
+        if (currentPolledPhyID == -1) { // We were did not poll a sensor or a packet has already been received and processed
+            continue;
         }
+
+        if (processByteStuffing) {
+            c ^= SMARTPORT_BYTESTUFFING_XOR_VALUE;
+            processByteStuffing = false;
+        } else if (c == SMARTPORT_BYTESTUFFING_MARKER) {
+            processByteStuffing = true;
+            continue;
+        }
+
+        buffer.bytes[rxBufferLen] = c;
+        rxBufferLen += 1;
 
         if (rxBufferLen == sizeof(buffer)) {
             // payload complete, check crc, process payload if CRC is good, reset buffer
@@ -301,7 +319,7 @@ static void smartportMasterReceive(void)
                 phyIDSetActive(currentPolledPhyID, true);
                 processPayload(&buffer.frame.payload);
             }
-            currentPolledPhyID = -1; // previously polled PhyID has answered, no expecting more data until next poll
+            currentPolledPhyID = -1; // previously polled PhyID has answered, not expecting more data until next poll
             rxBufferLen = 0; // reset buffer
         }
 
