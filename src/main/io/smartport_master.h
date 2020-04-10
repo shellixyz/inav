@@ -25,5 +25,23 @@
 
 #include <common/time.h>
 
+#include <telemetry/smartport.h>
+
+#if defined(USE_SMARTPORT_MASTER)
+
+typedef struct {
+    int8_t count;
+    int16_t voltage[6];
+} cellsData_t;
+
+
 bool smartportMasterInit(void);
 void smartportMasterHandle(timeUs_t currentTimeUs);
+
+// Returns latest received SmartPort payload for phyID or NULL if PhyID is not active
+smartPortPayload_t *smartportMasterGetPayload(uint8_t phyID);
+
+// Returns latest Cells data or NULL if the data is too old
+cellsData_t *smartportMasterGetCellsData(void);
+
+#endif /* USE_SMARTPORT_MASTER */
