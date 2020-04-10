@@ -1,28 +1,15 @@
-/*
- * SmartPort Telemetry implementation by frank26080115
- * see https://github.com/frank26080115/cleanflight/wiki/Using-Smart-Port
- */
 #include <stdbool.h>
 #include <stdint.h>
-/*#include <stdlib.h>*/
-/*#include <string.h>*/
-#include <math.h>
+#include <string.h>
 
 #include "platform.h"
 /*FILE_COMPILE_FOR_SPEED*/
 
 #if defined(USE_SMARTPORT_MASTER)
 
-/*#include "common/axis.h"*/
-/*#include "common/color.h"*/
-/*#include "common/maths.h"*/
 #include "build/debug.h"
 #include "common/log.h"
 #include "common/utils.h"
-
-/*#include "config/feature.h"*/
-#include "config/parameter_group.h"
-#include "config/parameter_group_ids.h"
 
 #include "drivers/serial.h"
 #include "drivers/time.h"
@@ -85,11 +72,17 @@ enum
 #define SMARTPORT_PHYID_COUNT (SMARTPORT_PHYID_MAX + 1)
 
 #define SMARTPORT_POLLING_INTERVAL 12 // ms
-/*#define SMARTPORT_POLLING_INTERVAL 200 // ms*/
 
 #define SMARTPORT_FRAME_START 0x7E
 #define SMARTPORT_BYTESTUFFING_MARKER 0x7D
 #define SMARTPORT_BYTESTUFFING_XOR_VALUE 0x20
+
+#define SMARTPORT_SENSOR_DATA_TIMEOUT 500 // ms
+
+typedef enum {
+    PT_ACTIVE_ID,
+    PT_INACTIVE_ID
+} pollType_e;
 
 typedef struct smartPortMasterFrame_s {
     uint8_t magic;
@@ -103,12 +96,8 @@ typedef union {
 } smartportPayloadBuffer_u;
 
 typedef struct {
-    int8_t cellCount;
-    int16_t cellVoltage[6];
-} cellsData_t;
-
-typedef struct {
-    cellsData_t cellsData;
+    cellsData_t cells;
+    timeUs_t cellsTimestamp;
 } smartportSensorsData_t;
 
 
@@ -118,8 +107,9 @@ static int8_t currentPolledPhyID = -1;
 static uint8_t rxBufferLen = 0;
 
 static uint32_t activePhyIDs = 0;
+static smartPortPayload_t payloadCache[SMARTPORT_PHYID_COUNT];
 
-smartportSensorsData_t smartportSensorsData = { .cellsData.cellCount = -1 };
+static smartportSensorsData_t sensorsData;
 
 #pragma GCC push_options
 #pragma GCC optimize ("O0")
@@ -132,6 +122,8 @@ bool smartportMasterInit(void)
 
     portOptions_t portOptions = (telemetryConfig()->halfDuplex ? SERIAL_BIDIR : SERIAL_UNIDIR) | (telemetryConfig()->telemetry_inverted ? SERIAL_NOT_INVERTED : SERIAL_INVERTED);
     smartportMasterSerialPort = openSerialPort(portConfig->identifier, FUNCTION_TELEMETRY_SMARTPORT_MASTER, NULL, NULL, SMARTPORT_BAUD, SMARTPORT_UART_MODE, portOptions);
+
+    memset(&sensorsData, 0, sizeof(sensorsData));
 
     return true;
 }
@@ -168,6 +160,11 @@ static int8_t phyIDNext(uint8_t start, bool active)
     return -1;
 }
 
+static bool phyIDIsActive(uint8_t id)
+{
+    return !!(activePhyIDs & (1 << id));
+}
+
 static bool phyIDNoneActive(void)
 {
     return activePhyIDs == 0;
@@ -189,12 +186,7 @@ static void smartportMasterSendByte(uint8_t byte)
     serialWrite(smartportMasterSerialPort, byte);
 }
 
-typedef enum {
-    PT_ACTIVE_ID,
-    PT_INACTIVE_ID
-} pollType_e;
-
-void smartportMasterPoll(void)
+static void smartportMasterPoll(void)
 {
     static pollType_e nextPollType = PT_INACTIVE_ID;
     static uint8_t nextActivePhyID = 0, nextInactivePhyID = 0;
@@ -258,32 +250,33 @@ static uint8_t calculatePayloadCRC(smartPortPayload_t* payload)
 static void decode_cells_data(uint32_t sdata)
 {
     uint8_t voltageStartIndex = sdata & 0xF;
-    uint8_t cellCount = sdata >> 4 & 0xF;
+    uint8_t count = sdata >> 4 & 0xF;
     uint16_t voltage1 = (sdata >> 8 & 0xFFF) * 2;
     uint16_t voltage2 = (sdata >> 20 & 0xFFF) * 2;
-    if ((voltageStartIndex <= 4) && (cellCount <= 6)) {
-        cellsData_t *cd = &smartportSensorsData.cellsData;
-        cd->cellCount = cellCount;
-        cd->cellVoltage[voltageStartIndex] = voltage1;
-        cd->cellVoltage[voltageStartIndex+1] = voltage2;
-        debug[0] = cd->cellCount;
+    if ((voltageStartIndex <= 4) && (count <= 6)) {
+        cellsData_t *cd = &sensorsData.cells;
+        cd->count = count;
+        cd->voltage[voltageStartIndex] = voltage1;
+        cd->voltage[voltageStartIndex+1] = voltage2;
+        debug[0] = cd->count;
         for (uint8_t i = 0; i < 6; ++i)
-            debug[i+1] = cd->cellVoltage[i];
+            debug[i+1] = cd->voltage[i];
     }
 }
 
-static void processPayload(smartPortPayload_t *payload)
+static void processPayload(smartPortPayload_t *payload, timeUs_t currentTimeUs)
 {
     if (payload->frameId == PRIM_DATA_FRAME) {
         switch (payload->valueId) {
             case DATAID_CELLS:
                 decode_cells_data(payload->data);
+                sensorsData.cellsTimestamp = currentTimeUs;
                 break;
         }
     }
 }
 
-static void smartportMasterReceive(void)
+static void smartportMasterReceive(timeUs_t currentTimeUs)
 {
     static smartportPayloadBuffer_u buffer;
     static bool processByteStuffing = false;
@@ -317,13 +310,23 @@ static void smartportMasterReceive(void)
             uint8_t calcCRC = calculatePayloadCRC(&buffer.frame.payload);
             if (rxCRC == calcCRC) {
                 phyIDSetActive(currentPolledPhyID, true);
-                processPayload(&buffer.frame.payload);
+                processPayload(&buffer.frame.payload, currentTimeUs);
+                payloadCache[currentPolledPhyID] = buffer.frame.payload;
             }
             currentPolledPhyID = -1; // previously polled PhyID has answered, not expecting more data until next poll
             rxBufferLen = 0; // reset buffer
         }
 
     }
+}
+
+smartPortPayload_t *smartportMasterGetPayload(uint8_t phyID)
+{
+    if ((phyID > SMARTPORT_PHYID_MAX) || !phyIDIsActive(phyID)) {
+        return NULL;
+    }
+
+    return payloadCache + phyID;
 }
 
 void smartportMasterHandle(timeUs_t currentTimeUs)
@@ -338,9 +341,19 @@ void smartportMasterHandle(timeUs_t currentTimeUs)
         smartportMasterPoll();
         pollTimestamp = currentTimeUs;
     } else {
-        smartportMasterReceive();
+        smartportMasterReceive(currentTimeUs);
     }
 }
+
+cellsData_t *smartportMasterGetCellsData(void)
+{
+    if (micros() - sensorsData.cellsTimestamp > SMARTPORT_SENSOR_DATA_TIMEOUT) {
+        return NULL;
+    }
+
+    return &sensorsData.cells;
+}
+
 #pragma GCC pop_options
 
 #endif
