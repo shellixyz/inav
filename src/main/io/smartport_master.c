@@ -79,6 +79,8 @@ enum
 
 #define SMARTPORT_SENSOR_DATA_TIMEOUT 500 // ms
 
+#define SMARTPORT_FORWARD_REQUESTS_MAX 10
+
 typedef enum {
     PT_ACTIVE_ID,
     PT_INACTIVE_ID
@@ -86,28 +88,41 @@ typedef enum {
 
 typedef struct smartPortMasterFrame_s {
     uint8_t magic;
-    uint8_t PhyID;
+    uint8_t phyID;
     smartPortPayload_t payload;
 } PACKED smartportFrame_t;
 
 typedef union {
     smartportFrame_t frame;
     uint8_t bytes[sizeof(smartportFrame_t)];
-} smartportPayloadBuffer_u;
+} smartportFrameBuffer_u;
 
 typedef struct {
     cellsData_t cells;
     timeUs_t cellsTimestamp;
 } smartportSensorsData_t;
 
+typedef struct {
+    uint8_t phyID;
+    smartPortPayload_t payload;
+} smartportForwardData_t;
 
 static serialPort_t *smartportMasterSerialPort = NULL;
 static serialPortConfig_t *portConfig;
 static int8_t currentPolledPhyID = -1;
+static int8_t forcedPolledPhyID = -1;
 static uint8_t rxBufferLen = 0;
 
 static uint32_t activePhyIDs = 0;
-static smartPortPayload_t payloadCache[SMARTPORT_PHYID_COUNT];
+static smartPortPayload_t sensorPayloadCache[SMARTPORT_PHYID_COUNT];
+
+static uint8_t forwardRequestsStart = 0;
+static uint8_t forwardRequestsEnd = 0;
+static smartportForwardData_t forwardRequests[SMARTPORT_FORWARD_REQUESTS_MAX]; // Forward requests' circular buffer
+
+static uint8_t forwardResponsesCount = 0;
+/*static uint8_t forwardResponsesEnd = 0;*/
+static smartportForwardData_t forwardResponses[SMARTPORT_FORWARD_REQUESTS_MAX]; // Forward responses' circular buffer
 
 static smartportSensorsData_t sensorsData;
 
@@ -186,6 +201,13 @@ static void smartportMasterSendByte(uint8_t byte)
     serialWrite(smartportMasterSerialPort, byte);
 }
 
+static void smartportMasterPhyIDFillCheckBits(uint8_t *phyIDByte)
+{
+    *phyIDByte |= (GET_BIT(*phyIDByte, 0) ^ GET_BIT(*phyIDByte, 1) ^ GET_BIT(*phyIDByte, 2)) << 5;
+    *phyIDByte |= (GET_BIT(*phyIDByte, 2) ^ GET_BIT(*phyIDByte, 3) ^ GET_BIT(*phyIDByte, 4)) << 6;
+    *phyIDByte |= (GET_BIT(*phyIDByte, 0) ^ GET_BIT(*phyIDByte, 2) ^ GET_BIT(*phyIDByte, 4)) << 7;
+}
+
 static void smartportMasterPoll(void)
 {
     static pollType_e nextPollType = PT_INACTIVE_ID;
@@ -197,45 +219,77 @@ static void smartportMasterPoll(void)
         phyIDSetActive(currentPolledPhyID, false);
     }
 
-    if (phyIDNoneActive()) {
-        nextPollType = PT_INACTIVE_ID;
-    }
+    if (forcedPolledPhyID != -1) {
 
-    if (phyIDAllActive()) {
-        nextPollType = PT_ACTIVE_ID;
-    }
+        phyIDToPoll = forcedPolledPhyID;
+        forcedPolledPhyID = -1;
 
-    switch (nextPollType) {
+    } else {
 
-        case PT_ACTIVE_ID: {
-            phyIDToPoll = phyIDNext(nextActivePhyID, true);
-            nextActivePhyID = (phyIDToPoll == SMARTPORT_PHYID_MAX ? 0 : phyIDToPoll + 1);
+        if (phyIDNoneActive()) {
             nextPollType = PT_INACTIVE_ID;
-            break;
         }
 
-        case PT_INACTIVE_ID: {
-            phyIDToPoll = phyIDNext(nextInactivePhyID, false);
-            nextInactivePhyID = (phyIDToPoll == SMARTPORT_PHYID_MAX ? 0 : phyIDToPoll + 1);
+        if (phyIDAllActive()) {
             nextPollType = PT_ACTIVE_ID;
-            break;
+        }
+
+        switch (nextPollType) {
+
+            case PT_ACTIVE_ID: {
+                phyIDToPoll = phyIDNext(nextActivePhyID, true);
+                nextActivePhyID = (phyIDToPoll == SMARTPORT_PHYID_MAX ? 0 : phyIDToPoll + 1);
+                nextPollType = PT_INACTIVE_ID;
+                break;
+            }
+
+            case PT_INACTIVE_ID: {
+                phyIDToPoll = phyIDNext(nextInactivePhyID, false);
+                nextInactivePhyID = (phyIDToPoll == SMARTPORT_PHYID_MAX ? 0 : phyIDToPoll + 1);
+                nextPollType = PT_ACTIVE_ID;
+                break;
+            }
+
         }
 
     }
-
 
     currentPolledPhyID = phyIDToPoll;
-
-    // construct check bits
-    phyIDToPoll |= (GET_BIT(phyIDToPoll, 0) ^ GET_BIT(phyIDToPoll, 1) ^ GET_BIT(phyIDToPoll, 2)) << 5;
-    phyIDToPoll |= (GET_BIT(phyIDToPoll, 2) ^ GET_BIT(phyIDToPoll, 3) ^ GET_BIT(phyIDToPoll, 4)) << 6;
-    phyIDToPoll |= (GET_BIT(phyIDToPoll, 0) ^ GET_BIT(phyIDToPoll, 2) ^ GET_BIT(phyIDToPoll, 4)) << 7;
+    smartportMasterPhyIDFillCheckBits(&phyIDToPoll);
 
     // poll
     smartportMasterSendByte(SMARTPORT_FRAME_START);
     smartportMasterSendByte(phyIDToPoll);
 
     rxBufferLen = 0; // discard incomplete frames received during previous poll
+}
+
+static void smartportMasterForwardNextPayload(void)
+{
+    smartportForwardData_t *request = forwardRequests + forwardRequestsStart;
+
+    forcedPolledPhyID = request->phyID; // force next poll to the request's phyID
+
+    smartportMasterPhyIDFillCheckBits(&request->phyID);
+    smartportMasterSendByte(SMARTPORT_FRAME_START);
+    smartportMasterSendByte(request->phyID);
+
+    uint16_t checksum = 0;
+    uint8_t *payloadPtr = (uint8_t *)&request->payload;
+    for (uint8_t i; i < sizeof(request->payload); ++i, ++payloadPtr) {
+        uint8_t c = *payloadPtr;
+        if ((c == SMARTPORT_FRAME_START) || (c == SMARTPORT_BYTESTUFFING_MARKER)) {
+            smartportMasterSendByte(SMARTPORT_BYTESTUFFING_MARKER);
+            smartportMasterSendByte(c ^ SMARTPORT_BYTESTUFFING_XOR_VALUE);
+        } else {
+            smartportMasterSendByte(c);
+        }
+        checksum += c;
+    }
+    checksum = 0xff - ((checksum & 0xff) + (checksum >> 8));
+    smartportMasterSendByte(checksum);
+
+    forwardRequestsStart = (forwardRequestsStart + 1) % SMARTPORT_FORWARD_REQUESTS_MAX;
 }
 
 static uint8_t calculatePayloadCRC(smartPortPayload_t* payload)
@@ -264,21 +318,42 @@ static void decode_cells_data(uint32_t sdata)
     }
 }
 
+static void processSensorPayload(smartPortPayload_t *payload, timeUs_t currentTimeUs)
+{
+    switch (payload->valueId) {
+        case DATAID_CELLS:
+            decode_cells_data(payload->data);
+            sensorsData.cellsTimestamp = currentTimeUs;
+            break;
+    }
+    sensorPayloadCache[currentPolledPhyID] = *payload;
+}
+
 static void processPayload(smartPortPayload_t *payload, timeUs_t currentTimeUs)
 {
-    if (payload->frameId == PRIM_DATA_FRAME) {
-        switch (payload->valueId) {
-            case DATAID_CELLS:
-                decode_cells_data(payload->data);
-                sensorsData.cellsTimestamp = currentTimeUs;
-                break;
-        }
+    switch (payload->frameId) {
+
+        case PRIM_DISCARD_FRAME:
+            break;
+
+        case PRIM_DATA_FRAME:
+            processSensorPayload(payload, currentTimeUs);
+            break;
+
+        default:
+            if (forwardResponsesCount < SMARTPORT_FORWARD_REQUESTS_MAX) {
+                smartportForwardData_t *response = forwardResponses + forwardResponsesCount;
+                response->phyID = currentPolledPhyID;
+                response->payload = *payload;
+                forwardResponsesCount += 1;
+            }
+            break;
     }
 }
 
 static void smartportMasterReceive(timeUs_t currentTimeUs)
 {
-    static smartportPayloadBuffer_u buffer;
+    static smartportFrameBuffer_u buffer;
     static bool processByteStuffing = false;
 
     if (!rxBufferLen) {
@@ -311,7 +386,6 @@ static void smartportMasterReceive(timeUs_t currentTimeUs)
             if (rxCRC == calcCRC) {
                 phyIDSetActive(currentPolledPhyID, true);
                 processPayload(&buffer.frame.payload, currentTimeUs);
-                payloadCache[currentPolledPhyID] = buffer.frame.payload;
             }
             currentPolledPhyID = -1; // previously polled PhyID has answered, not expecting more data until next poll
             rxBufferLen = 0; // reset buffer
@@ -320,13 +394,124 @@ static void smartportMasterReceive(timeUs_t currentTimeUs)
     }
 }
 
-smartPortPayload_t *smartportMasterGetPayload(uint8_t phyID)
+bool smartportMasterGetSensorPayload(uint8_t phyID, smartPortPayload_t *payload)
 {
     if ((phyID > SMARTPORT_PHYID_MAX) || !phyIDIsActive(phyID)) {
-        return NULL;
+        return false;
     }
 
-    return payloadCache + phyID;
+    *payload = sensorPayloadCache[phyID];
+    return true;
+}
+
+#if 0
+static uint8_t forwardResponseCount(void)
+{
+    if (forwardResponsesStart > forwardResponsesEnd) {
+        return SMARTPORT_FORWARD_REQUESTS_MAX - forwardResponsesStart + forwardResponsesEnd;
+    } else {
+        return forwardResponsesEnd - forwardResponsesStart;
+    }
+}
+#endif
+
+#if 0
+bool smartportMasterNextForwardResponse(uint8_t *phyID, smartPortPayload_t *payload)
+{
+    if (!forwardResponseCount()) {
+        return false;
+    }
+
+    smartportForwardData_t *response = forwardResponses + forwardResponsesStart;
+    *phyID = response->phyID;
+    *payload = response->payload;
+    forwardResponsesStart = (forwardResponsesStart + 1) % SMARTPORT_FORWARD_REQUESTS_MAX;
+    return true;
+}
+#endif
+
+#if 0
+// i = position from forwardResponsesStart
+static void forwardResponseDelete(uint8_t i)
+{
+    if (((forwardResponsesStart + i + 1) % SMARTPORT_FORWARD_REQUESTS_MAX) == forwardResponsesEnd) {
+        // i = last cell
+        forwardResponsesEnd = forwardResponsesEnd == 0 ? SMARTPORT_FORWARD_REQUESTS_MAX - 1 : forwardResponsesEnd - 1;
+    } else {
+        if (i > 0) {
+            if (forwardResponsesStart > forwardResponsesEnd) { // split
+                const uint8_t tail_count = SMARTPORT_FORWARD_REQUESTS_MAX - forwardResponsesStart;
+                if (i < tail_count) { // i in tail
+                    memmove(forwardResponses + forwardResponsesStart + 1, forwardResponses + forwardResponsesStart, tail_count - i);
+                } else {
+                    memmove(forwardResponses + 1, forwardResponses, i);
+                    forwardReponses[0] = forwardReponses[SMARTPORT_FORWARD_REQUESTS_MAX - 1];
+                    memmove(forwardReponses + forwardResponsesStart + 1, forwardReponses + forwardResponsesStart, tail_count - 1);
+                }
+            } else {
+                memove(forwardResponsesStart + 1, forwardResponsesStart, i);
+            }
+        }
+        forwardResponsesStart = (forwardResponsesStart + 1) % SMARTPORT_FORWARD_REQUESTS_MAX;
+    }
+}
+
+bool smartportMasterNextForwardResponse(uint8_t phyID, smartPortPayload_t *payload)
+{
+    uint8_t rcount = forwardResponseCount();
+
+    if (!rcount) {
+        return false;
+    }
+
+    for (uint8_t i = 0; i < rcount; ++i) {
+        uint8_t response_i = (forwardResponsesStart + i) % SMARTPORT_FORWARD_REQUESTS_MAX;
+        if (forwardResponses[response_i].phyID == phyID) {
+            *payload = forwardResponses[response_i].payload;
+            forwardResponseDelete(response_i);
+            return true;
+        }
+    }
+
+    return false;
+}
+#endif
+
+bool smartportMasterNextForwardResponse(uint8_t phyID, smartPortPayload_t *payload)
+{
+    for (uint8_t i = 0; i < forwardResponsesCount; ++i) {
+        smartportForwardData_t *response = forwardResponses + i;
+        if (response->phyID == phyID) {
+            *payload = response->payload;
+            forwardResponsesCount -= 1;
+            memmove(response, response + 1, forwardResponsesCount - i - 1);
+            return true;
+        }
+    }
+
+    return false;
+}
+
+static uint8_t forwardRequestCount(void)
+{
+    if (forwardRequestsStart > forwardRequestsEnd) {
+        return SMARTPORT_FORWARD_REQUESTS_MAX - forwardRequestsStart + forwardRequestsEnd;
+    } else {
+        return forwardRequestsEnd - forwardRequestsStart;
+    }
+}
+
+bool smartportMasterForward(uint8_t phyID, smartPortPayload_t *payload)
+{
+    if (forwardRequestCount() == SMARTPORT_FORWARD_REQUESTS_MAX) {
+        return false;
+    }
+
+    smartportForwardData_t *request = forwardRequests + forwardRequestsEnd;
+    request->phyID = phyID;
+    request->payload = *payload;
+    forwardRequestsEnd = (forwardRequestsEnd + 1) % SMARTPORT_FORWARD_REQUESTS_MAX;
+    return true;
 }
 
 void smartportMasterHandle(timeUs_t currentTimeUs)
@@ -338,7 +523,11 @@ void smartportMasterHandle(timeUs_t currentTimeUs)
     }
 
     if (!pollTimestamp || (cmpTimeUs(currentTimeUs, pollTimestamp) > SMARTPORT_POLLING_INTERVAL * 1000)) {
-        smartportMasterPoll();
+        if (forwardRequestCount() && (forcedPolledPhyID == -1)) { // forward next payload if there is one in queue and we are not waiting from the response of the previous one
+            smartportMasterForwardNextPayload();
+        } else {
+            smartportMasterPoll();
+        }
         pollTimestamp = currentTimeUs;
     } else {
         smartportMasterReceive(currentTimeUs);

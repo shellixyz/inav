@@ -39,7 +39,9 @@ bool smartportMasterInit(void);
 void smartportMasterHandle(timeUs_t currentTimeUs);
 
 // Returns latest received SmartPort payload for phyID or NULL if PhyID is not active
-smartPortPayload_t *smartportMasterGetPayload(uint8_t phyID);
+bool smartportMasterGetSensorPayload(uint8_t phyID, smartPortPayload_t *payload);
+bool smartportMasterForward(uint8_t phyID, smartPortPayload_t *payload);
+bool smartportMasterNextForwardResponse(uint8_t phyID, smartPortPayload_t *payload);
 
 // Returns latest Cells data or NULL if the data is too old
 cellsData_t *smartportMasterGetCellsData(void);
