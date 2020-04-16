@@ -3,7 +3,7 @@
 #include <string.h>
 
 #include "platform.h"
-/*FILE_COMPILE_FOR_SPEED*/
+FILE_COMPILE_FOR_SPEED
 
 #if defined(USE_SMARTPORT_MASTER)
 
@@ -127,13 +127,10 @@ static uint8_t forwardRequestsEnd = 0;
 static smartportForwardData_t forwardRequests[SMARTPORT_FORWARD_REQUESTS_MAX]; // Forward requests' circular buffer
 
 static uint8_t forwardResponsesCount = 0;
-/*static uint8_t forwardResponsesEnd = 0;*/
 static smartportForwardData_t forwardResponses[SMARTPORT_FORWARD_REQUESTS_MAX]; // Forward responses' buffer
 
 static smartportSensorsData_t sensorsData;
 
-#pragma GCC push_options
-#pragma GCC optimize ("O0")
 bool smartportMasterInit(void)
 {
     portConfig = findSerialPortConfig(FUNCTION_TELEMETRY_SMARTPORT_MASTER);
@@ -207,7 +204,7 @@ static void smartportMasterSendByte(uint8_t byte)
     serialWrite(smartportMasterSerialPort, byte);
 }
 
-static void smartportMasterPhyIDFillCheckBits(uint8_t *phyIDByte)
+void smartportMasterPhyIDFillCheckBits(uint8_t *phyIDByte)
 {
     *phyIDByte |= (GET_BIT(*phyIDByte, 0) ^ GET_BIT(*phyIDByte, 1) ^ GET_BIT(*phyIDByte, 2)) << 5;
     *phyIDByte |= (GET_BIT(*phyIDByte, 2) ^ GET_BIT(*phyIDByte, 3) ^ GET_BIT(*phyIDByte, 4)) << 6;
@@ -451,79 +448,6 @@ bool smartportMasterGetSensorPayload(uint8_t phyID, smartPortPayload_t *payload)
     return true;
 }
 
-#if 0
-static uint8_t forwardResponseCount(void)
-{
-    if (forwardResponsesStart > forwardResponsesEnd) {
-        return SMARTPORT_FORWARD_REQUESTS_MAX - forwardResponsesStart + forwardResponsesEnd;
-    } else {
-        return forwardResponsesEnd - forwardResponsesStart;
-    }
-}
-#endif
-
-#if 0
-bool smartportMasterNextForwardResponse(uint8_t *phyID, smartPortPayload_t *payload)
-{
-    if (!forwardResponseCount()) {
-        return false;
-    }
-
-    smartportForwardData_t *response = forwardResponses + forwardResponsesStart;
-    *phyID = response->phyID;
-    *payload = response->payload;
-    forwardResponsesStart = (forwardResponsesStart + 1) % SMARTPORT_FORWARD_REQUESTS_MAX;
-    return true;
-}
-#endif
-
-#if 0
-// i = position from forwardResponsesStart
-static void forwardResponseDelete(uint8_t i)
-{
-    if (((forwardResponsesStart + i + 1) % SMARTPORT_FORWARD_REQUESTS_MAX) == forwardResponsesEnd) {
-        // i = last cell
-        forwardResponsesEnd = forwardResponsesEnd == 0 ? SMARTPORT_FORWARD_REQUESTS_MAX - 1 : forwardResponsesEnd - 1;
-    } else {
-        if (i > 0) {
-            if (forwardResponsesStart > forwardResponsesEnd) { // split
-                const uint8_t tail_count = SMARTPORT_FORWARD_REQUESTS_MAX - forwardResponsesStart;
-                if (i < tail_count) { // i in tail
-                    memmove(forwardResponses + forwardResponsesStart + 1, forwardResponses + forwardResponsesStart, tail_count - i);
-                } else {
-                    memmove(forwardResponses + 1, forwardResponses, i);
-                    forwardReponses[0] = forwardReponses[SMARTPORT_FORWARD_REQUESTS_MAX - 1];
-                    memmove(forwardReponses + forwardResponsesStart + 1, forwardReponses + forwardResponsesStart, tail_count - 1);
-                }
-            } else {
-                memove(forwardResponsesStart + 1, forwardResponsesStart, i);
-            }
-        }
-        forwardResponsesStart = (forwardResponsesStart + 1) % SMARTPORT_FORWARD_REQUESTS_MAX;
-    }
-}
-
-bool smartportMasterNextForwardResponse(uint8_t phyID, smartPortPayload_t *payload)
-{
-    uint8_t rcount = forwardResponseCount();
-
-    if (!rcount) {
-        return false;
-    }
-
-    for (uint8_t i = 0; i < rcount; ++i) {
-        uint8_t response_i = (forwardResponsesStart + i) % SMARTPORT_FORWARD_REQUESTS_MAX;
-        if (forwardResponses[response_i].phyID == phyID) {
-            *payload = forwardResponses[response_i].payload;
-            forwardResponseDelete(response_i);
-            return true;
-        }
-    }
-
-    return false;
-}
-#endif
-
 bool smartportMasterHasForwardResponse(uint8_t phyID)
 {
     for (uint8_t i = 0; i < forwardResponsesCount; ++i) {
@@ -615,7 +539,5 @@ bool smartportMasterPhyIDIsActive(uint8_t phyID)
 {
     return phyIDIsActive(phyID);
 }
-
-#pragma GCC pop_options
 
 #endif
