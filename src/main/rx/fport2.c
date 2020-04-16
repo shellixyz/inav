@@ -256,23 +256,8 @@ static void fportDataReceive(uint16_t byte, void *callback_data)
 }
 
 #if defined(USE_TELEMETRY_SMARTPORT)
-static void phyIDFillCheckBits(uint8_t *phyIDByte)
-{
-    *phyIDByte |= (GET_BIT(*phyIDByte, 0) ^ GET_BIT(*phyIDByte, 1) ^ GET_BIT(*phyIDByte, 2)) << 5;
-    *phyIDByte |= (GET_BIT(*phyIDByte, 2) ^ GET_BIT(*phyIDByte, 3) ^ GET_BIT(*phyIDByte, 4)) << 6;
-    *phyIDByte |= (GET_BIT(*phyIDByte, 0) ^ GET_BIT(*phyIDByte, 2) ^ GET_BIT(*phyIDByte, 4)) << 7;
-}
-
-/*static void writeUplinkFramePhyID(uint8_t phyID, bool fillPhyIDCheckBits, const smartPortPayload_t *payload)*/
 static void writeUplinkFramePhyID(uint8_t phyID, const smartPortPayload_t *payload)
 {
-    /*if (fillPhyIDCheckBits) {*/
-        /*phyIDFillCheckBits(&phyID);*/
-    /*}*/
-    /*smartPortSendByte(FPORT2_UPLINK_FRAME_LENGTH, NULL, fportPort);*/
-    /*smartPortSendByte(phyID, &checksum, fportPort);*/
-    /*smartPortWriteFrameSerial(payload, fportPort, checksum);*/
-
     serialWrite(fportPort, FPORT2_UPLINK_FRAME_LENGTH);
     serialWrite(fportPort, phyID);
 
@@ -343,22 +328,6 @@ static uint8_t frameStatus(rxRuntimeConfig_t *rxRuntimeConfig)
 
                     downlinkPhyID = frame->data.downlinkData.phyID;
 
-#if 0
-                    uint8_t phyIDCheck = downlinkPhyID & 0x0F;
-                    phyIDFillCheckBits(&phyIDCheck);
-                    if (downlinkPhyID != phyIDCheck) {
-                        reportFrameError(DEBUG_FPORT2_ERROR_PHYID_CRC);
-                        break;
-                    }
-#endif
-
-                    /*uint8_t phyIDCheckNibble = 0;*/
-                    /**phyIDCheckNibble |= (GET_BIT(*downlinkPhyID, 0) ^ GET_BIT(*downlinkPhyID, 1) ^ GET_BIT(*downlinkPhyID, 2)) << 0;*/
-                    /**phyIDCheckNibble |= (GET_BIT(*downlinkPhyID, 2) ^ GET_BIT(*downlinkPhyID, 3) ^ GET_BIT(*downlinkPhyID, 4)) << 1;*/
-                    /**phyIDCheckNibble |= (GET_BIT(*downlinkPhyID, 0) ^ GET_BIT(*downlinkPhyID, 2) ^ GET_BIT(*downlinkPhyID, 4)) << 2;*/
-
-                    // if (frame->data.downlinkData.phyXOR == phyIDCheckNibble)
-
                     switch (frame->data.downlinkData.telemetryData.frameId) {
 
                         case FPORT2_FRAME_ID_NULL:
@@ -371,7 +340,9 @@ static uint8_t frameStatus(rxRuntimeConfig_t *rxRuntimeConfig)
                                 memcpy(&payloadBuffer, &frame->data.downlinkData.telemetryData, sizeof(payloadBuffer));
                                 mspPayload = &payloadBuffer;
                             } else {
+#if defined(USE_SMARTPORT_MASTER)
                                 smartportMasterForward(frame->data.downlinkData.phyID & 0xF, &frame->data.downlinkData.telemetryData);
+#endif
                             }
                             FALLTHROUGH;
 
@@ -425,7 +396,6 @@ static bool processFrame(const rxRuntimeConfig_t *rxRuntimeConfig)
 
     if (clearToSend) {
         if ((downlinkPhyID == FPORT2_FC_COMMON_ID) || (downlinkPhyID == FPORT2_FC_MSP_ID)) {
-            /*if (((downlinkPhyID == FPORT2_FC_COMMON_ID) || ((downlinkPhyID == FPORT2_FC_MSP_ID) && mspPayload)) && !sendNullFrame) {*/
             if ((downlinkPhyID == FPORT2_FC_MSP_ID) && !mspPayload) {
                 clearToSend = false;
             } else if (!sendNullFrame) {
@@ -433,13 +403,10 @@ static bool processFrame(const rxRuntimeConfig_t *rxRuntimeConfig)
                 mspPayload = NULL;
             }
         } else {
+#if defined(USE_SMARTPORT_MASTER)
             uint8_t smartportMasterPhyID = downlinkPhyID & 0x0F; // remove check bits as smartport master functions expect naked PhyIDs
-            /*if (smartportMasterNextForwardResponse(downlinkPhyID, &forwardPayload) || smartportMasterGetSensorPayload(downlinkPhyID, &forwardPayload)) {*/
-            /*writeUplinkFramePhyID(downlinkPhyID, &forwardPayload);*/
-            /*clearToSend = false;*/
-            /*}*/
             uint8_t phyIDCheck = smartportMasterPhyID;
-            phyIDFillCheckBits(&phyIDCheck);
+            smartportMasterPhyIDFillCheckBits(&phyIDCheck);
 
             if (downlinkPhyID == phyIDCheck) {
                 if (sendNullFrame) {
@@ -451,16 +418,14 @@ static bool processFrame(const rxRuntimeConfig_t *rxRuntimeConfig)
                     if (smartportMasterNextForwardResponse(smartportMasterPhyID, &forwardPayload) || smartportMasterGetSensorPayload(smartportMasterPhyID, &forwardPayload)) {
                         writeUplinkFramePhyID(downlinkPhyID, &forwardPayload);
                     }
-                    /*if (smartportMasterNextForwardResponse(downlinkPhyID, &forwardPayload)) {*/
-                    /*writeUplinkFramePhyID(downlinkPhyID, &forwardPayload);*/
-                    /*} else if (smartportMasterGetSensorPayload(downlinkPhyID, &forwardPayload)) {*/
-                    /*writeUplinkFramePhyID(downlinkPhyID, &forwardPayload);*/
-                    /*}*/
                     clearToSend = false; // either we answered or the sensor is not active, do not send null frame
                 }
             } else {
                 clearToSend = false;
             }
+#else
+            clearToSend = false;
+#endif
         }
 
         if (clearToSend) {
@@ -516,5 +481,4 @@ bool fport2RxInit(const rxConfig_t *rxConfig, rxRuntimeConfig_t *rxRuntimeConfig
     return fportPort != NULL;
 }
 
-#pragma GCC pop_options
 #endif
