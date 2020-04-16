@@ -34,16 +34,44 @@ typedef struct {
     int16_t voltage[6];
 } cellsData_t;
 
+typedef enum {
+    VS600_BAND_A,
+    VS600_BAND_B,
+    VS600_BAND_C,
+    VS600_BAND_D,
+    VS600_BAND_E,
+    VS600_BAND_F,
+} vs600Band_e;
+
+typedef enum {
+    VS600_POWER_PIT,
+    VS600_POWER_25MW,
+    VS600_POWER_200MW,
+    VS600_POWER_600MW,
+} vs600Power_e;
+
+typedef struct {
+    vs600Band_e band;
+    uint8_t channel;
+    vs600Power_e power;
+} vs600Data_t;
+
 
 bool smartportMasterInit(void);
 void smartportMasterHandle(timeUs_t currentTimeUs);
 
-// Returns latest received SmartPort payload for phyID or NULL if PhyID is not active
+bool smartportMasterPhyIDIsActive(uint8_t phyID);
+
+// Returns latest received SmartPort payload for phyID
 bool smartportMasterGetSensorPayload(uint8_t phyID, smartPortPayload_t *payload);
+
+// Forwarding
 bool smartportMasterForward(uint8_t phyID, smartPortPayload_t *payload);
+bool smartportMasterHasForwardResponse(uint8_t phyID);
 bool smartportMasterNextForwardResponse(uint8_t phyID, smartPortPayload_t *payload);
 
 // Returns latest Cells data or NULL if the data is too old
 cellsData_t *smartportMasterGetCellsData(void);
+vs600Data_t *smartportMasterGetVS600Data(void);
 
 #endif /* USE_SMARTPORT_MASTER */
