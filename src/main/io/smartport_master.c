@@ -8,7 +8,6 @@
 #if defined(USE_SMARTPORT_MASTER)
 
 #include "build/debug.h"
-#include "common/log.h"
 #include "common/utils.h"
 
 #include "drivers/serial.h"
@@ -36,33 +35,34 @@ enum {
 
 enum
 {
-    DATAID_SPEED      = 0x0830 ,
-    DATAID_VFAS       = 0x0210 ,
-    DATAID_CURRENT    = 0x0200 ,
-    DATAID_RPM        = 0x050F ,
-    DATAID_ALTITUDE   = 0x0100 ,
-    DATAID_FUEL       = 0x0600 ,
-    DATAID_ADC1       = 0xF102 ,
-    DATAID_ADC2       = 0xF103 ,
-    DATAID_LATLONG    = 0x0800 ,
-    DATAID_CAP_USED   = 0x0600 ,
-    DATAID_VARIO      = 0x0110 ,
-    DATAID_CELLS      = 0x0300 ,
-    DATAID_CELLS_LAST = 0x030F ,
-    DATAID_HEADING    = 0x0840 ,
-    DATAID_FPV        = 0x0450 ,
-    DATAID_PITCH      = 0x0430 ,
-    DATAID_ROLL       = 0x0440 ,
-    DATAID_ACCX       = 0x0700 ,
-    DATAID_ACCY       = 0x0710 ,
-    DATAID_ACCZ       = 0x0720 ,
-    DATAID_T1         = 0x0400 ,
-    DATAID_T2         = 0x0410 ,
-    DATAID_HOME_DIST  = 0x0420 ,
-    DATAID_GPS_ALT    = 0x0820 ,
-    DATAID_ASPD       = 0x0A00 ,
-    DATAID_A3         = 0x0900 ,
-    DATAID_A4         = 0x0910
+    DATAID_SPEED      = 0x0830,
+    DATAID_VFAS       = 0x0210,
+    DATAID_CURRENT    = 0x0200,
+    DATAID_RPM        = 0x050F,
+    DATAID_ALTITUDE   = 0x0100,
+    DATAID_FUEL       = 0x0600,
+    DATAID_ADC1       = 0xF102,
+    DATAID_ADC2       = 0xF103,
+    DATAID_LATLONG    = 0x0800,
+    DATAID_CAP_USED   = 0x0600,
+    DATAID_VARIO      = 0x0110,
+    DATAID_CELLS      = 0x0300,
+    DATAID_CELLS_LAST = 0x030F,
+    DATAID_HEADING    = 0x0840,
+    DATAID_FPV        = 0x0450,
+    DATAID_PITCH      = 0x0430,
+    DATAID_ROLL       = 0x0440,
+    DATAID_ACCX       = 0x0700,
+    DATAID_ACCY       = 0x0710,
+    DATAID_ACCZ       = 0x0720,
+    DATAID_T1         = 0x0400,
+    DATAID_T2         = 0x0410,
+    DATAID_HOME_DIST  = 0x0420,
+    DATAID_GPS_ALT    = 0x0820,
+    DATAID_ASPD       = 0x0A00,
+    DATAID_A3         = 0x0900,
+    DATAID_A4         = 0x0910,
+    DATAID_VS600      = 0x0E10
 };
 
 #define SMARTPORT_BAUD 57600
@@ -100,6 +100,12 @@ typedef union {
 typedef struct {
     cellsData_t cells;
     timeUs_t cellsTimestamp;
+    vs600Data_t vs600;
+    timeUs_t vs600Timestamp;
+    int32_t altitude;
+    timeUs_t altitudeTimestamp;
+    int16_t vario;
+    timeUs_t varioTimestamp;
 } smartportSensorsData_t;
 
 typedef struct {
@@ -122,7 +128,7 @@ static smartportForwardData_t forwardRequests[SMARTPORT_FORWARD_REQUESTS_MAX]; /
 
 static uint8_t forwardResponsesCount = 0;
 /*static uint8_t forwardResponsesEnd = 0;*/
-static smartportForwardData_t forwardResponses[SMARTPORT_FORWARD_REQUESTS_MAX]; // Forward responses' circular buffer
+static smartportForwardData_t forwardResponses[SMARTPORT_FORWARD_REQUESTS_MAX]; // Forward responses' buffer
 
 static smartportSensorsData_t sensorsData;
 
@@ -276,8 +282,8 @@ static void smartportMasterForwardNextPayload(void)
 
     uint16_t checksum = 0;
     uint8_t *payloadPtr = (uint8_t *)&request->payload;
-    for (uint8_t i; i < sizeof(request->payload); ++i, ++payloadPtr) {
-        uint8_t c = *payloadPtr;
+    for (uint8_t i = 0; i < sizeof(request->payload); ++i) {
+        uint8_t c = *payloadPtr++;
         if ((c == SMARTPORT_FRAME_START) || (c == SMARTPORT_BYTESTUFFING_MARKER)) {
             smartportMasterSendByte(SMARTPORT_BYTESTUFFING_MARKER);
             smartportMasterSendByte(c ^ SMARTPORT_BYTESTUFFING_XOR_VALUE);
@@ -301,29 +307,70 @@ static uint8_t calculatePayloadCRC(smartPortPayload_t* payload)
     return 0xFF - ((sum & 0xFF) + (sum >> 8));
 }
 
-static void decode_cells_data(uint32_t sdata)
+static void decodeCellsData(uint32_t sdata)
 {
     uint8_t voltageStartIndex = sdata & 0xF;
     uint8_t count = sdata >> 4 & 0xF;
     uint16_t voltage1 = (sdata >> 8 & 0xFFF) * 2;
     uint16_t voltage2 = (sdata >> 20 & 0xFFF) * 2;
-    if ((voltageStartIndex <= 4) && (count <= 6)) {
+    if ((voltageStartIndex <= 4) && (count <= 6)) { // sanity check
         cellsData_t *cd = &sensorsData.cells;
         cd->count = count;
         cd->voltage[voltageStartIndex] = voltage1;
         cd->voltage[voltageStartIndex+1] = voltage2;
-        debug[0] = cd->count;
-        for (uint8_t i = 0; i < 6; ++i)
-            debug[i+1] = cd->voltage[i];
+
+        DEBUG_SET(DEBUG_SPM_CELLS, 0, cd->count);
+        for (uint8_t i = 0; i < 6; ++i) {
+            DEBUG_SET(DEBUG_SPM_CELLS, i+1, cd->voltage[i]);
+        }
     }
+}
+
+static void decodeVS600Data(uint32_t sdata)
+{
+    vs600Data_t *vs600 = &sensorsData.vs600;
+    vs600->power = (sdata >> 8) & 0xFF;
+    vs600->band = (sdata >> 16) & 0xFF;
+    vs600->channel = (sdata >> 24) & 0xFF;
+    DEBUG_SET(DEBUG_SPM_VS600, 0, sdata);
+    DEBUG_SET(DEBUG_SPM_VS600, 1, vs600->channel);
+    DEBUG_SET(DEBUG_SPM_VS600, 2, vs600->band);
+    DEBUG_SET(DEBUG_SPM_VS600, 3, vs600->power);
+}
+
+static void decodeAltitudeData(uint32_t sdata)
+{
+    sensorsData.altitude = sdata * 5; // cm
+    DEBUG_SET(DEBUG_SPM_VARIO, 0, sensorsData.altitude);
+}
+
+static void decodeVarioData(uint32_t sdata)
+{
+    sensorsData.vario = sdata * 2; // mm/s
+    DEBUG_SET(DEBUG_SPM_VARIO, 1, sensorsData.vario);
 }
 
 static void processSensorPayload(smartPortPayload_t *payload, timeUs_t currentTimeUs)
 {
     switch (payload->valueId) {
         case DATAID_CELLS:
-            decode_cells_data(payload->data);
+            decodeCellsData(payload->data);
             sensorsData.cellsTimestamp = currentTimeUs;
+            break;
+
+        case DATAID_VS600:
+            decodeVS600Data(payload->data);
+            sensorsData.vs600Timestamp = currentTimeUs;
+            break;
+
+        case DATAID_ALTITUDE:
+            decodeAltitudeData(payload->data);
+            sensorsData.altitudeTimestamp = currentTimeUs;
+            break;
+
+        case DATAID_VARIO:
+            decodeVarioData(payload->data);
+            sensorsData.varioTimestamp = currentTimeUs;
             break;
     }
     sensorPayloadCache[currentPolledPhyID] = *payload;
@@ -364,7 +411,7 @@ static void smartportMasterReceive(timeUs_t currentTimeUs)
 
         uint8_t c = serialRead(smartportMasterSerialPort);
 
-        if (currentPolledPhyID == -1) { // We were did not poll a sensor or a packet has already been received and processed
+        if (currentPolledPhyID == -1) { // We did not poll a sensor or a packet has already been received and processed
             continue;
         }
 
@@ -477,6 +524,18 @@ bool smartportMasterNextForwardResponse(uint8_t phyID, smartPortPayload_t *paylo
 }
 #endif
 
+bool smartportMasterHasForwardResponse(uint8_t phyID)
+{
+    for (uint8_t i = 0; i < forwardResponsesCount; ++i) {
+        smartportForwardData_t *response = forwardResponses + i;
+        if (response->phyID == phyID) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 bool smartportMasterNextForwardResponse(uint8_t phyID, smartPortPayload_t *payload)
 {
     for (uint8_t i = 0; i < forwardResponsesCount; ++i) {
@@ -541,6 +600,20 @@ cellsData_t *smartportMasterGetCellsData(void)
     }
 
     return &sensorsData.cells;
+}
+
+vs600Data_t *smartportMasterGetVS600Data(void)
+{
+    if (micros() - sensorsData.vs600Timestamp > SMARTPORT_SENSOR_DATA_TIMEOUT) {
+        return NULL;
+    }
+
+    return &sensorsData.vs600;
+}
+
+bool smartportMasterPhyIDIsActive(uint8_t phyID)
+{
+    return phyIDIsActive(phyID);
 }
 
 #pragma GCC pop_options
