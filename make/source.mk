@@ -117,6 +117,7 @@ COMMON_SRC = \
             rx/crsf.c \
             rx/eleres.c \
             rx/fport.c \
+            rx/fport2.c \
             rx/ibus.c \
             rx/jetiexbus.c \
             rx/msp.c \
@@ -174,6 +175,7 @@ COMMON_SRC = \
             drivers/vtx_common.c \
             io/rangefinder_msp.c \
             io/rangefinder_benewake.c \
+            io/smartport_master.c \
             io/opflow_cxof.c \
             io/opflow_msp.c \
             io/dashboard.c \

@@ -33,6 +33,7 @@
 #define USE_SERIALRX_SBUS       // Very common protocol
 #define USE_SERIALRX_IBUS       // Cheap FlySky & Turnigy receivers
 #define USE_SERIALRX_FPORT
+#define USE_SERIALRX_FPORT2
 
 #define COMMON_DEFAULT_FEATURES (FEATURE_TX_PROF_SEL)
 
@@ -106,6 +107,7 @@
 #define USE_PWM_DRIVER_PCA9685
 
 #define USE_TELEMETRY_SIM
+#define USE_SMARTPORT_MASTER
 #define USE_FRSKYOSD
 #define USE_DJI_HD_OSD
 
