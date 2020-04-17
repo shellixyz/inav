@@ -2135,3 +2135,15 @@ groups:
           field: topics
           min: 0,
           max: UINT32_MAX
+
+  - name: PG_SMARTPORT_MASTER_CONFIG
+    type: smartportMasterConfig_t
+    headers: ["io/smartport_master.h"]
+    condition: USE_SMARTPORT_MASTER
+    members:
+      - name: smartport_master_halfduplex
+        field: halfDuplex
+        type: bool
+      - name: smartport_master_inverted
+        field: inverted
+        type: bool
