@@ -20,9 +20,6 @@ FILE_COMPILE_FOR_SPEED
 #include "io/serial.h"
 #include "io/smartport_master.h"
 
-#include "telemetry/smartport.h"
-#include "telemetry/telemetry.h"
-
 enum {
     PRIM_DISCARD_FRAME = 0x00,
     PRIM_DATA_FRAME = 0x10,
