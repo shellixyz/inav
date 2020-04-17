@@ -8,7 +8,11 @@ FILE_COMPILE_FOR_SPEED
 #if defined(USE_SMARTPORT_MASTER)
 
 #include "build/debug.h"
+
 #include "common/utils.h"
+
+#include "config/parameter_group.h"
+#include "config/parameter_group_ids.h"
 
 #include "drivers/serial.h"
 #include "drivers/time.h"
@@ -113,6 +117,13 @@ typedef struct {
     smartPortPayload_t payload;
 } smartportForwardData_t;
 
+PG_REGISTER_WITH_RESET_TEMPLATE(smartportMasterConfig_t, smartportMasterConfig, PG_SMARTPORT_MASTER_CONFIG, 0);
+
+PG_RESET_TEMPLATE(smartportMasterConfig_t, smartportMasterConfig,
+    .halfDuplex = true,
+    .inverted = false
+);
+
 static serialPort_t *smartportMasterSerialPort = NULL;
 static serialPortConfig_t *portConfig;
 static int8_t currentPolledPhyID = -1;
@@ -138,7 +149,7 @@ bool smartportMasterInit(void)
         return false;
     }
 
-    portOptions_t portOptions = (telemetryConfig()->halfDuplex ? SERIAL_BIDIR : SERIAL_UNIDIR) | (telemetryConfig()->telemetry_inverted ? SERIAL_NOT_INVERTED : SERIAL_INVERTED);
+    portOptions_t portOptions = (smartportMasterConfig()->halfDuplex ? SERIAL_BIDIR : SERIAL_UNIDIR) | (smartportMasterConfig()->inverted ? SERIAL_NOT_INVERTED : SERIAL_INVERTED);
     smartportMasterSerialPort = openSerialPort(portConfig->identifier, FUNCTION_TELEMETRY_SMARTPORT_MASTER, NULL, NULL, SMARTPORT_BAUD, SMARTPORT_UART_MODE, portOptions);
 
     memset(&sensorsData, 0, sizeof(sensorsData));
