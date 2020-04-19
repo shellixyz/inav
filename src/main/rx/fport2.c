@@ -341,7 +341,7 @@ static uint8_t frameStatus(rxRuntimeConfig_t *rxRuntimeConfig)
                                 mspPayload = &payloadBuffer;
                             } else {
 #if defined(USE_SMARTPORT_MASTER)
-                                smartportMasterForward(frame->data.downlinkData.phyID & 0xF, &frame->data.downlinkData.telemetryData);
+                                smartportMasterForward(frame->data.downlinkData.phyID & 0x1F, &frame->data.downlinkData.telemetryData);
 #endif
                             }
                             FALLTHROUGH;
@@ -404,7 +404,7 @@ static bool processFrame(const rxRuntimeConfig_t *rxRuntimeConfig)
             }
         } else {
 #if defined(USE_SMARTPORT_MASTER)
-            uint8_t smartportMasterPhyID = downlinkPhyID & 0x0F; // remove check bits as smartport master functions expect naked PhyIDs
+            uint8_t smartportMasterPhyID = downlinkPhyID & 0x1F; // remove check bits as smartport master functions expect naked PhyIDs
             uint8_t phyIDCheck = smartportMasterPhyID;
             smartportMasterPhyIDFillCheckBits(&phyIDCheck);
 
