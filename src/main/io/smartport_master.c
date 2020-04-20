@@ -279,7 +279,7 @@ static void smartportMasterForwardNextPayload(void)
 {
     smartportForwardData_t *request = forwardRequests + forwardRequestsStart;
 
-    forcedPolledPhyID = request->phyID; // force next poll to the request's phyID
+    /*forcedPolledPhyID = request->phyID; // force next poll to the request's phyID          XXX disabled, doesn't seem necessary */
 
     smartportMasterPhyIDFillCheckBits(&request->phyID);
     smartportMasterSendByte(SMARTPORT_FRAME_START);
