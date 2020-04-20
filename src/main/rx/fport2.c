@@ -135,7 +135,6 @@ typedef struct fportBuffer_s {
 static fportBuffer_t rxBuffer[NUM_RX_BUFFERS];
 static volatile uint8_t rxBufferWriteIndex = 0;
 static volatile uint8_t rxBufferReadIndex = 0;
-// ^^^^^^^^^^^^^^^^^^^^^
 
 static smartPortPayload_t *mspPayload = NULL;
 
@@ -150,8 +149,6 @@ static uint8_t downlinkPhyID;
 static const smartPortPayload_t emptySmartPortFrame = { .frameId = 0, .valueId = 0, .data = 0 };
 #endif
 
-#pragma GCC push_options
-#pragma GCC optimize ("O0")
 
 static void reportFrameError(uint8_t errorReason) {
     static volatile uint16_t frameErrors = 0;
