@@ -326,26 +326,33 @@ static uint8_t frameStatus(rxRuntimeConfig_t *rxRuntimeConfig)
                     }
 
                     downlinkPhyID = frame->data.downlinkData.phyID;
+                    uint8_t frameId = frame->data.downlinkData.telemetryData.frameId;
 
-                    switch (frame->data.downlinkData.telemetryData.frameId) {
+                    switch (frameId) {
 
                         case FPORT2_FRAME_ID_NULL:
+                            hasTelemetryRequest = true;
                             sendNullFrame = true;
                             break;
 
-                        case FPORT2_FRAME_ID_READ:
-                        case FPORT2_FRAME_ID_WRITE:
-                            if (downlinkPhyID == FPORT2_FC_MSP_ID) {
-                                memcpy(&payloadBuffer, &frame->data.downlinkData.telemetryData, sizeof(payloadBuffer));
-                                mspPayload = &payloadBuffer;
-                            } else {
-#if defined(USE_SMARTPORT_MASTER)
-                                smartportMasterForward(downlinkPhyID & 0x1F, &frame->data.downlinkData.telemetryData);
-#endif
-                            }
-                            FALLTHROUGH;
+                        case FPORT2_FRAME_ID_DATA:
+                            hasTelemetryRequest = true;
+                            break;
 
                         default:
+                            if ((frameId == FPORT2_FRAME_ID_READ) && (downlinkPhyID == FPORT2_FC_MSP_ID)) {
+                                memcpy(&payloadBuffer, &frame->data.downlinkData.telemetryData, sizeof(payloadBuffer));
+                                mspPayload = &payloadBuffer;
+                                hasTelemetryRequest = true;
+                            } else if (downlinkPhyID != FPORT2_FC_COMMON_ID) {
+#if defined(USE_SMARTPORT_MASTER)
+                                int8_t smartportPhyID = smartportMasterStripPhyIDCheckBits(downlinkPhyID);
+                                if (smartportPhyID != -1) {
+                                    smartportMasterForward(smartportPhyID, &frame->data.downlinkData.telemetryData);
+                                    hasTelemetryRequest = true;
+                                }
+#endif
+                            }
                             break;
 
                     }
@@ -403,18 +410,16 @@ static bool processFrame(const rxRuntimeConfig_t *rxRuntimeConfig)
             }
         } else {
 #if defined(USE_SMARTPORT_MASTER)
-            uint8_t smartportMasterPhyID = downlinkPhyID & 0x1F; // remove check bits as smartport master functions expect naked PhyIDs
-            uint8_t phyIDCheck = smartportMasterPhyID;
-            smartportMasterPhyIDFillCheckBits(&phyIDCheck);
+            int8_t smartportPhyID = smartportMasterStripPhyIDCheckBits(downlinkPhyID);
 
-            if (downlinkPhyID == phyIDCheck) {
+            if (smartportPhyID != -1) {
                 if (sendNullFrame) {
-                    if (!smartportMasterPhyIDIsActive(smartportMasterPhyID)) { // send null frame only if the sensor is active
+                    if (!smartportMasterPhyIDIsActive(smartportPhyID)) { // send null frame only if the sensor is active
                         clearToSend = false;
                     }
                 } else {
                     smartPortPayload_t forwardPayload;
-                    if (smartportMasterNextForwardResponse(smartportMasterPhyID, &forwardPayload) || smartportMasterGetSensorPayload(smartportMasterPhyID, &forwardPayload)) {
+                    if (smartportMasterNextForwardResponse(smartportPhyID, &forwardPayload) || smartportMasterGetSensorPayload(smartportPhyID, &forwardPayload)) {
                         writeUplinkFramePhyID(downlinkPhyID, &forwardPayload);
                     }
                     clearToSend = false; // either we answered or the sensor is not active, do not send null frame

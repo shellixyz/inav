@@ -214,7 +214,7 @@ static void smartportMasterSendByte(uint8_t byte)
     serialWrite(smartportMasterSerialPort, byte);
 }
 
-void smartportMasterPhyIDFillCheckBits(uint8_t *phyIDByte)
+static void smartportMasterPhyIDFillCheckBits(uint8_t *phyIDByte)
 {
     *phyIDByte |= (GET_BIT(*phyIDByte, 0) ^ GET_BIT(*phyIDByte, 1) ^ GET_BIT(*phyIDByte, 2)) << 5;
     *phyIDByte |= (GET_BIT(*phyIDByte, 2) ^ GET_BIT(*phyIDByte, 3) ^ GET_BIT(*phyIDByte, 4)) << 6;
@@ -550,6 +550,14 @@ vs600Data_t *smartportMasterGetVS600Data(void)
 bool smartportMasterPhyIDIsActive(uint8_t phyID)
 {
     return phyIDIsActive(phyID);
+}
+
+int8_t smartportMasterStripPhyIDCheckBits(uint8_t phyID)
+{
+    uint8_t smartportPhyID = phyID & 0x1F;
+    uint8_t phyIDCheck = smartportPhyID;
+    smartportMasterPhyIDFillCheckBits(&phyIDCheck);
+    return phyID == phyIDCheck ? smartportPhyID : -1;
 }
 
 #endif

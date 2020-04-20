@@ -70,7 +70,7 @@ bool smartportMasterInit(void);
 void smartportMasterHandle(timeUs_t currentTimeUs);
 
 bool smartportMasterPhyIDIsActive(uint8_t phyID);
-void smartportMasterPhyIDFillCheckBits(uint8_t *phyIDByte);
+int8_t smartportMasterStripPhyIDCheckBits(uint8_t phyID);
 
 // Returns latest received SmartPort payload for phyID
 bool smartportMasterGetSensorPayload(uint8_t phyID, smartPortPayload_t *payload);
