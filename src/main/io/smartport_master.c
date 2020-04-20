@@ -475,7 +475,7 @@ bool smartportMasterNextForwardResponse(uint8_t phyID, smartPortPayload_t *paylo
         if (response->phyID == phyID) {
             *payload = response->payload;
             forwardResponsesCount -= 1;
-            memmove(response, response + 1, forwardResponsesCount - i - 1);
+            memmove(response, response + 1, (forwardResponsesCount - i) * sizeof(*response));
             return true;
         }
     }
