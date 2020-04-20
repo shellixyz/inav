@@ -335,12 +335,12 @@ static uint8_t frameStatus(rxRuntimeConfig_t *rxRuntimeConfig)
 
                         case FPORT2_FRAME_ID_READ:
                         case FPORT2_FRAME_ID_WRITE:
-                            if (frame->data.downlinkData.phyID == FPORT2_FC_MSP_ID) {
+                            if (downlinkPhyID == FPORT2_FC_MSP_ID) {
                                 memcpy(&payloadBuffer, &frame->data.downlinkData.telemetryData, sizeof(payloadBuffer));
                                 mspPayload = &payloadBuffer;
                             } else {
 #if defined(USE_SMARTPORT_MASTER)
-                                smartportMasterForward(frame->data.downlinkData.phyID & 0x1F, &frame->data.downlinkData.telemetryData);
+                                smartportMasterForward(downlinkPhyID & 0x1F, &frame->data.downlinkData.telemetryData);
 #endif
                             }
                             FALLTHROUGH;
