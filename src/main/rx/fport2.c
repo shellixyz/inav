@@ -317,7 +317,6 @@ static uint8_t frameStatus(rxRuntimeConfig_t *rxRuntimeConfig)
                     result = sbusChannelsDecode(rxRuntimeConfig, &frame->data.controlData.channels);
                     lqTrackerSet(rxRuntimeConfig->lqTracker, scaleRange(frame->data.controlData.rssi, 0, 100, 0, RSSI_MAX_VALUE));
                     frameReceivedTimestamp = millis();
-                    result |= RX_FRAME_COMPLETE;
                     break;
 
                 case FT_DOWNLINK:
