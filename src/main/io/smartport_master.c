@@ -91,6 +91,7 @@ typedef struct smartPortMasterFrame_s {
     uint8_t magic;
     uint8_t phyID;
     smartPortPayload_t payload;
+    uint8_t crc;
 } PACKED smartportFrame_t;
 
 typedef union {
@@ -138,6 +139,7 @@ static uint8_t forwardResponsesCount = 0;
 static smartportForwardData_t forwardResponses[SMARTPORT_FORWARD_REQUESTS_MAX]; // Forward responses' buffer
 
 static smartportSensorsData_t sensorsData;
+
 
 bool smartportMasterInit(void)
 {
@@ -431,16 +433,18 @@ static void smartportMasterReceive(timeUs_t currentTimeUs)
         buffer.bytes[rxBufferLen] = c;
         rxBufferLen += 1;
 
-        if (rxBufferLen == sizeof(buffer)) {
-            // payload complete, check crc, process payload if CRC is good, reset buffer
-            uint8_t rxCRC = serialRead(smartportMasterSerialPort);
+        if (rxBufferLen == sizeof(buffer)) { // frame complete
+
             uint8_t calcCRC = calculatePayloadCRC(&buffer.frame.payload);
-            if (rxCRC == calcCRC) {
+
+            if (buffer.frame.crc == calcCRC) {
                 phyIDSetActive(currentPolledPhyID, true);
                 processPayload(&buffer.frame.payload, currentTimeUs);
             }
+
             currentPolledPhyID = -1; // previously polled PhyID has answered, not expecting more data until next poll
             rxBufferLen = 0; // reset buffer
+
         }
 
     }
