@@ -175,9 +175,9 @@ static uint32_t phyIDAllActiveMask(void)
     return mask;
 }
 
-static int8_t phyIDNext(uint8_t start, bool active)
+static int8_t phyIDNext(uint8_t start, bool active, bool loop)
 {
-    for (uint8_t i = start; i < start + SMARTPORT_PHYID_COUNT; ++i) {
+    for (uint8_t i = start; i < ((loop ? start : 0) + SMARTPORT_PHYID_COUNT); ++i) {
         uint8_t phyID = i % SMARTPORT_PHYID_COUNT;
         uint32_t mask = 1 << phyID;
         uint32_t phyIDMasked = activePhyIDs & mask;
@@ -207,6 +207,11 @@ static bool phyIDAllActive(void)
     }
 
     return !!((activePhyIDs & allActiveMask) == allActiveMask);
+}
+
+static bool phyIDAnyActive(void)
+{
+    return !!activePhyIDs;
 }
 
 static void smartportMasterSendByte(uint8_t byte)
@@ -241,25 +246,38 @@ static void smartportMasterPoll(void)
 
         if (phyIDNoneActive()) {
             nextPollType = PT_INACTIVE_ID;
-        }
-
-        if (phyIDAllActive()) {
+        } else if (phyIDAllActive()) {
             nextPollType = PT_ACTIVE_ID;
         }
 
         switch (nextPollType) {
 
             case PT_ACTIVE_ID: {
-                phyIDToPoll = phyIDNext(nextActivePhyID, true);
-                nextActivePhyID = (phyIDToPoll == SMARTPORT_PHYID_MAX ? 0 : phyIDToPoll + 1);
-                nextPollType = PT_INACTIVE_ID;
-                break;
+                int8_t activePhyIDToPoll = phyIDNext(nextActivePhyID, true, false);
+                if (activePhyIDToPoll == -1) {
+                    nextActivePhyID = 0;
+                    nextPollType = PT_INACTIVE_ID;
+                } else {
+                    phyIDToPoll = activePhyIDToPoll;
+                    if (phyIDToPoll == SMARTPORT_PHYID_MAX) {
+                        nextActivePhyID = 0;
+                        if (!phyIDAllActive()) {
+                            nextPollType = PT_INACTIVE_ID;
+                        }
+                    } else {
+                        nextActivePhyID = phyIDToPoll + 1;
+                    }
+                    break;
+                }
+                FALLTHROUGH;
             }
 
             case PT_INACTIVE_ID: {
-                phyIDToPoll = phyIDNext(nextInactivePhyID, false);
+                phyIDToPoll = phyIDNext(nextInactivePhyID, false, true);
                 nextInactivePhyID = (phyIDToPoll == SMARTPORT_PHYID_MAX ? 0 : phyIDToPoll + 1);
-                nextPollType = PT_ACTIVE_ID;
+                if (phyIDAnyActive()) {
+                    nextPollType = PT_ACTIVE_ID;
+                }
                 break;
             }
 
