@@ -81,9 +81,16 @@ enum {
 };
 
 typedef enum {
-    FT_DOWNLINK = 0,
-    FT_CONTROL = 0xFF
-} frame_type;
+    CFT_RC = 0xFF,
+    CFT_OTA_START = 0xF0,
+    CFT_OTA_DATA = 0xF1,
+    CFT_OTA_STOP = 0xF2
+} fport2_control_frame_type_e;
+
+typedef enum {
+    FT_CONTROL,
+    FT_DOWNLINK
+} frame_type_e;
 
 typedef enum {
     FS_CONTROL_FRAME_START,
@@ -104,33 +111,48 @@ enum {
 typedef struct {
     sbusChannels_t channels;
     uint8_t rssi;
-} controlData_t;
+} rcData_t;
 
 typedef struct {
     uint8_t phyID;
     /*uint8_t phyID : 5;*/
     /*uint8_t phyXOR : 3;*/
     smartPortPayload_t telemetryData;
-} __attribute__((__packed__)) downlinkData_t;
-
-typedef union {
-    controlData_t controlData;
-    downlinkData_t downlinkData;
-} fportData_t;
+} PACKED fportDownlinkData_t;
 
 typedef struct {
     uint8_t type;
-    fportData_t data;
+    union {
+        rcData_t rc;
+        uint8_t ota[16];
+    };
+} PACKED fportControlFrame_t;
+
+/*typedef union {*/
+    /*rcData_t control;*/
+    /*downlinkData_t downlink;*/
+/*} fportData_u;*/
+
+typedef struct {
+    uint8_t type;
+    /*fportData_u data;*/
+    union {
+        fportControlFrame_t control;
+        fportDownlinkData_t downlink;
+    };
 } fportFrame_t;
 
 // RX frames ring buffer
-#define NUM_RX_BUFFERS 6
-#define BUFFER_SIZE 27
+#define NUM_RX_BUFFERS 50
+#define BUFFER_SIZE 30 // XXX
 
 typedef struct fportBuffer_s {
-    uint8_t data[BUFFER_SIZE];
+    uint8_t data[sizeof(fportFrame_t)+1]; // +1 for CRC
     uint8_t length;
 } fportBuffer_t;
+
+#pragma GCC push_options
+#pragma GCC optimize ("O0")
 
 static fportBuffer_t rxBuffer[NUM_RX_BUFFERS];
 static volatile uint8_t rxBufferWriteIndex = 0;
@@ -149,14 +171,23 @@ static uint8_t downlinkPhyID;
 static const smartPortPayload_t emptySmartPortFrame = { .frameId = 0, .valueId = 0, .data = 0 };
 #endif
 
+static volatile uint16_t frameErrors = 0;
 
 static void reportFrameError(uint8_t errorReason) {
-    static volatile uint16_t frameErrors = 0;
 
     frameErrors++;
 
     DEBUG_SET(DEBUG_FPORT, DEBUG_FPORT2_FRAME_ERRORS, frameErrors);
     DEBUG_SET(DEBUG_FPORT, DEBUG_FPORT2_FRAME_LAST_ERROR, errorReason);
+}
+
+static uint8_t bufferCount(void)
+{
+    if (rxBufferReadIndex > rxBufferWriteIndex) {
+        return NUM_RX_BUFFERS - rxBufferReadIndex + rxBufferWriteIndex;
+    } else {
+        return rxBufferWriteIndex - rxBufferReadIndex;
+    }
 }
 
 static void clearWriteBuffer(void)
@@ -199,6 +230,8 @@ static void fportDataReceive(uint16_t byte, void *callback_data)
     lastRxByteTimestamp = currentTimeUs;
     clearToSend = false;
 
+    debug[4] = bufferCount();
+
     if ((state != FS_CONTROL_FRAME_START) && (timeSincePreviousRxByte > FPORT2_RX_TIMEOUT)) {
         clearWriteBuffer();
         state = FS_CONTROL_FRAME_START;
@@ -208,13 +241,14 @@ static void fportDataReceive(uint16_t byte, void *callback_data)
 
         case FS_CONTROL_FRAME_START:
             if (byte == FPORT2_CONTROL_FRAME_LENGTH) {
+                writeBuffer(FT_CONTROL);
                 state = FS_CONTROL_FRAME_TYPE;
             }
             break;
 
         case FS_CONTROL_FRAME_TYPE:
-            if (byte == FT_CONTROL) {
-                writeBuffer(FT_CONTROL);
+            if ((byte == CFT_RC) || ((byte >= CFT_OTA_START) && (byte <= CFT_OTA_STOP))) {
+                writeBuffer(byte);
                 state = FS_CONTROL_FRAME_DATA;
             } else {
                 state = FS_CONTROL_FRAME_START;
@@ -222,13 +256,15 @@ static void fportDataReceive(uint16_t byte, void *callback_data)
             break;
 
         case FS_CONTROL_FRAME_DATA:
-            if (writeBuffer(byte) > (FPORT2_CONTROL_FRAME_LENGTH + 1)) {
+            if (writeBuffer(byte) > (FPORT2_CONTROL_FRAME_LENGTH + 2)) { // +2 = General frame type + CRC 
+                /*LOG_E(SYSTEM, "p%X", byte);*/
                 nextWriteBuffer();
                 state = FS_DOWNLINK_FRAME_START;
             }
             break;
 
         case FS_DOWNLINK_FRAME_START:
+            /*LOG_E(SYSTEM, "n%X", byte);*/
             if (byte == FPORT2_DOWNLINK_FRAME_LENGTH) {
                 writeBuffer(FT_DOWNLINK);
                 state = FS_DOWNLINK_FRAME_DATA;
@@ -297,23 +333,39 @@ static uint8_t frameStatus(rxRuntimeConfig_t *rxRuntimeConfig)
     static timeMs_t frameReceivedTimestamp = 0;
     uint8_t result = RX_FRAME_PENDING;
 
+#if 1
     if (rxBufferReadIndex != rxBufferWriteIndex) {
 
         uint8_t *buffer = rxBuffer[rxBufferReadIndex].data;
         uint8_t buflen = rxBuffer[rxBufferReadIndex].length;
 
+        fportFrame_t *frame = (fportFrame_t *)buffer;
+
         if (!checkChecksum(buffer + 1, buflen - 1)) {
             reportFrameError(DEBUG_FPORT2_ERROR_CHECKSUM);
         } else {
 
-            fportFrame_t *frame = (fportFrame_t *)buffer;
-
             switch (frame->type) {
 
                 case FT_CONTROL:
-                    result = sbusChannelsDecode(rxRuntimeConfig, &frame->data.controlData.channels);
-                    lqTrackerSet(rxRuntimeConfig->lqTracker, scaleRange(frame->data.controlData.rssi, 0, 100, 0, RSSI_MAX_VALUE));
-                    frameReceivedTimestamp = millis();
+                    switch (frame->control.type) {
+
+                        case CFT_RC:
+                            result = sbusChannelsDecode(rxRuntimeConfig, &frame->control.rc.channels);
+                            lqTrackerSet(rxRuntimeConfig->lqTracker, scaleRange(frame->control.rc.rssi, 0, 100, 0, RSSI_MAX_VALUE));
+                            frameReceivedTimestamp = millis();
+                            break;
+
+                        case CFT_OTA_START:
+                        case CFT_OTA_DATA:
+                        case CFT_OTA_STOP:
+                            break;
+
+                        default:
+                            reportFrameError(DEBUG_FPORT2_ERROR_TYPE);
+                            break;
+
+                    }
                     break;
 
                 case FT_DOWNLINK:
@@ -322,8 +374,8 @@ static uint8_t frameStatus(rxRuntimeConfig_t *rxRuntimeConfig)
                         break;
                     }
 
-                    downlinkPhyID = frame->data.downlinkData.phyID;
-                    uint8_t frameId = frame->data.downlinkData.telemetryData.frameId;
+                    downlinkPhyID = frame->downlink.phyID;
+                    uint8_t frameId = frame->downlink.telemetryData.frameId;
 
                     switch (frameId) {
 
@@ -338,14 +390,14 @@ static uint8_t frameStatus(rxRuntimeConfig_t *rxRuntimeConfig)
 
                         default:
                             if ((frameId == FPORT2_FRAME_ID_READ) && (downlinkPhyID == FPORT2_FC_MSP_ID)) {
-                                memcpy(&payloadBuffer, &frame->data.downlinkData.telemetryData, sizeof(payloadBuffer));
+                                memcpy(&payloadBuffer, &frame->downlink.telemetryData, sizeof(payloadBuffer));
                                 mspPayload = &payloadBuffer;
                                 hasTelemetryRequest = true;
                             } else if (downlinkPhyID != FPORT2_FC_COMMON_ID) {
 #if defined(USE_SMARTPORT_MASTER)
                                 int8_t smartportPhyID = smartportMasterStripPhyIDCheckBits(downlinkPhyID);
                                 if (smartportPhyID != -1) {
-                                    smartportMasterForward(smartportPhyID, &frame->data.downlinkData.telemetryData);
+                                    smartportMasterForward(smartportPhyID, &frame->downlink.telemetryData);
                                     hasTelemetryRequest = true;
                                 }
 #endif
@@ -368,6 +420,7 @@ static uint8_t frameStatus(rxRuntimeConfig_t *rxRuntimeConfig)
 
         rxBufferReadIndex = (rxBufferReadIndex + 1) % NUM_RX_BUFFERS;
     }
+#endif
 
 #if defined(USE_TELEMETRY_SMARTPORT)
     if ((mspPayload || hasTelemetryRequest) && cmpTimeUs(micros(), lastTelemetryFrameReceivedUs) >= FPORT2_MIN_TELEMETRY_RESPONSE_DELAY_US) {
