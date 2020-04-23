@@ -78,6 +78,7 @@ enum {
     DEBUG_FPORT2_ERROR_PHYID_CRC,
     DEBUG_FPORT2_ERROR_TYPE,
     DEBUG_FPORT2_ERROR_TYPE_SIZE,
+    DEBUG_FPORT2_ERROR_OTA_BAD_ADDRESS,
 };
 
 typedef enum {
@@ -101,11 +102,14 @@ typedef enum {
 } frame_state_e;
 
 enum {
-    FPORT2_FRAME_ID_NULL = 0x00,     // (master/slave)
-    FPORT2_FRAME_ID_DATA = 0x10,     // (master/slave)
-    FPORT2_FRAME_ID_READ = 0x30,     // (master)
-    FPORT2_FRAME_ID_WRITE = 0x31,    // (master)
-    FPORT2_FRAME_ID_RESPONSE = 0x32, // (slave)
+    FPORT2_FRAME_ID_NULL = 0x00,
+    FPORT2_FRAME_ID_DATA = 0x10,
+    FPORT2_FRAME_ID_READ = 0x30,
+    FPORT2_FRAME_ID_WRITE = 0x31,
+    FPORT2_FRAME_ID_RESPONSE = 0x32,
+    FPORT2_FRAME_ID_OTA_START = 0xF0,
+    FPORT2_FRAME_ID_OTA_DATA = 0xF1,
+    FPORT2_FRAME_ID_OTA_STOP = 0xF2
 };
 
 typedef struct {
@@ -147,28 +151,31 @@ typedef struct {
 #define BUFFER_SIZE 30 // XXX
 
 typedef struct fportBuffer_s {
-    uint8_t data[sizeof(fportFrame_t)+1]; // +1 for CRC
+    /*uint8_t data[sizeof(fportFrame_t)+1]; // +1 for CRC*/
+    uint8_t data[BUFFER_SIZE]; // +1 for CRC
     uint8_t length;
 } fportBuffer_t;
 
 #pragma GCC push_options
 #pragma GCC optimize ("O0")
 
-static fportBuffer_t rxBuffer[NUM_RX_BUFFERS];
+static volatile fportBuffer_t rxBuffer[NUM_RX_BUFFERS];
 static volatile uint8_t rxBufferWriteIndex = 0;
 static volatile uint8_t rxBufferReadIndex = 0;
-
-static smartPortPayload_t *mspPayload = NULL;
 
 static serialPort_t *fportPort;
 
 #ifdef USE_TELEMETRY_SMARTPORT
+static smartPortPayload_t *mspPayload = NULL;
 static bool telemetryEnabled = false;
 static volatile timeUs_t lastTelemetryFrameReceivedUs;
 static volatile bool clearToSend = false;
 static volatile bool sendNullFrame = false;
 static uint8_t downlinkPhyID;
 static const smartPortPayload_t emptySmartPortFrame = { .frameId = 0, .valueId = 0, .data = 0 };
+static smartPortPayload_t *otaResponsePayload = NULL;
+static bool otaMode = false;
+static timeUs_t otaFrameEndTimestamp = 0;
 #endif
 
 static volatile uint16_t frameErrors = 0;
@@ -230,7 +237,7 @@ static void fportDataReceive(uint16_t byte, void *callback_data)
     lastRxByteTimestamp = currentTimeUs;
     clearToSend = false;
 
-    debug[4] = bufferCount();
+    /*debug[4] = MAX(bufferCount(), debug[4]);*/
 
     if ((state != FS_CONTROL_FRAME_START) && (timeSincePreviousRxByte > FPORT2_RX_TIMEOUT)) {
         clearWriteBuffer();
@@ -275,6 +282,9 @@ static void fportDataReceive(uint16_t byte, void *callback_data)
 
         case FS_DOWNLINK_FRAME_DATA:
             if (writeBuffer(byte) > (FPORT2_DOWNLINK_FRAME_LENGTH + 1)) {
+                /*if ((rxBuffer[rxBufferWriteIndex].data[2] >= FPORT2_FRAME_ID_OTA_START) && (rxBuffer[rxBufferWriteIndex].data[2] <= FPORT2_FRAME_ID_OTA_STOP)) {*/
+                    /*otaFrameEndTimestamp = currentTimeUs;*/
+                /*}*/
                 nextWriteBuffer();
                 lastTelemetryFrameReceivedUs = currentTimeUs;
                 state = FS_CONTROL_FRAME_START;
@@ -328,19 +338,23 @@ static uint8_t frameStatus(rxRuntimeConfig_t *rxRuntimeConfig)
 #ifdef USE_TELEMETRY_SMARTPORT
     static smartPortPayload_t payloadBuffer;
     static bool hasTelemetryRequest = false;
+    static uint32_t otaPrevDataAddress;
 #endif
-
+    static bool otaJustStarted = false;
+    static bool otaGotData = false;
+    static uint8_t otaDataBuffer[16];
     static timeMs_t frameReceivedTimestamp = 0;
     uint8_t result = RX_FRAME_PENDING;
 
 #if 1
     if (rxBufferReadIndex != rxBufferWriteIndex) {
 
-        uint8_t *buffer = rxBuffer[rxBufferReadIndex].data;
-        uint8_t buflen = rxBuffer[rxBufferReadIndex].length;
+        uint8_t *xbuffer = rxBuffer[rxBufferReadIndex].data;
+        uint8_t xbuflen = rxBuffer[rxBufferReadIndex].length;
 
-        fportFrame_t *frame = (fportFrame_t *)buffer;
+        fportFrame_t *frame = (fportFrame_t *)xbuffer;
 
+#if 0
         if (!checkChecksum(buffer + 1, buflen - 1)) {
             reportFrameError(DEBUG_FPORT2_ERROR_CHECKSUM);
         } else {
@@ -357,8 +371,22 @@ static uint8_t frameStatus(rxRuntimeConfig_t *rxRuntimeConfig)
                             break;
 
                         case CFT_OTA_START:
+                            otaMode = true;
+                            break;
+
                         case CFT_OTA_DATA:
+                            if (otaMode) {
+                                memcpy(otaDataBuffer, frame->control.ota, 16);
+                                otaGotData = true;
+                            } else {
+                                reportFrameError(DEBUG_FPORT2_ERROR_TYPE);
+                            }
+                            break;
+
                         case CFT_OTA_STOP:
+                            if (!otaMode) {
+                                reportFrameError(DEBUG_FPORT2_ERROR_TYPE);
+                            }
                             break;
 
                         default:
@@ -388,6 +416,64 @@ static uint8_t frameStatus(rxRuntimeConfig_t *rxRuntimeConfig)
                             hasTelemetryRequest = true;
                             break;
 
+                        /*case FPORT2_FRAME_ID_OTA_START:*/
+                            /*if (otaMode) {*/
+                                /*otaJustStarted = true;*/
+                                /*hasTelemetryRequest = true;*/
+                            /*}*/
+                            /*break;*/
+
+                        case FPORT2_FRAME_ID_OTA_START:
+                        case FPORT2_FRAME_ID_OTA_DATA:
+                        case FPORT2_FRAME_ID_OTA_STOP:
+                            switch (frameId) {
+                                case FPORT2_FRAME_ID_OTA_START:
+                                    if (otaMode) {
+                                        otaJustStarted = true;
+                                        otaPrevDataAddress = 0;
+                                        hasTelemetryRequest = true;
+                                    } else {
+                                        reportFrameError(DEBUG_FPORT2_ERROR_TYPE);
+                                    }
+                                    break;
+
+                                case FPORT2_FRAME_ID_OTA_DATA:
+                                    if (otaMode) {
+                                        uint32_t otaDataAddress = frame->downlink.telemetryData.data;
+                                        if (otaGotData && (otaDataAddress == (otaJustStarted ? 0 : otaPrevDataAddress + 16))) { // check that we got a control frame with data and check address
+                                            hasTelemetryRequest = true;
+                                            otaPrevDataAddress = otaDataAddress;
+                                            otaGotData = false;
+                                            debug[5] += 16; // XXX do something with the data
+                                        } else {
+                                            reportFrameError(DEBUG_FPORT2_ERROR_OTA_BAD_ADDRESS);
+                                        }
+                                        otaJustStarted = false;
+                                    } else {
+                                        reportFrameError(DEBUG_FPORT2_ERROR_TYPE);
+                                    }
+                                    break;
+
+                                case FPORT2_FRAME_ID_OTA_STOP:
+                                    if (otaMode) {
+                                        hasTelemetryRequest = true;
+                                    } else {
+                                        reportFrameError(DEBUG_FPORT2_ERROR_TYPE);
+                                    }
+                                    break;
+                            }
+                            if (hasTelemetryRequest) {
+                                memcpy(&payloadBuffer, &frame->downlink.telemetryData, sizeof(payloadBuffer));
+                                otaResponsePayload = &payloadBuffer;
+                            }
+                            break;
+
+                        /*case FPORT2_FRAME_ID_OTA_STOP:*/
+                            /*if (otaMode) {*/
+                                /*hasTelemetryRequest = true;*/
+                            /*}*/
+                            /*break;*/
+
                         default:
                             if ((frameId == FPORT2_FRAME_ID_READ) && (downlinkPhyID == FPORT2_FC_MSP_ID)) {
                                 memcpy(&payloadBuffer, &frame->downlink.telemetryData, sizeof(payloadBuffer));
@@ -405,8 +491,6 @@ static uint8_t frameStatus(rxRuntimeConfig_t *rxRuntimeConfig)
                             break;
 
                     }
-
-                    hasTelemetryRequest = true;
 #endif
                     break;
 
@@ -419,6 +503,7 @@ static uint8_t frameStatus(rxRuntimeConfig_t *rxRuntimeConfig)
         }
 
         rxBufferReadIndex = (rxBufferReadIndex + 1) % NUM_RX_BUFFERS;
+#endif
     }
 #endif
 
@@ -451,13 +536,23 @@ static bool processFrame(const rxRuntimeConfig_t *rxRuntimeConfig)
     }
 
     if (clearToSend) {
-        if ((downlinkPhyID == FPORT2_FC_COMMON_ID) || (downlinkPhyID == FPORT2_FC_MSP_ID)) {
+        if (otaResponsePayload) {
+            debug[6] = currentTimeUs - otaFrameEndTimestamp;
+            writeUplinkFramePhyID(downlinkPhyID, otaResponsePayload);
+            if (otaResponsePayload->frameId == FPORT2_FRAME_ID_OTA_STOP) {
+                otaMode = false;
+            }
+            otaResponsePayload = NULL;
+            clearToSend = false;
+
+        } else if ((downlinkPhyID == FPORT2_FC_COMMON_ID) || (downlinkPhyID == FPORT2_FC_MSP_ID)) {
             if ((downlinkPhyID == FPORT2_FC_MSP_ID) && !mspPayload) {
                 clearToSend = false;
             } else if (!sendNullFrame) {
                 processSmartPortTelemetry(mspPayload, &clearToSend, NULL);
                 mspPayload = NULL;
             }
+
         } else {
 #if defined(USE_SMARTPORT_MASTER)
             int8_t smartportPhyID = smartportMasterStripPhyIDCheckBits(downlinkPhyID);
