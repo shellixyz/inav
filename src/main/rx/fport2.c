@@ -67,6 +67,9 @@ enum {
     DEBUG_FPORT2_FRAME_ERRORS,
     DEBUG_FPORT2_FRAME_LAST_ERROR,
     DEBUG_FPORT2_TELEMETRY_INTERVAL,
+    DEBUG_FPORT2_MAX_BUFFER_USAGE,
+    DEBUG_FPORT2_OTA_FRAME_RESPONSE_TIME,
+    DEBUG_FPORT2_OTA_RECEIVED_BYTES,
 };
 
 enum {
@@ -132,14 +135,8 @@ typedef struct {
     };
 } PACKED fportControlFrame_t;
 
-/*typedef union {*/
-    /*rcData_t control;*/
-    /*downlinkData_t downlink;*/
-/*} fportData_u;*/
-
 typedef struct {
     uint8_t type;
-    /*fportData_u data;*/
     union {
         fportControlFrame_t control;
         fportDownlinkData_t downlink;
@@ -151,7 +148,7 @@ typedef struct {
 #define BUFFER_SIZE 30 // XXX
 
 typedef struct fportBuffer_s {
-    /*uint8_t data[sizeof(fportFrame_t)+1]; // +1 for CRC*/
+    /*uint8_t data[sizeof(fportFrame_t)+2]; // +1 for CRC*/
     uint8_t data[BUFFER_SIZE]; // +1 for CRC
     uint8_t length;
 } fportBuffer_t;
@@ -237,8 +234,6 @@ static void fportDataReceive(uint16_t byte, void *callback_data)
     lastRxByteTimestamp = currentTimeUs;
     clearToSend = false;
 
-    /*debug[4] = MAX(bufferCount(), debug[4]);*/
-
     if ((state != FS_CONTROL_FRAME_START) && (timeSincePreviousRxByte > FPORT2_RX_TIMEOUT)) {
         clearWriteBuffer();
         state = FS_CONTROL_FRAME_START;
@@ -264,14 +259,12 @@ static void fportDataReceive(uint16_t byte, void *callback_data)
 
         case FS_CONTROL_FRAME_DATA:
             if (writeBuffer(byte) > (FPORT2_CONTROL_FRAME_LENGTH + 2)) { // +2 = General frame type + CRC 
-                /*LOG_E(SYSTEM, "p%X", byte);*/
                 nextWriteBuffer();
                 state = FS_DOWNLINK_FRAME_START;
             }
             break;
 
         case FS_DOWNLINK_FRAME_START:
-            /*LOG_E(SYSTEM, "n%X", byte);*/
             if (byte == FPORT2_DOWNLINK_FRAME_LENGTH) {
                 writeBuffer(FT_DOWNLINK);
                 state = FS_DOWNLINK_FRAME_DATA;
@@ -282,9 +275,9 @@ static void fportDataReceive(uint16_t byte, void *callback_data)
 
         case FS_DOWNLINK_FRAME_DATA:
             if (writeBuffer(byte) > (FPORT2_DOWNLINK_FRAME_LENGTH + 1)) {
-                /*if ((rxBuffer[rxBufferWriteIndex].data[2] >= FPORT2_FRAME_ID_OTA_START) && (rxBuffer[rxBufferWriteIndex].data[2] <= FPORT2_FRAME_ID_OTA_STOP)) {*/
-                    /*otaFrameEndTimestamp = currentTimeUs;*/
-                /*}*/
+                if ((rxBuffer[rxBufferWriteIndex].data[2] >= FPORT2_FRAME_ID_OTA_START) && (rxBuffer[rxBufferWriteIndex].data[2] <= FPORT2_FRAME_ID_OTA_STOP)) {
+                    otaFrameEndTimestamp = currentTimeUs;
+                }
                 nextWriteBuffer();
                 lastTelemetryFrameReceivedUs = currentTimeUs;
                 state = FS_CONTROL_FRAME_START;
@@ -296,6 +289,9 @@ static void fportDataReceive(uint16_t byte, void *callback_data)
             break;
 
     }
+
+    DEBUG_SET(DEBUG_FPORT, DEBUG_FPORT2_MAX_BUFFER_USAGE, MAX(bufferCount(), debug[DEBUG_FPORT2_MAX_BUFFER_USAGE]));
+
 }
 
 #if defined(USE_TELEMETRY_SMARTPORT)
@@ -349,12 +345,12 @@ static uint8_t frameStatus(rxRuntimeConfig_t *rxRuntimeConfig)
 #if 1
     if (rxBufferReadIndex != rxBufferWriteIndex) {
 
-        uint8_t *xbuffer = rxBuffer[rxBufferReadIndex].data;
-        uint8_t xbuflen = rxBuffer[rxBufferReadIndex].length;
+        uint8_t *buffer = rxBuffer[rxBufferReadIndex].data;
+        uint8_t buflen = rxBuffer[rxBufferReadIndex].length;
 
-        fportFrame_t *frame = (fportFrame_t *)xbuffer;
+        fportFrame_t *frame = (fportFrame_t *)buffer;
 
-#if 0
+#if 1
         if (!checkChecksum(buffer + 1, buflen - 1)) {
             reportFrameError(DEBUG_FPORT2_ERROR_CHECKSUM);
         } else {
@@ -416,13 +412,6 @@ static uint8_t frameStatus(rxRuntimeConfig_t *rxRuntimeConfig)
                             hasTelemetryRequest = true;
                             break;
 
-                        /*case FPORT2_FRAME_ID_OTA_START:*/
-                            /*if (otaMode) {*/
-                                /*otaJustStarted = true;*/
-                                /*hasTelemetryRequest = true;*/
-                            /*}*/
-                            /*break;*/
-
                         case FPORT2_FRAME_ID_OTA_START:
                         case FPORT2_FRAME_ID_OTA_DATA:
                         case FPORT2_FRAME_ID_OTA_STOP:
@@ -444,7 +433,8 @@ static uint8_t frameStatus(rxRuntimeConfig_t *rxRuntimeConfig)
                                             hasTelemetryRequest = true;
                                             otaPrevDataAddress = otaDataAddress;
                                             otaGotData = false;
-                                            debug[5] += 16; // XXX do something with the data
+                                            /*debug[5] += 16; // XXX do something with the data*/
+                                            DEBUG_SET(DEBUG_FPORT, DEBUG_FPORT2_OTA_RECEIVED_BYTES, debug[DEBUG_FPORT2_OTA_RECEIVED_BYTES] + 16);
                                         } else {
                                             reportFrameError(DEBUG_FPORT2_ERROR_OTA_BAD_ADDRESS);
                                         }
@@ -467,12 +457,6 @@ static uint8_t frameStatus(rxRuntimeConfig_t *rxRuntimeConfig)
                                 otaResponsePayload = &payloadBuffer;
                             }
                             break;
-
-                        /*case FPORT2_FRAME_ID_OTA_STOP:*/
-                            /*if (otaMode) {*/
-                                /*hasTelemetryRequest = true;*/
-                            /*}*/
-                            /*break;*/
 
                         default:
                             if ((frameId == FPORT2_FRAME_ID_READ) && (downlinkPhyID == FPORT2_FC_MSP_ID)) {
@@ -537,7 +521,7 @@ static bool processFrame(const rxRuntimeConfig_t *rxRuntimeConfig)
 
     if (clearToSend) {
         if (otaResponsePayload) {
-            debug[6] = currentTimeUs - otaFrameEndTimestamp;
+            DEBUG_SET(DEBUG_FPORT, DEBUG_FPORT2_OTA_FRAME_RESPONSE_TIME, currentTimeUs - otaFrameEndTimestamp);
             writeUplinkFramePhyID(downlinkPhyID, otaResponsePayload);
             if (otaResponsePayload->frameId == FPORT2_FRAME_ID_OTA_STOP) {
                 otaMode = false;
