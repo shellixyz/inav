@@ -214,8 +214,8 @@ static bool nextWriteBuffer(void)
 
 static uint8_t writeBuffer(uint8_t byte)
 {
-    uint8_t * const buffer = rxBuffer[rxBufferWriteIndex].data;
-    uint8_t * const buflen = &rxBuffer[rxBufferWriteIndex].length;
+    volatile uint8_t * const buffer = rxBuffer[rxBufferWriteIndex].data;
+    volatile uint8_t * const buflen = &rxBuffer[rxBufferWriteIndex].length;
     buffer[*buflen] = byte;
     *buflen += 1;
     return *buflen;
@@ -345,13 +345,13 @@ static uint8_t frameStatus(rxRuntimeConfig_t *rxRuntimeConfig)
 #if 1
     if (rxBufferReadIndex != rxBufferWriteIndex) {
 
-        uint8_t *buffer = rxBuffer[rxBufferReadIndex].data;
+        volatile uint8_t *buffer = rxBuffer[rxBufferReadIndex].data;
         uint8_t buflen = rxBuffer[rxBufferReadIndex].length;
 
         fportFrame_t *frame = (fportFrame_t *)buffer;
 
 #if 1
-        if (!checkChecksum(buffer + 1, buflen - 1)) {
+        if (!checkChecksum((uint8_t *)buffer + 1, buflen - 1)) {
             reportFrameError(DEBUG_FPORT2_ERROR_CHECKSUM);
         } else {
 
