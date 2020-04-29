@@ -20,6 +20,8 @@ FILE_COMPILE_FOR_SPEED
 #include "io/serial.h"
 #include "io/smartport_master.h"
 
+#include "rx/frsky_crc.h"
+
 enum {
     PRIM_DISCARD_FRAME = 0x00,
     PRIM_DATA_FRAME = 0x10,
@@ -323,15 +325,6 @@ static void smartportMasterForwardNextPayload(void)
     forwardRequestsStart = (forwardRequestsStart + 1) % SMARTPORT_FORWARD_REQUESTS_MAX;
 }
 
-static uint8_t calculatePayloadCRC(smartPortPayload_t* payload)
-{
-    uint16_t sum = 0;
-    for (uint8_t i = 0; i < sizeof(*payload); ++i) {
-        sum += ((uint8_t *)payload)[i];
-    }
-    return 0xFF - ((sum & 0xFF) + (sum >> 8));
-}
-
 static void decodeCellsData(uint32_t sdata)
 {
     uint8_t voltageStartIndex = sdata & 0xF;
@@ -453,7 +446,7 @@ static void smartportMasterReceive(timeUs_t currentTimeUs)
 
         if (rxBufferLen == sizeof(buffer)) { // frame complete
 
-            uint8_t calcCRC = calculatePayloadCRC(&buffer.frame.payload);
+            uint8_t calcCRC = frskyCheckSum((uint8_t *)&buffer.frame.payload, sizeof(buffer.frame.payload));
 
             if (buffer.frame.crc == calcCRC) {
                 phyIDSetActive(currentPolledPhyID, true);

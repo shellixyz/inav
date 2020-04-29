@@ -35,13 +35,19 @@ void frskyCheckSumFini(uint16_t *checksum)
     *checksum = 0xFF - *checksum;
 }
 
-bool frskyChecksumIsGood(uint8_t *data, uint8_t length)
+uint8_t frskyCheckSum(uint8_t *data, uint8_t length)
 {
     uint16_t checksum = 0;
     for (unsigned i = 0; i < length; i++) {
         frskyCheckSumStep(&checksum, *data++);
     }
+    frskyCheckSumFini(&checksum);
+    return checksum;
+}
 
-    return checksum == FRSKY_CHECKSUM_GOOD_VALUE;
+bool frskyCheckSumIsGood(uint8_t *data, uint8_t length)
+{
+    uint16_t checksum = frskyCheckSum(data, length);
+    return !checksum;
 }
 

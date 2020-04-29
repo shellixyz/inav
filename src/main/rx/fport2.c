@@ -43,6 +43,7 @@
 #include "telemetry/smartport.h"
 #endif
 
+#include "rx/frsky_crc.h"
 #include "rx/rx.h"
 #include "rx/sbus_channels.h"
 #include "rx/fport2.h"
@@ -53,7 +54,6 @@
 #define FPORT2_MAX_TELEMETRY_AGE_MS 500
 #define FPORT2_FC_COMMON_ID 0x1B
 #define FPORT2_FC_MSP_ID 0x0D
-#define FPORT2_CRC_VALUE 0xFF
 #define FPORT2_BAUDRATE 115200
 #define FPORT2_PORT_OPTIONS (SERIAL_STOPBITS_1 | SERIAL_PARITY_NO)
 #define FPORT2_RX_TIMEOUT 120 // µs
@@ -144,17 +144,12 @@ typedef struct {
 } fportFrame_t;
 
 // RX frames ring buffer
-#define NUM_RX_BUFFERS 50
-#define BUFFER_SIZE 30 // XXX
+#define NUM_RX_BUFFERS 15
 
 typedef struct fportBuffer_s {
-    /*uint8_t data[sizeof(fportFrame_t)+2]; // +1 for CRC*/
-    uint8_t data[BUFFER_SIZE]; // +1 for CRC
+    uint8_t data[sizeof(fportFrame_t)+1]; // +1 for CRC
     uint8_t length;
 } fportBuffer_t;
-
-#pragma GCC push_options
-#pragma GCC optimize ("O0")
 
 static volatile fportBuffer_t rxBuffer[NUM_RX_BUFFERS];
 static volatile uint8_t rxBufferWriteIndex = 0;
@@ -235,7 +230,6 @@ static void fportDataReceive(uint16_t byte, void *callback_data)
     clearToSend = false;
 
     if ((state != FS_CONTROL_FRAME_START) && (timeSincePreviousRxByte > FPORT2_RX_TIMEOUT)) {
-        clearWriteBuffer();
         state = FS_CONTROL_FRAME_START;
     }
 
@@ -243,6 +237,7 @@ static void fportDataReceive(uint16_t byte, void *callback_data)
 
         case FS_CONTROL_FRAME_START:
             if (byte == FPORT2_CONTROL_FRAME_LENGTH) {
+                clearWriteBuffer();
                 writeBuffer(FT_CONTROL);
                 state = FS_CONTROL_FRAME_TYPE;
             }
@@ -300,13 +295,14 @@ static void writeUplinkFramePhyID(uint8_t phyID, const smartPortPayload_t *paylo
     serialWrite(fportPort, FPORT2_UPLINK_FRAME_LENGTH);
     serialWrite(fportPort, phyID);
 
-    uint16_t checksum = phyID;
+    uint16_t checksum = 0;
+    frskyCheckSumStep(&checksum, phyID);
     uint8_t *data = (uint8_t *)payload;
     for (unsigned i = 0; i < sizeof(smartPortPayload_t); ++i, ++data) {
         serialWrite(fportPort, *data);
-        checksum += *data;
+        frskyCheckSumStep(&checksum, *data);
     }
-    checksum = 0xff - ((checksum & 0xff) + (checksum >> 8));
+    frskyCheckSumFini(&checksum);
     serialWrite(fportPort, checksum);
 }
 
@@ -315,19 +311,6 @@ static void writeUplinkFrame(const smartPortPayload_t *payload)
     writeUplinkFramePhyID(FPORT2_FC_COMMON_ID, payload);
 }
 #endif
-
-
-static bool checkChecksum(uint8_t *data, uint8_t length)
-{
-    uint16_t checksum = 0;
-    for(int i = 0; i < length; ++i) {
-        checksum += *data++;
-        checksum += (checksum >> 8);
-        checksum &= 0xFF;
-    }
-
-    return checksum == FPORT2_CRC_VALUE;
-}
 
 static uint8_t frameStatus(rxRuntimeConfig_t *rxRuntimeConfig)
 {
@@ -351,7 +334,7 @@ static uint8_t frameStatus(rxRuntimeConfig_t *rxRuntimeConfig)
         fportFrame_t *frame = (fportFrame_t *)buffer;
 
 #if 1
-        if (!checkChecksum((uint8_t *)buffer + 1, buflen - 1)) {
+        if (!frskyCheckSumIsGood((uint8_t *)buffer + 1, buflen - 1)) {
             reportFrameError(DEBUG_FPORT2_ERROR_CHECKSUM);
         } else {
 
@@ -364,6 +347,7 @@ static uint8_t frameStatus(rxRuntimeConfig_t *rxRuntimeConfig)
                             result = sbusChannelsDecode(rxRuntimeConfig, &frame->control.rc.channels);
                             lqTrackerSet(rxRuntimeConfig->lqTracker, scaleRange(frame->control.rc.rssi, 0, 100, 0, RSSI_MAX_VALUE));
                             frameReceivedTimestamp = millis();
+                            otaMode = false;
                             break;
 
                         case CFT_OTA_START:
@@ -433,7 +417,7 @@ static uint8_t frameStatus(rxRuntimeConfig_t *rxRuntimeConfig)
                                             hasTelemetryRequest = true;
                                             otaPrevDataAddress = otaDataAddress;
                                             otaGotData = false;
-                                            /*debug[5] += 16; // XXX do something with the data*/
+                                            debug[5] += 16; // XXX do something with the data
                                             DEBUG_SET(DEBUG_FPORT, DEBUG_FPORT2_OTA_RECEIVED_BYTES, debug[DEBUG_FPORT2_OTA_RECEIVED_BYTES] + 16);
                                         } else {
                                             reportFrameError(DEBUG_FPORT2_ERROR_OTA_BAD_ADDRESS);
