@@ -126,11 +126,16 @@ DEVICE_FLAGS   += -DSTM32F765xx
 LD_SCRIPT       = $(LINKER_DIR)/stm32_flash_f765.ld
 STARTUP_SRC     = startup_stm32f765xx.s
 TARGET_FLASH   := 2048
-else ifeq ($(TARGET),$(filter $(TARGET),$(F7X5XG_TARGETS)))
+else ifeq ($(TARGET),$(filter $(TARGET),$(F745XG_TARGETS)))
 DEVICE_FLAGS   += -DSTM32F745xx
 LD_SCRIPT       = $(LINKER_DIR)/stm32_flash_f745.ld
 STARTUP_SRC     = startup_stm32f745xx.s
-TARGET_FLASH   := 2048
+TARGET_FLASH   := 1024
+else ifeq ($(TARGET),$(filter $(TARGET),$(F765XG_TARGETS)))
+DEVICE_FLAGS   += -DSTM32F765xx
+LD_SCRIPT       = $(LINKER_DIR)/stm32_flash_f745.ld
+STARTUP_SRC     = startup_stm32f745xx.s
+TARGET_FLASH   := 1024
 else ifeq ($(TARGET),$(filter $(TARGET),$(F7X6XG_TARGETS)))
 DEVICE_FLAGS   += -DSTM32F746xx
 LD_SCRIPT       = $(LINKER_DIR)/stm32_flash_f746.ld
