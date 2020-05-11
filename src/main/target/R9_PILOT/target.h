@@ -180,7 +180,7 @@
 
 #define ADC_CHANNEL_1_PIN           PC2
 #define ADC_CHANNEL_2_PIN           PC3
-#define ADC_CHANNEL_3_PIN           PC5
+#define ADC_CHANNEL_3_PIN           PC1
 #define ADC_CHANNEL_4_PIN           PC0
 
 #define CURRENT_METER_ADC_CHANNEL   ADC_CHN_1
@@ -201,6 +201,6 @@
 #define TARGET_IO_PORTD 0xffff
 #define TARGET_IO_PORTE 0xffff
 
-#define MAX_PWM_OUTPUT_PORTS 8
+#define MAX_PWM_OUTPUT_PORTS 12
 
 #define USE_DSHOT
