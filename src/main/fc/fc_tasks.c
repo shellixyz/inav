@@ -68,6 +68,7 @@
 #include "io/vtx.h"
 #include "io/osd_dji_hd.h"
 #include "io/servo_sbus.h"
+#include "io/video_power.h"
 
 #include "msp/msp_serial.h"
 
@@ -328,6 +329,9 @@ void fcTasksInit(void)
 #ifdef USE_LIGHTS
     setTaskEnabled(TASK_LIGHTS, true);
 #endif
+#ifdef USE_VIDEO_POWER_SWITCH
+    setTaskEnabled(TASK_VIDEO_POWER_SWITCH, true);
+#endif
     setTaskEnabled(TASK_BATTERY, feature(FEATURE_VBAT) || isAmperageConfigured());
     setTaskEnabled(TASK_TEMPERATURE, true);
     setTaskEnabled(TASK_RX, true);
@@ -437,6 +441,15 @@ cfTask_t cfTasks[TASK_COUNT] = {
         .taskName = "LIGHTS",
         .taskFunc = lightsUpdate,
         .desiredPeriod = TASK_PERIOD_HZ(100),     // 100 Hz
+        .staticPriority = TASK_PRIORITY_LOW,
+    },
+#endif
+
+#ifdef USE_VIDEO_POWER_SWITCH
+    [TASK_VIDEO_POWER_SWITCH] = {
+        .taskName = "VID PWR",
+        .taskFunc = videoPowerSwitchUpdate,
+        .desiredPeriod = TASK_PERIOD_HZ(10),      // 10 Hz
         .staticPriority = TASK_PRIORITY_LOW,
     },
 #endif

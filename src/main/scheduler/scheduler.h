@@ -63,6 +63,9 @@ typedef enum {
 #ifdef USE_LIGHTS
     TASK_LIGHTS,
 #endif
+#ifdef USE_VIDEO_POWER_SWITCH
+    TASK_VIDEO_POWER_SWITCH,
+#endif
 #ifdef USE_GPS
     TASK_GPS,
 #endif

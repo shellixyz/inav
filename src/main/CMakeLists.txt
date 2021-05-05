@@ -376,6 +376,8 @@ main_sources(COMMON_SRC
     io/rcdevice.h
     io/rcdevice_cam.c
     io/rcdevice_cam.h
+    io/video_power.c
+    io/video_power.h
 
     msp/msp_serial.c
     msp/msp_serial.h

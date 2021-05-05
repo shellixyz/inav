@@ -673,6 +673,16 @@ groups:
         max: 100
         default_value: 1.0
 
+  - name: PG_VIDEO_POWER_CONFIG
+    type: videoPowerConfig_t
+    headers: ["io/video_power.h"]
+    condition: USE_VIDEO_POWER_SWITCH
+    members:
+      - name: disarmed_video_off_delay
+        default_value: 120
+        min: 0
+        max: 3600
+
   - name: PG_RX_CONFIG
     type: rxConfig_t
     headers: ["rx/rx.h", "rx/spektrum.h"]

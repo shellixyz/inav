@@ -91,6 +91,7 @@ static const box_t boxes[CHECKBOX_ITEM_COUNT + 1] = {
     { BOXPREARM, "PREARM", 51 },
     { BOXTURTLE, "TURTLE", 52 },
     { BOXNAVCRUISE, "NAV CRUISE", 53 },
+    { BOXVIDEOPWR, "VIDEO PWR", 54 },
     { CHECKBOX_ITEM_COUNT, NULL, 0xFF }
 };
 
@@ -320,6 +321,10 @@ void initActiveBoxIds(void)
     if(STATE(MULTIROTOR) && isMotorProtocolDshot())
         activeBoxIds[activeBoxIdCount++] = BOXTURTLE;
 #endif
+
+#ifdef USE_VIDEO_POWER_SWITCH
+    activeBoxIds[activeBoxIdCount++] = BOXVIDEOPWR;
+#endif
 }
 
 #define IS_ENABLED(mask) (mask == 0 ? 0 : 1)
@@ -379,6 +384,9 @@ void packBoxModeFlags(boxBitmask_t * mspBoxModeFlags)
     CHECK_ACTIVE_BOX(IS_ENABLED(IS_RC_MODE_ACTIVE(BOXLOITERDIRCHN)),    BOXLOITERDIRCHN);
 #if defined(USE_RX_MSP) && defined(USE_MSP_RC_OVERRIDE)
     CHECK_ACTIVE_BOX(IS_ENABLED(IS_RC_MODE_ACTIVE(BOXMSPRCOVERRIDE)),   BOXMSPRCOVERRIDE);
+#endif
+#ifdef USE_VIDEO_POWER_SWITCH
+    CHECK_ACTIVE_BOX(IS_ENABLED(IS_RC_MODE_ACTIVE(BOXVIDEOPWR)),        BOXVIDEOPWR);
 #endif
 
     memset(mspBoxModeFlags, 0, sizeof(boxBitmask_t));
