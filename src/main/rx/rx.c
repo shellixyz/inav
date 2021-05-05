@@ -291,8 +291,7 @@ void rxInit(void)
     timeMs_t nowMs = millis();
 
     for (int i = 0; i < MAX_SUPPORTED_RC_CHANNEL_COUNT; i++) {
-        rcChannels[i].raw = PWM_RANGE_MIDDLE;
-        rcChannels[i].data = PWM_RANGE_MIDDLE;
+        rcChannels[i].data = rcChannels[i].raw = i < NON_AUX_CHANNEL_COUNT ? PWM_RANGE_MIDDLE : PWM_RANGE_MIN;
         rcChannels[i].expiresAt = nowMs + MAX_INVALID_RX_PULSE_TIME;
     }
 
