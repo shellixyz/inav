@@ -359,6 +359,8 @@ static void activateConfig(void)
     activateControlRateConfig();
     activateBatteryProfile();
 
+    generateLinThrottleCurve();
+
     resetAdjustmentStates();
 
     updateUsedModeActivationConditionFlags();
